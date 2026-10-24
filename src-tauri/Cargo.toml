@@ -1,0 +1,63 @@
+[package]
+name = "filemint"
+version = "1.2.0"
+description = "FileMint - Local file optimizer and converter"
+authors = ["FileMint Team"]
+license = "MIT"
+edition = "2021"
+
+[lib]
+name = "filemint_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.2", features = [] }
+tauri-plugin-dialog = "2.2"
+tauri-plugin-fs = "2.2"
+tauri-plugin-shell = "2.2"
+tauri-plugin-notification = "2.2"
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.42", features = ["full"] }
+rayon = "1.10"
+anyhow = "1.0"
+thiserror = "2.0"
+base64 = "0.22"
+flate2 = "1.0"
+chrono = "0.4"
+dirs = "6.0"
+
+# Image processing (pure Rust codecs)
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "bmp", "gif", "tiff", "avif"] }
+oxipng = "9.1"
+image-webp = "0.2"
+
+# PDF processing (pure Rust, MIT license)
+lopdf = "0.35"
+
+# Network (pure Rust TLS, strictly for startup update check)
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+
+# Windows specific
+[target.'cfg(windows)'.dependencies]
+winreg = "0.52"
+windows = { version = "0.58", features = ["Win32_UI_Shell", "Win32_Foundation", "Win32_System_Com", "Win32_System_LibraryLoader", "Win32_Graphics_Imaging"] }
+windows-core = "0.58"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

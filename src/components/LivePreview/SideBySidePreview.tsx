@@ -1,0 +1,346 @@
+import React, { useState } from 'react';
+import { useFileMintStore, formatFileSize } from '../../store/useFileMintStore';
+import {
+  Loader2,
+  ArrowRight,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  FileText,
+  Maximize2,
+  Shield,
+  Sparkles,
+  Columns,
+  SplitSquareVertical,
+} from 'lucide-react';
+import { LargePreviewModal } from './LargePreviewModal';
+
+export const SideBySidePreview: React.FC = () => {
+  const {
+    files,
+    activePreviewIndex,
+    preview,
+    previewLoading,
+    imageOptions,
+    pdfOptions,
+    t,
+    language,
+  } = useFileMintStore();
+  const activeFile = files[activePreviewIndex];
+
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [viewMode, setViewMode] = useState<'sideBySide' | 'split'>('sideBySide');
+  const [splitPos, setSplitPos] = useState<number>(50);
+  const [isLargeModalOpen, setIsLargeModalOpen] = useState(false);
+
+  if (!activeFile) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-slate-400 text-xs">
+        {t.noFileSelected}
+      </div>
+    );
+  }
+
+  // Specific rendering for PDF documents
+  if (activeFile.fileType === 'pdf') {
+    const estimatedPercent =
+      pdfOptions.profile === 'Compact' ? 65 : pdfOptions.profile === 'Balanced' ? 45 : 25;
+    const estimatedFinal = Math.round(activeFile.sizeBytes * (1 - estimatedPercent / 100));
+
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-8 bg-slate-100/50 dark:bg-slate-950/40 select-none">
+        <div className="max-w-lg md:max-w-xl w-full p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col items-center text-center">
+          <div className="h-16 w-16 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center mb-4">
+            <FileText className="w-8 h-8" />
+          </div>
+
+          <h3
+            className="font-bold text-base text-slate-800 dark:text-slate-100 mb-1 max-w-full truncate cursor-help"
+            title={activeFile.path}
+          >
+            {activeFile.name}
+          </h3>
+          <p
+            className="text-xs text-slate-400 mb-6 font-mono text-[11px] truncate max-w-full px-2"
+            title={activeFile.path}
+          >
+            {activeFile.path}
+          </p>
+
+          <div className="w-full grid grid-cols-3 gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-center mb-6">
+            <div>
+              <div className="text-[10px] text-slate-400 uppercase font-semibold">
+                {t.initialWeight}
+              </div>
+              <div className="text-xs font-mono font-bold text-slate-700 dark:text-slate-200 mt-0.5">
+                {formatFileSize(activeFile.sizeBytes, language)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-slate-400 uppercase font-semibold">
+                {t.estimatedWeight}
+              </div>
+              <div className="text-xs font-mono font-bold text-mint-500 mt-0.5">
+                ~{formatFileSize(estimatedFinal, language)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-slate-400 uppercase font-semibold">
+                {t.savings}
+              </div>
+              <div className="text-xs font-mono font-bold text-emerald-500 mt-0.5">
+                -{estimatedPercent}%
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            {t.pdfProfileSelected} :{' '}
+            <span className="font-semibold text-slate-800 dark:text-slate-200">
+              {pdfOptions.profile}
+            </span>
+            . {t.pdfExplanation}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Dynamic image preview rendering
+  return (
+    <div className="flex-1 flex flex-col bg-slate-100/50 dark:bg-slate-950/40 overflow-hidden relative select-none">
+      {/* Streamlined, responsive toolbar */}
+      <div className="h-12 px-4 sm:px-5 border-b border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 flex items-center justify-between gap-3 text-xs backdrop-blur-sm z-10 shrink-0">
+        {/* Left: Metadata comparison pill */}
+        <div className="flex items-center gap-2 min-w-0">
+          <span
+            className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[120px] sm:max-w-[180px] cursor-help text-xs"
+            title={activeFile.path}
+          >
+            {activeFile.name}
+          </span>
+
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-200/50 dark:bg-slate-800/60 font-mono text-[11px] shrink-0">
+            <span className="text-slate-600 dark:text-slate-400">
+              {formatFileSize(activeFile.sizeBytes, language)}
+            </span>
+            <ArrowRight className="w-3 h-3 text-slate-400" />
+            {preview ? (
+              <span className="font-bold text-mint-600 dark:text-mint-400">
+                {formatFileSize(preview.estimated_bytes, language)}
+              </span>
+            ) : (
+              <span className="text-slate-400 animate-pulse text-[10px]">...</span>
+            )}
+            {preview && preview.saved_percentage > 0 && (
+              <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                -{preview.saved_percentage.toFixed(0)}%
+              </span>
+            )}
+          </div>
+
+          {activeFile.hasGps && (
+            <span
+              className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-semibold cursor-help shrink-0"
+              title={t.gpsDetectedNotice}
+            >
+              📍 GPS
+            </span>
+          )}
+
+          {activeFile.hasGps && imageOptions.metadata_policy !== 'KeepAll' && (
+            <span
+              className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-mint-500/15 text-mint-600 dark:text-mint-400 text-[10px] font-semibold shrink-0"
+              title={t.metadataRemoveGpsDesc}
+            >
+              <Shield className="w-3 h-3 text-mint-500" />
+              <span>{t.gpsCleanBadge}</span>
+            </span>
+          )}
+        </div>
+
+        {/* Right: View controls & zoom */}
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          {/* View mode toggle */}
+          <div className="flex items-center rounded-lg p-0.5 bg-slate-200/60 dark:bg-slate-800/80 border border-slate-300/40 dark:border-slate-700/50">
+            <button
+              type="button"
+              onClick={() => setViewMode('sideBySide')}
+              className={`p-1 rounded-md text-[11px] font-medium transition-all ${
+                viewMode === 'sideBySide'
+                  ? 'bg-white dark:bg-slate-900 text-mint-500 shadow-sm font-semibold'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+              title={t.viewSideBySide}
+            >
+              <Columns className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('split')}
+              className={`p-1 rounded-md text-[11px] font-medium transition-all ${
+                viewMode === 'split'
+                  ? 'bg-white dark:bg-slate-900 text-mint-500 shadow-sm font-semibold'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+              title={t.viewSplit}
+            >
+              <SplitSquareVertical className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="w-[1px] h-4 bg-slate-300 dark:bg-slate-700 mx-0.5" />
+
+          {/* Zoom controls */}
+          <button
+            onClick={() => setZoomLevel((z) => Math.max(0.5, z - 0.25))}
+            className="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
+            title={t.zoomOut}
+          >
+            <ZoomOut className="w-3.5 h-3.5" />
+          </button>
+          <span className="text-[10px] font-mono text-slate-400 w-8 text-center">
+            {Math.round(zoomLevel * 100)}%
+          </span>
+          <button
+            onClick={() => setZoomLevel((z) => Math.min(3, z + 0.25))}
+            className="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
+            title={t.zoomIn}
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setZoomLevel(1)}
+            className="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
+            title={t.resetZoom}
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+
+          <div className="w-[1px] h-4 bg-slate-300 dark:bg-slate-700 mx-0.5" />
+
+          {/* Enlarge */}
+          <button
+            onClick={() => setIsLargeModalOpen(true)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-200/60 dark:bg-slate-800/80 hover:bg-mint-500 hover:text-slate-950 dark:hover:bg-mint-500 dark:hover:text-slate-950 transition-all border border-slate-300/60 dark:border-slate-700/60 shadow-sm cursor-pointer"
+            title={t.enlarge}
+          >
+            <Maximize2 className="w-3 h-3" />
+            <span className="hidden sm:inline">{t.enlarge}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main image preview stage */}
+      <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center p-3 md:p-5 overflow-auto relative w-full h-full">
+        {previewLoading && (
+          <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-[2px] flex items-center justify-center z-20">
+            <div className="px-4 py-2.5 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 text-xs font-medium text-slate-700 dark:text-slate-200">
+              <Loader2 className="w-4 h-4 animate-spin text-mint-500" />
+              <span>{t.previewLoading}</span>
+            </div>
+          </div>
+        )}
+
+        {preview?.data_url ? (
+          viewMode === 'sideBySide' ? (
+            <div className="flex items-center justify-center max-h-full max-w-full min-h-0 min-w-0">
+              <div
+                onClick={() => setIsLargeModalOpen(true)}
+                className="group relative flex flex-col items-center border border-slate-200 dark:border-slate-800 rounded-3xl p-3 bg-white/70 dark:bg-slate-900/60 shadow-2xl cursor-zoom-in hover:border-mint-500/60 transition-all max-h-full max-w-full min-h-0 min-w-0"
+                style={{
+                  transform: zoomLevel !== 1 ? `scale(${zoomLevel})` : undefined,
+                  transformOrigin: 'center',
+                  transition: 'transform 0.15s ease-out',
+                }}
+                title={t.clickToEnlarge}
+              >
+                <div className="text-[10px] uppercase font-bold text-mint-500 tracking-wider mb-2 flex items-center justify-between w-full px-1.5 shrink-0">
+                  <span className="flex items-center gap-1.5 font-semibold text-mint-600 dark:text-mint-400">
+                    <Sparkles className="w-3.5 h-3.5 text-mint-500" />
+                    <span>{language === 'en' ? 'Live Optimized Preview' : 'Aperçu du résultat en direct'}</span>
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400 font-normal">
+                    {preview.new_width}×{preview.new_height} px
+                  </span>
+                </div>
+                <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-auto">
+                  <img
+                    src={preview.data_url}
+                    alt={t.result}
+                    className="max-h-full max-w-full w-auto h-auto object-contain rounded-2xl shadow-sm block"
+                    style={{
+                      maxHeight: 'min(620px, calc(100vh - 290px))',
+                      maxWidth: 'min(1100px, calc(100vw - 420px))',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Split slider comparison mode */
+            <div
+              className="relative border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center max-h-full max-w-full min-h-0 min-w-0"
+              style={{
+                transform: zoomLevel !== 1 ? `scale(${zoomLevel})` : undefined,
+                transformOrigin: 'center',
+                transition: 'transform 0.15s ease-out',
+              }}
+            >
+              {/* Badges for split comparison */}
+              <div className="absolute top-3 left-3 z-10 px-2 py-0.5 rounded-full bg-slate-950/70 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none">
+                {t.initial}
+              </div>
+              <div className="absolute top-3 right-3 z-10 px-2 py-0.5 rounded-full bg-mint-500/80 text-slate-950 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none">
+                {t.result}
+              </div>
+
+              <img
+                src={preview.data_url}
+                alt={t.result}
+                className="max-h-full max-w-full w-auto h-auto object-contain block rounded-3xl"
+                style={{
+                  maxHeight: 'min(620px, calc(100vh - 290px))',
+                  maxWidth: 'min(1100px, calc(100vw - 420px))',
+                }}
+              />
+              <div
+                className="absolute top-0 bottom-0 left-0 overflow-hidden border-r-2 border-mint-500 bg-white dark:bg-slate-900"
+                style={{ width: `${splitPos}%` }}
+              >
+                <img
+                  src={preview.data_url}
+                  alt={t.initial}
+                  className="max-h-full max-w-full w-auto h-auto object-contain block opacity-90 contrast-125"
+                  style={{
+                    maxHeight: 'min(620px, calc(100vh - 290px))',
+                    maxWidth: 'min(1100px, calc(100vw - 420px))',
+                  }}
+                />
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={splitPos}
+                onChange={(e) => setSplitPos(Number(e.target.value))}
+                className="absolute inset-x-0 bottom-3 w-4/5 mx-auto opacity-70 hover:opacity-100 transition-opacity accent-mint-500 z-10 cursor-ew-resize"
+              />
+            </div>
+          )
+        ) : (
+          <div className="text-center text-slate-400 text-xs">
+            {previewLoading ? t.previewLoading : t.previewUnavailable}
+          </div>
+        )}
+      </div>
+
+      <LargePreviewModal
+        isOpen={isLargeModalOpen}
+        onClose={() => setIsLargeModalOpen(false)}
+        preview={preview}
+        activeFile={activeFile}
+      />
+    </div>
+  );
+};

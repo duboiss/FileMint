@@ -1,0 +1,33 @@
+name: 💡 Feature Request
+description: Suggest a new idea or improvement for FileMint
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We love feedback and ideas for new features!
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem?
+      description: A clear and concise description of the limitation or use case.
+      placeholder: I frequently need to ... but currently FileMint doesn't support ...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or workarounds you've considered.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Add any other context, UI mockups, or screenshots about the feature request.

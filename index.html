@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FileMint</title>
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <style>
+      /* Immediate base styles to prevent any white flash during initial paint */
+      html, body {
+        margin: 0;
+        padding: 0;
+        background-color: #020617; /* Slate 950 dark fallback */
+        color: #f8fafc;
+      }
+      html:not(.dark), html:not(.dark) body {
+        background-color: #f8fafc; /* Slate 50 light */
+        color: #0f172a;
+      }
+    </style>
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('filemint_theme');
+          var isDark = saved === 'dark' || (saved !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.backgroundColor = '#020617';
+            if (document.body) document.body.style.backgroundColor = '#020617';
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.style.backgroundColor = '#f8fafc';
+            if (document.body) document.body.style.backgroundColor = '#f8fafc';
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen select-none overflow-hidden font-sans antialiased">
+    <div id="root" class="h-screen w-screen flex flex-col"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

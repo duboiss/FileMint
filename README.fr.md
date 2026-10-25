@@ -64,7 +64,7 @@
 - **Compression par Taille Cible :** Respectez les limites de poids imposées par les portails administratifs et courriels.
 - **Optimisation Structurelle :** Recompression FlateDecode et nettoyage d'objets sans altérer les textes sélectionnables ni les liens.
 
-### 📂 Dossier de Surveillance Automatique (*Hot Folder*)
+### 📂 Dossier de Surveillance Automatique
 - **Surveillance en Arrière-Plan :** Surveille un dossier de votre choix et optimise automatiquement tout fichier déposé.
 - **Mode Boîte de Dépôt :** Option pour supprimer le fichier source après traitement réussi (idéal pour les dossiers de transit).
 - **Retour Visuel Discret :** Toast flottant de confirmation et pastille animée dans l'en-tête de l'application.

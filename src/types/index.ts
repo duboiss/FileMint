@@ -146,6 +146,7 @@ export interface WatchFolderConfig {
   delete_source: boolean;
   image_options?: ImageTransformOptions | null;
   pdf_options?: PdfCompressionOptions | null;
+  profile_id?: string | null;
 }
 
 export interface WatchProcessedEvent {

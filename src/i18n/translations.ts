@@ -268,6 +268,7 @@ export interface TranslationDictionary {
   lifetimePillFiles: string;
   resetStats: string;
   resetStatsConfirm: string;
+  generalSection: string;
   appearance: string;
   themeDarkLabel: string;
   themeLightLabel: string;
@@ -303,6 +304,8 @@ export interface TranslationDictionary {
   watchFolderStatusActive: string;
   watchFolderStatusIdle: string;
   watchFolderProcessedToast: string;
+  watchFolderProfileLabel: string;
+  watchFolderProfileDefault: string;
   updatesSection: string;
   updateCheckLabel: string;
   updateCheckDesc: string;
@@ -582,6 +585,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     lifetimePillFiles: 'fichiers optimisés',
     resetStats: 'Réinitialiser les compteurs',
     resetStatsConfirm: 'Voulez-vous vraiment remettre à zéro les compteurs d\'espace économisé et de fichiers ?',
+    generalSection: 'Préférences générales',
     appearance: 'Apparence & Thème',
     themeDarkLabel: 'Thème Sombre',
     themeLightLabel: 'Thème Clair',
@@ -598,12 +602,12 @@ export const translations: Record<Language, TranslationDictionary> = {
     contextMenuModernDesc: 'Visible directement au premier clic droit.',
     contextMenuClassic: 'Classique (Windows 10 / 11)',
     contextMenuClassicDesc: 'Dans le menu « Afficher plus d\'options » ou sous Windows 10.',
-    contextMenuRefreshNotice: 'L\'intégration classique est immédiate. L\'extension moderne s\'applique à la prochaine ouverture de l\'Explorateur ou au redémarrage.',
+    contextMenuRefreshNotice: 'L\'intégration s\'applique immédiatement dans l\'Explorateur Windows.',
     contextMenuApplying: 'Configuration du menu contextuel Windows en cours...',
     contextMenuBadgeRecommended: 'Recommandé',
     contextMenuWelcomeTitle: 'Menu contextuel (clic droit Windows) :',
     contextMenuWelcomeSubtitle: 'Accédez directement à FileMint au clic droit dans l\'Explorateur.',
-    watchFolderSection: 'Dossier de surveillance automatique (Hot Folder)',
+    watchFolderSection: 'Dossier de surveillance automatique',
     watchFolderDesc: 'Compresse silencieusement en arrière-plan tout fichier (image ou PDF) déposé dans ce dossier.',
     watchFolderEnable: 'Activer la surveillance automatique',
     watchFolderEnableDesc: 'Traite automatiquement les fichiers dès leur enregistrement ou dépôt dans le dossier.',
@@ -617,6 +621,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     watchFolderStatusActive: 'Surveillance active',
     watchFolderStatusIdle: 'Surveillance en attente de configuration',
     watchFolderProcessedToast: 'Fichier optimisé automatiquement :',
+    watchFolderProfileLabel: 'Profil d\'optimisation appliqué :',
+    watchFolderProfileDefault: 'Profil par défaut de l\'application',
     updatesSection: 'Mises à jour logicielles',
     updateCheckLabel: 'Vérification automatique au démarrage',
     updateCheckDesc: 'Consulte discrètement GitHub Releases (sans télémétrie ni envoi de données privées).',
@@ -895,6 +901,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     lifetimePillFiles: 'files optimized',
     resetStats: 'Reset counters',
     resetStatsConfirm: 'Are you sure you want to reset all lifetime storage and file counters?',
+    generalSection: 'General Preferences',
     appearance: 'Appearance & Theme',
     themeDarkLabel: 'Dark Theme',
     themeLightLabel: 'Light Theme',
@@ -911,7 +918,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     contextMenuModernDesc: 'Directly visible on the primary right-click menu.',
     contextMenuClassic: 'Classic (Windows 10 / 11)',
     contextMenuClassicDesc: 'Inside "Show more options" or on Windows 10.',
-    contextMenuRefreshNotice: 'Classic integration is immediate. Modern extension applies upon next Explorer launch or restart.',
+    contextMenuRefreshNotice: 'Integration applies immediately in Windows Explorer.',
     contextMenuApplying: 'Configuring Windows context menu...',
     contextMenuBadgeRecommended: 'Recommended',
     contextMenuWelcomeTitle: 'Context menu (Windows right-click):',
@@ -930,6 +937,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     watchFolderStatusActive: 'Watching active',
     watchFolderStatusIdle: 'Watcher waiting for setup',
     watchFolderProcessedToast: 'File automatically optimized:',
+    watchFolderProfileLabel: 'Applied optimization profile:',
+    watchFolderProfileDefault: 'Application default profile',
     updatesSection: 'Software Updates',
     updateCheckLabel: 'Automatic check on startup',
     updateCheckDesc: 'Discreetly checks GitHub Releases (no telemetry, no private data sent).',

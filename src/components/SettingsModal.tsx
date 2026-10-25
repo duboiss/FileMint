@@ -210,7 +210,7 @@ export const SettingsModal: React.FC = () => {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative max-w-lg w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] cursor-default"
+        className="relative max-w-xl w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] cursor-default"
       >
         {pendingImportProfiles && (
           <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-50 rounded-3xl p-6 flex flex-col justify-between">
@@ -305,313 +305,283 @@ export const SettingsModal: React.FC = () => {
           </button>
         </div>
 
-        <div className="p-6 space-y-6 overflow-y-auto text-xs">
-          <div className="space-y-3">
-            <h4 className="font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Languages className="w-3.5 h-3.5 text-mint-500" />
-              <span>{t.languageSection}</span>
+        <div className="p-5 space-y-4 overflow-y-auto text-xs">
+          {/* 1. Préférences Générales (Langue, Thème, Mises à jour, Menu contextuel) */}
+          <div className="space-y-1.5">
+            <h4 className="font-bold uppercase tracking-wider text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1.5 px-1">
+              <Sliders className="w-3 h-3 text-mint-500" />
+              <span>{t.generalSection}</span>
             </h4>
-            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
-              <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
-                <button
-                  type="button"
-                  onClick={() => setLanguage('fr')}
-                  className={`py-2 px-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
-                    language === 'fr'
-                      ? 'border-mint-500 bg-mint-500/15 text-mint-600 dark:text-mint-400 font-bold shadow-sm'
-                      : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
-                >
-                  <span>{t.french}</span>
-                  {systemLang === 'fr' && (
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md bg-mint-500/20 text-mint-600 dark:text-mint-400 border border-mint-500/30">
-                      {t.systemLanguage}
+            <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 divide-y divide-slate-200/70 dark:divide-slate-800/70">
+              
+              {/* Langue */}
+              <div className="flex items-center justify-between gap-3 pb-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 rounded-lg bg-mint-500/10 text-mint-500 flex items-center justify-center shrink-0">
+                    <Languages className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs block">
+                      {t.languageSection}
                     </span>
-                  )}
-                </button>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+                      {language === 'fr' ? t.french : t.english}
+                      {systemLang === language && ` • ${t.systemLanguage}`}
+                    </span>
+                  </div>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={() => setLanguage('en')}
-                  className={`py-2 px-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
-                    language === 'en'
-                      ? 'border-mint-500 bg-mint-500/15 text-mint-600 dark:text-mint-400 font-bold shadow-sm'
-                      : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
-                >
-                  <span>{t.english}</span>
-                  {systemLang === 'en' && (
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md bg-mint-500/20 text-mint-600 dark:text-mint-400 border border-mint-500/30">
-                      {t.systemLanguage}
-                    </span>
-                  )}
-                </button>
+                <div className="flex items-center rounded-xl bg-slate-200/70 dark:bg-slate-800 p-0.5 border border-slate-200 dark:border-slate-700/80 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setLanguage('fr')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      language === 'fr'
+                        ? 'border border-slate-200/50 dark:border-slate-600 bg-white dark:bg-slate-700 text-mint-600 dark:text-mint-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {t.french}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLanguage('en')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      language === 'en'
+                        ? 'border border-slate-200/50 dark:border-slate-600 bg-white dark:bg-slate-700 text-mint-600 dark:text-mint-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {t.english}
+                  </button>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div className="space-y-3">
-            <h4 className="font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Palette className="w-3.5 h-3.5 text-mint-500" />
-              <span>{t.appearance}</span>
-            </h4>
-            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2.5">
-              <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block">
-                {t.chooseTheme}
-              </span>
-              <div className="grid grid-cols-3 gap-2 text-xs font-semibold">
-                <button
-                  type="button"
-                  onClick={() => setTheme('system')}
-                  className={`py-2 px-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer min-h-[52px] ${
-                    theme === 'system'
-                      ? 'border-mint-500 bg-mint-500/15 text-mint-600 dark:text-mint-400 font-bold shadow-sm'
-                      : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Monitor className="w-3.5 h-3.5 shrink-0" />
+              {/* Apparence */}
+              <div className="flex items-center justify-between gap-3 py-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 rounded-lg bg-mint-500/10 text-mint-500 flex items-center justify-center shrink-0">
+                    <Palette className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs block">
+                      {t.appearance}
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+                      {theme === 'system' ? t.themeSystem : theme === 'light' ? t.themeLight : t.themeDark}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center rounded-xl bg-slate-200/70 dark:bg-slate-800 p-0.5 border border-slate-200 dark:border-slate-700/80 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setTheme('system')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      theme === 'system'
+                        ? 'border border-slate-200/50 dark:border-slate-600 bg-white dark:bg-slate-700 text-mint-600 dark:text-mint-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                    title={t.themeSystem}
+                  >
+                    <Monitor className="w-3 h-3 shrink-0" />
                     <span>{t.themeSystem}</span>
-                  </div>
-                  <span className="text-[9px] font-medium tracking-normal px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                    {t.themeSystemWindows}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setTheme('light')}
-                  className={`py-2 px-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer min-h-[52px] ${
-                    theme === 'light'
-                      ? 'border-mint-500 bg-mint-500/15 text-mint-600 dark:text-mint-400 font-bold shadow-sm'
-                      : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Sun className="w-3.5 h-3.5 shrink-0" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme('light')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      theme === 'light'
+                        ? 'border border-slate-200/50 dark:border-slate-600 bg-white dark:bg-slate-700 text-mint-600 dark:text-mint-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                    title={t.themeLight}
+                  >
+                    <Sun className="w-3 h-3 shrink-0" />
                     <span>{t.themeLight}</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setTheme('dark')}
-                  className={`py-2 px-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer min-h-[52px] ${
-                    theme === 'dark'
-                      ? 'border-mint-500 bg-mint-500/15 text-mint-600 dark:text-mint-400 font-bold shadow-sm'
-                      : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Moon className="w-3.5 h-3.5 shrink-0" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme('dark')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      theme === 'dark'
+                        ? 'border border-slate-200/50 dark:border-slate-600 bg-white dark:bg-slate-700 text-mint-600 dark:text-mint-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                    title={t.themeDark}
+                  >
+                    <Moon className="w-3 h-3 shrink-0" />
                     <span>{t.themeDark}</span>
-                  </div>
-                </button>
+                  </button>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div className="space-y-3">
-            <h4 className="font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <MousePointer className="w-3.5 h-3.5" />
-              <span>{t.systemIntegration}</span>
-            </h4>
-            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold block text-slate-800 dark:text-slate-200">
-                      {t.contextMenuLabel}
-                    </span>
-                    {contextMenuLoading && (
-                      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-mint-600 dark:text-mint-400 bg-mint-500/10 px-2 py-0.5 rounded-full animate-pulse">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        <span>{t.contextMenuApplying}</span>
+              {/* Mises à jour logicielles */}
+              <div className="py-2.5 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-mint-500/10 text-mint-500 flex items-center justify-center shrink-0">
+                      <Globe className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs block">
+                        {t.updatesSection}
                       </span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+                        {t.updateCheckLabel}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={updateCheckEnabled}
+                    onClick={() => setUpdateCheckEnabled(!updateCheckEnabled)}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      updateCheckEnabled ? 'bg-mint-500' : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                        updateCheckEnabled ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Banner si mise à jour disponible */}
+                {updateInfo?.has_update && (
+                  <div className="p-2.5 rounded-xl bg-mint-500/10 border border-mint-500/25 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-mint-600 dark:text-mint-400 font-semibold text-xs flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5" />
+                        <span>{t.updateAvailable} (v{updateInfo.latest_version})</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => openUrl(updateInfo.release_notes_url)}
+                        className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        <span>{t.updateReleaseNotes}</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </button>
+                    </div>
+
+                    {updateDownloading ? (
+                      <div className="space-y-1.5 p-2 rounded-lg bg-white/60 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60">
+                        <div className="flex justify-between items-center text-[10px]">
+                          <span className="text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1.5">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-mint-500" />
+                            <span>{updateProgress >= 100 ? t.updateInstalling : t.updateDownloading}</span>
+                          </span>
+                          <span className="font-mono font-bold text-mint-500">{updateProgress}%</span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                          <div
+                            className="h-full bg-mint-500 transition-all duration-200 rounded-full"
+                            style={{ width: `${updateProgress}%` }}
+                          />
+                        </div>
+                      </div>
+                    ) : updateInfo.download_url ? (
+                      <button
+                        type="button"
+                        onClick={() => installUpdate()}
+                        className="w-full py-1.5 px-3 rounded-lg bg-mint-500 hover:bg-mint-600 text-slate-950 font-bold text-xs shadow-sm shadow-mint-500/20 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>{t.updateDownloadAndInstall} (v{updateInfo.latest_version})</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => openUrl(updateInfo.release_notes_url)}
+                        className="w-full py-1.5 px-3 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>{t.openDownloadPage}</span>
+                      </button>
+                    )}
+
+                    {updateError && (
+                      <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-[11px]">
+                        {t.updateError} : {updateError}
+                      </div>
                     )}
                   </div>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
-                    {t.contextMenuDesc}
-                  </span>
-                </div>
+                )}
               </div>
 
-              <div
-                className={`pt-1 space-y-2 transition-opacity ${
-                  contextMenuLoading ? 'opacity-70 pointer-events-none' : ''
-                }`}
-              >
-                <div className="relative">
-                  <select
-                    disabled={contextMenuLoading}
-                    value={!contextMenuEnabled || contextMenuMode === 'disabled' ? 'disabled' : contextMenuMode}
-                    onChange={(e) => setContextMenuMode(e.target.value as ContextMenuMode)}
-                    className="w-full py-2.5 px-3 pr-10 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-800/80 text-sm font-medium focus:outline-none focus:border-mint-500 transition-colors cursor-pointer appearance-none text-slate-800 dark:text-slate-100"
-                  >
-                    <option value="modern">
-                      {t.contextMenuModern} • {t.contextMenuBadgeRecommended}
-                    </option>
-                    <option value="classic">
-                      {t.contextMenuClassic}
-                    </option>
-                    <option value="disabled">
-                      {t.contextMenuDisabled}
-                    </option>
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                    <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
-                      <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                    </svg>
+              {/* Menu contextuel Windows */}
+              <div className="pt-2.5 space-y-1.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-mint-500/10 text-mint-500 flex items-center justify-center shrink-0">
+                      <MousePointer className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs block">
+                        {t.contextMenuLabel}
+                      </span>
+                      {contextMenuLoading && (
+                        <Loader2 className="w-3 h-3 animate-spin text-mint-500 shrink-0" />
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {(!contextMenuEnabled || contextMenuMode === 'disabled') && t.contextMenuDisabledDesc}
-                  {contextMenuEnabled && contextMenuMode === 'modern' && t.contextMenuModernDesc}
-                  {contextMenuEnabled && contextMenuMode === 'classic' && t.contextMenuClassicDesc}
-                </p>
-
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 italic block pt-0.5">
-                  {t.contextMenuRefreshNotice}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Automatic Watch Folder (Hot Folder) */}
-          <div className="space-y-3">
-            <h4 className="font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Folder className="w-3.5 h-3.5 text-mint-500" />
-                <span>{t.watchFolderSection}</span>
-              </span>
-              {watchFolderConfig.enabled && watchFolderConfig.watch_path && (
-                <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>{t.watchFolderStatusActive}</span>
-                </span>
-              )}
-            </h4>
-
-            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-4">
-              {/* Enable Switch */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0 pr-1">
-                  <div className="font-semibold text-slate-800 dark:text-slate-100 text-xs">
-                    {t.watchFolderEnable}
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                    {t.watchFolderDesc}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={watchFolderConfig.enabled}
-                  onClick={() =>
-                    setWatchFolderConfig({
-                      enabled: !watchFolderConfig.enabled,
-                    })
-                  }
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ml-2 ${
-                    watchFolderConfig.enabled ? 'bg-mint-500' : 'bg-slate-300 dark:bg-slate-700'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                      watchFolderConfig.enabled ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* Watched Directory Picker */}
-              <div className="space-y-1.5 pt-1 border-t border-slate-200 dark:border-slate-700/60">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  {t.watchFolderPath}
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    placeholder={t.watchFolderSelectPlaceholder}
-                    value={watchFolderConfig.watch_path || ''}
-                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSelectWatchFolder}
-                    className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
-                  >
-                    <Folder className="w-3.5 h-3.5 text-mint-500" />
-                    <span>{t.watchFolderBrowse}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Output Directory Picker */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  {t.watchFolderDestPath}
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    placeholder={t.watchFolderDefaultSubfolder}
-                    value={watchFolderConfig.output_path || ''}
-                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSelectWatchOutputFolder}
-                    className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
-                  >
-                    <Folder className="w-3.5 h-3.5 text-mint-500" />
-                    <span>{t.watchFolderBrowse}</span>
-                  </button>
-                  {watchFolderConfig.output_path && (
-                    <button
-                      type="button"
-                      onClick={() => setWatchFolderConfig({ output_path: null })}
-                      className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-red-50 hover:text-red-500 text-slate-400 cursor-pointer"
-                      title="Réinitialiser au sous-dossier par défaut"
+                  <div className="relative shrink-0">
+                    <select
+                      disabled={contextMenuLoading}
+                      value={!contextMenuEnabled || contextMenuMode === 'disabled' ? 'disabled' : contextMenuMode}
+                      onChange={(e) => setContextMenuMode(e.target.value as ContextMenuMode)}
+                      className="py-1.5 pl-3 pr-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-mint-500 transition-colors cursor-pointer appearance-none shadow-xs"
                     >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+                      <option value="modern">
+                        {t.contextMenuModern}
+                      </option>
+                      <option value="classic">
+                        {t.contextMenuClassic}
+                      </option>
+                      <option value="disabled">
+                        {t.contextMenuDisabled}
+                      </option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
+                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pl-9 space-y-0.5 text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
+                  <p>
+                    {(!contextMenuEnabled || contextMenuMode === 'disabled') && t.contextMenuDisabledDesc}
+                    {contextMenuEnabled && contextMenuMode === 'modern' && t.contextMenuModernDesc}
+                    {contextMenuEnabled && contextMenuMode === 'classic' && t.contextMenuClassicDesc}
+                  </p>
+
+                  {contextMenuEnabled && contextMenuMode !== 'disabled' && (
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 italic block">
+                      {t.contextMenuRefreshNotice}
+                    </span>
                   )}
                 </div>
               </div>
-
-              {/* Delete source toggle (drop box mode) */}
-              <label className="flex items-start gap-2.5 pt-2 border-t border-slate-200 dark:border-slate-700/60 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={watchFolderConfig.delete_source}
-                  onChange={(e) => setWatchFolderConfig({ delete_source: e.target.checked })}
-                  className="rounded text-mint-500 accent-mint-500 mt-0.5"
-                />
-                <div>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200 block text-xs">
-                    {t.watchFolderDeleteSource}
-                  </span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                    {t.watchFolderDeleteSourceDesc}
-                  </span>
-                </div>
-              </label>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <h4 className="font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Sliders className="w-3.5 h-3.5" />
+          {/* 2. Paramètres de traitement & Profils */}
+          <div className="space-y-1.5">
+            <h4 className="font-bold uppercase tracking-wider text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1.5 px-1">
+              <Sliders className="w-3 h-3 text-mint-500" />
               <span>{t.defaultTabSection}</span>
             </h4>
-            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
+            <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
+              {/* Onglet par défaut */}
               <div>
-                <span className="font-semibold block text-slate-800 dark:text-slate-200 mb-1">
+                <span className="font-semibold block text-slate-800 dark:text-slate-200 text-xs mb-1.5">
                   {t.defaultTabSection}
                 </span>
                 <div className="grid grid-cols-5 gap-1 text-[11px] font-semibold">
@@ -627,21 +597,22 @@ export const SettingsModal: React.FC = () => {
                     <button
                       key={item.id}
                       onClick={() => setDefaultImageTab(item.id as ImageConfigTab)}
-                      className={`py-2 px-1 rounded-xl border text-center transition-all cursor-pointer ${
+                      className={`py-1.5 px-1 rounded-xl border text-center transition-all cursor-pointer ${
                         defaultImageTab === item.id
-                          ? 'border-mint-500 bg-mint-500/15 text-mint-600 dark:text-mint-400 font-bold shadow-sm'
+                          ? 'border-mint-500 bg-mint-500/15 text-mint-600 dark:text-mint-400 font-bold shadow-xs'
                           : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                       }`}
                       title={item.label}
                     >
-                      <span className="truncate block tracking-tight">{item.label}</span>
+                      <span className="truncate block">{item.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-700/60">
-                <span className="font-semibold block text-slate-800 dark:text-slate-200 mb-1.5">
+              {/* Profil par défaut */}
+              <div className="pt-2.5 border-t border-slate-200/70 dark:border-slate-800/70">
+                <span className="font-semibold block text-slate-800 dark:text-slate-200 text-xs mb-1.5">
                   {t.defaultPresetSection}
                 </span>
 
@@ -662,7 +633,7 @@ export const SettingsModal: React.FC = () => {
                             onClick={() => setDefaultImagePreset(p.id)}
                             className={`py-1.5 px-2 rounded-xl border text-center transition-all cursor-pointer ${
                               isSelected
-                                ? 'border-mint-500 bg-mint-500/15 text-mint-600 dark:text-mint-400 font-bold shadow-sm'
+                                ? 'border-mint-500 bg-mint-500/15 text-mint-600 dark:text-mint-400 font-bold shadow-xs'
                                 : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                             }`}
                             title={p.name}
@@ -693,334 +664,361 @@ export const SettingsModal: React.FC = () => {
                       ].filter(Boolean).join(' • ');
 
                       return (
-                        <div className="mt-2.5 p-3 rounded-xl bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/60 flex items-center justify-between gap-3 text-[11px]">
+                        <div className="mt-2 p-2 px-3 rounded-xl bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/60 flex items-center justify-between gap-3 text-[11px]">
                           <span className="text-slate-600 dark:text-slate-300 font-medium truncate">
                             {summaryText}
                           </span>
-                          <div className="flex items-center gap-1.5 font-mono text-[10px] shrink-0">
-                            {/* 1. Retouche */}
-                            {(opt.rotation || 0) % 360 !== 0 && (
-                              <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 font-sans">
-                                {(opt.rotation || 0) % 360}°
-                              </span>
-                            )}
-                            {(opt.flip_horizontal || opt.flip_vertical) && (
-                              <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 font-sans">
-                                Miroir
-                              </span>
-                            )}
-                            {opt.grayscale && (
-                              <span className="px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-400 font-sans">
-                                N&B
-                              </span>
-                            )}
-
-                            {/* 2. Dimensions */}
-                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
-                              {formatResizeSummary(opt)}
-                            </span>
-
-                            {/* 3. Compression & Confidentialité */}
-                            <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold">
-                              {opt.compress === false ? t.noCompression : `Q${opt.quality}`}
-                            </span>
-                            {opt.metadata_policy === 'RemoveGps' && (
-                              <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 font-semibold">
-                                Sans GPS
-                              </span>
-                            )}
-                            {opt.metadata_policy === 'RemoveAll' && (
-                              <span className="px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-500 font-semibold">
-                                Sans EXIF
-                              </span>
-                            )}
-
-                            {/* 4. Format */}
-                            <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold">
-                              {opt.format === 'Original' ? t.keepOriginal : opt.format}
-                            </span>
-                          </div>
+                          <span className="px-1.5 py-0.5 rounded bg-mint-500/10 text-mint-600 dark:text-mint-400 font-semibold font-mono text-[10px] shrink-0">
+                            {opt.format === 'Original' ? t.keepOriginal : opt.format}
+                          </span>
                         </div>
                       );
                     })()}
                   </>
                 )}
 
-                <div className="pt-3 border-t border-slate-200 dark:border-slate-700/60 space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <FileJson className="w-3.5 h-3.5 text-mint-500 shrink-0" />
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
-                        {t.exportImportTitle}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1 shrink-0">
-                      <AlertTriangle className="w-3 h-3 shrink-0" />
-                      <span>{t.importOverwriteWarning}</span>
-                    </span>
+                {/* Profiles Export/Import */}
+                <div className="pt-2.5 mt-2.5 border-t border-slate-200/70 dark:border-slate-800/70 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                    <FileJson className="w-3.5 h-3.5 text-mint-500 shrink-0" />
+                    <span className="font-semibold">{t.exportImportTitle}</span>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={handleExport}
-                      className="py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700/50 flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+                      className="py-1 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer shadow-xs"
                     >
-                      <Download className="w-3.5 h-3.5 text-mint-500" />
+                      <Download className="w-3 h-3 text-mint-500" />
                       <span>{t.exportProfiles}</span>
                     </button>
-
                     <button
                       type="button"
                       onClick={handleTriggerImport}
-                      className="py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700/50 flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+                      className="py-1 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer shadow-xs"
                     >
-                      <Upload className="w-3.5 h-3.5 text-blue-500" />
+                      <Upload className="w-3 h-3 text-blue-500" />
                       <span>{t.importProfiles}</span>
                     </button>
                   </div>
-
-                  {toastMessage && (
-                    <div className="p-2 rounded-xl bg-mint-500/10 border border-mint-500/30 text-mint-700 dark:text-mint-300 text-[11px] font-medium flex items-center gap-1.5 animate-fadeIn">
-                      <Check className="w-3.5 h-3.5 text-mint-500 shrink-0" />
-                      <span>{toastMessage}</span>
-                    </div>
-                  )}
-
-                  {errorMessage && (
-                    <div className="p-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-[11px] font-medium flex items-center gap-1.5 animate-fadeIn">
-                      <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                      <span>{errorMessage}</span>
-                    </div>
-                  )}
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".json,application/json"
-                    onChange={handleFileInputChange}
-                    className="hidden"
-                  />
                 </div>
+
+                {toastMessage && (
+                  <div className="mt-2 p-2 rounded-xl bg-mint-500/10 border border-mint-500/30 text-mint-700 dark:text-mint-300 text-[11px] font-medium flex items-center gap-1.5 animate-fadeIn">
+                    <Check className="w-3.5 h-3.5 text-mint-500 shrink-0" />
+                    <span>{toastMessage}</span>
+                  </div>
+                )}
+
+                {errorMessage && (
+                  <div className="mt-2 p-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-[11px] font-medium flex items-center gap-1.5 animate-fadeIn">
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                />
               </div>
             </div>
           </div>
 
-          {/* Export location & destination section */}
-          <div className="space-y-3">
-            <h4 className="font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Folder className="w-3.5 h-3.5 text-mint-500" />
+          {/* 3. Emplacement d'exportation */}
+          <div className="space-y-1.5">
+            <h4 className="font-bold uppercase tracking-wider text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1.5 px-1">
+              <Folder className="w-3 h-3 text-mint-500" />
               <span>{t.exportLocationSection}</span>
             </h4>
-            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3.5 text-xs">
-              <div>
-                <span className="font-semibold block text-slate-800 dark:text-slate-200 mb-1.5">
-                  {t.defaultExportMode}
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setDestinationConfig({ mode: 'FileMintSubfolder' })}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      destinationConfig.mode === 'FileMintSubfolder'
-                        ? 'border-mint-500 bg-white dark:bg-slate-900 font-semibold text-mint-600 dark:text-mint-400 shadow-sm'
-                        : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
-                    }`}
-                  >
-                    <div className="font-medium text-xs">{t.modeSubfolder}</div>
-                    <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                      ./{destinationConfig.subfolder_name || 'FileMint'}/
-                    </div>
-                  </button>
+            <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2.5">
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDestinationConfig({ mode: 'FileMintSubfolder' })}
+                  className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                    destinationConfig.mode === 'FileMintSubfolder'
+                      ? 'border-mint-500 bg-white dark:bg-slate-900 font-semibold text-mint-600 dark:text-mint-400 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <div className="font-medium text-xs truncate">{t.modeSubfolder}</div>
+                  <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                    ./{destinationConfig.subfolder_name || 'FileMint'}/
+                  </div>
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setDestinationConfig({ mode: 'SameAsOriginal' })}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      destinationConfig.mode === 'SameAsOriginal'
-                        ? 'border-mint-500 bg-white dark:bg-slate-900 font-semibold text-mint-600 dark:text-mint-400 shadow-sm'
-                        : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
-                    }`}
-                  >
-                    <div className="font-medium text-xs">{t.modeSame}</div>
-                    <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                      {t.modeSameDesc}
-                    </div>
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => setDestinationConfig({ mode: 'SameAsOriginal' })}
+                  className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                    destinationConfig.mode === 'SameAsOriginal'
+                      ? 'border-mint-500 bg-white dark:bg-slate-900 font-semibold text-mint-600 dark:text-mint-400 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <div className="font-medium text-xs truncate">{t.modeSame}</div>
+                  <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                    {t.modeSameDesc}
+                  </div>
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={handleSelectDefaultCustomFolder}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      typeof destinationConfig.mode === 'object'
-                        ? 'border-mint-500 bg-white dark:bg-slate-900 font-semibold text-mint-600 dark:text-mint-400 shadow-sm'
-                        : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
-                    }`}
-                  >
-                    <div className="font-medium text-xs">{t.modeCustom}</div>
-                    <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                      {typeof destinationConfig.mode === 'object' ? destinationConfig.mode.Custom : t.chooseCustom}
-                    </div>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleSelectDefaultCustomFolder}
+                  className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                    typeof destinationConfig.mode === 'object'
+                      ? 'border-mint-500 bg-white dark:bg-slate-900 font-semibold text-mint-600 dark:text-mint-400 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <div className="font-medium text-xs truncate">{t.modeCustom}</div>
+                  <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                    {typeof destinationConfig.mode === 'object' ? destinationConfig.mode.Custom : t.chooseCustom}
+                  </div>
+                </button>
               </div>
 
-              {/* Relative subfolder name setting */}
-              <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60">
-                <label className="font-semibold block text-slate-800 dark:text-slate-200 mb-1">
-                  {t.defaultSubfolderName}
-                </label>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1 max-w-sm">
+              {/* Subfolder name if FileMintSubfolder mode is active */}
+              {destinationConfig.mode === 'FileMintSubfolder' && (
+                <div className="pt-2 border-t border-slate-200/70 dark:border-slate-800/70 flex items-center justify-between gap-2">
+                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                    {t.defaultSubfolderName} :
+                  </label>
+                  <div className="flex items-center gap-2 max-w-xs">
                     <input
                       type="text"
                       value={destinationConfig.subfolder_name || 'FileMint'}
                       onChange={(e) => setDestinationConfig({ subfolder_name: e.target.value })}
                       placeholder={t.subfolderNamePlaceholder}
-                      className="w-full px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-mint-500"
+                      className="w-36 px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-mint-500"
                     />
-                  </div>
-                  <span className="text-[11px] text-slate-400 font-mono">
-                    ./{destinationConfig.subfolder_name || 'FileMint'}/
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <h4 className="font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5" />
-              <span>{t.updatesSection}</span>
-            </h4>
-            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="font-semibold block text-slate-800 dark:text-slate-200">
-                    {t.updateCheckLabel}
-                  </span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
-                    {t.updateCheckDesc}
-                  </span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={updateCheckEnabled}
-                  onChange={(e) => setUpdateCheckEnabled(e.target.checked)}
-                  className="w-4 h-4 rounded text-mint-500 accent-mint-500 cursor-pointer"
-                />
-              </div>
-
-              {updateInfo?.has_update && (
-                <div className="pt-3 border-t border-slate-200 dark:border-slate-700/60 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-mint-500 font-semibold text-xs flex items-center gap-1.5">
-                      <Check className="w-3.5 h-3.5" />
-                      <span>{t.updateAvailable} (v{updateInfo.latest_version})</span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      ./{destinationConfig.subfolder_name || 'FileMint'}/
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => openUrl(updateInfo.release_notes_url)}
-                      className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
-                    >
-                      <span>{t.updateReleaseNotes}</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </button>
                   </div>
-
-                  {updateDownloading ? (
-                    <div className="space-y-1.5 p-3 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
-                      <div className="flex justify-between items-center text-[11px]">
-                        <span className="text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1.5">
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-mint-500" />
-                          <span>{updateProgress >= 100 ? t.updateInstalling : t.updateDownloading}</span>
-                        </span>
-                        <span className="font-mono font-bold text-mint-500">{updateProgress}%</span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                        <div
-                          className="h-full bg-mint-500 transition-all duration-200 rounded-full"
-                          style={{ width: `${updateProgress}%` }}
-                        />
-                      </div>
-                    </div>
-                  ) : updateInfo.download_url ? (
-                    <button
-                      type="button"
-                      onClick={() => installUpdate()}
-                      className="w-full py-2 px-3 rounded-xl bg-mint-500 hover:bg-mint-600 text-slate-950 font-bold text-xs shadow-md shadow-mint-500/20 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>{t.updateDownloadAndInstall} (v{updateInfo.latest_version})</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => openUrl(updateInfo.release_notes_url)}
-                      className="w-full py-2 px-3 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>{t.openDownloadPage}</span>
-                    </button>
-                  )}
-
-                  {updateError && (
-                    <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-[11px]">
-                      {t.updateError} : {updateError}
-                    </div>
-                  )}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-mint-500/5 border border-mint-500/20 text-slate-600 dark:text-slate-300 space-y-2">
-            <span className="font-bold text-mint-600 dark:text-mint-400 block">
-              {t.privacySection}
-            </span>
-            <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-              {t.privacyP1}
-            </p>
-            <ul className="text-[11px] space-y-1 list-disc list-inside text-slate-500 dark:text-slate-400">
-              <li>{t.privacyItem1}</li>
-              <li>{t.privacyItem2}</li>
-              <li>{t.privacyItem3}</li>
-            </ul>
+          {/* 4. Dossier de surveillance automatique */}
+          <div className="space-y-1.5">
+            <h4 className="font-bold uppercase tracking-wider text-[10px] text-slate-400 dark:text-slate-500 flex items-center justify-between px-1">
+              <span className="flex items-center gap-1.5">
+                <Folder className="w-3 h-3 text-mint-500" />
+                <span>{t.watchFolderSection}</span>
+              </span>
+              {watchFolderConfig.enabled && watchFolderConfig.watch_path && (
+                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>{t.watchFolderStatusActive}</span>
+                </span>
+              )}
+            </h4>
+
+            <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2.5">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 pr-1">
+                  <span className="font-semibold text-slate-800 dark:text-slate-100 text-xs block">
+                    {t.watchFolderEnable}
+                  </span>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                    {t.watchFolderDesc}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={watchFolderConfig.enabled}
+                  onClick={() =>
+                    setWatchFolderConfig({
+                      enabled: !watchFolderConfig.enabled,
+                    })
+                  }
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    watchFolderConfig.enabled ? 'bg-mint-500' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                      watchFolderConfig.enabled ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="pt-2 border-t border-slate-200/70 dark:border-slate-800/70 space-y-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    {t.watchFolderPath}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      placeholder={t.watchFolderSelectPlaceholder}
+                      value={watchFolderConfig.watch_path || ''}
+                      className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSelectWatchFolder}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                    >
+                      <Folder className="w-3.5 h-3.5 text-mint-500" />
+                      <span>{t.watchFolderBrowse}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    {t.watchFolderDestPath}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      placeholder={t.watchFolderDefaultSubfolder}
+                      value={watchFolderConfig.output_path || ''}
+                      className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSelectWatchOutputFolder}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                    >
+                      <Folder className="w-3.5 h-3.5 text-mint-500" />
+                      <span>{t.watchFolderBrowse}</span>
+                    </button>
+                    {watchFolderConfig.output_path && (
+                      <button
+                        type="button"
+                        onClick={() => setWatchFolderConfig({ output_path: null })}
+                        className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-red-50 hover:text-red-500 text-slate-400 cursor-pointer"
+                        title="Réinitialiser au sous-dossier par défaut"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Profil d'optimisation appliqué */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      {t.watchFolderProfileLabel}
+                    </label>
+                    {(() => {
+                      const activeProfileId = watchFolderConfig.profile_id || defaultImagePreset;
+                      const activeProfile = customProfiles.find((p) => p.id === activeProfileId) || customProfiles[0];
+                      if (!activeProfile) return null;
+                      return (
+                        <span className="text-[10px] font-mono text-mint-600 dark:text-mint-400 font-semibold truncate max-w-[260px]">
+                          {formatResizeSummary(activeProfile.options)} • Q{activeProfile.options.quality} • {activeProfile.options.format}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  <div className="relative">
+                    <select
+                      value={watchFolderConfig.profile_id || ''}
+                      onChange={(e) => {
+                        const newProfileId = e.target.value || null;
+                        const targetProfile = customProfiles.find((p) => p.id === (newProfileId || defaultImagePreset)) || customProfiles[0];
+                        setWatchFolderConfig({
+                          profile_id: newProfileId,
+                          image_options: targetProfile ? targetProfile.options : undefined,
+                        });
+                      }}
+                      className="w-full py-1.5 px-3 pr-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-800 dark:text-slate-100 text-xs font-medium cursor-pointer appearance-none focus:outline-none focus:border-mint-500"
+                    >
+                      <option value="">
+                        {t.watchFolderProfileDefault} ({customProfiles.find((p) => p.id === defaultImagePreset)?.name || 'Web'})
+                      </option>
+                      {customProfiles.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
+                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2.5 pt-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={watchFolderConfig.delete_source}
+                    onChange={(e) => setWatchFolderConfig({ delete_source: e.target.checked })}
+                    className="rounded text-mint-500 accent-mint-500"
+                  />
+                  <span className="text-[11px] text-slate-600 dark:text-slate-400">
+                    <strong className="text-slate-700 dark:text-slate-200">{t.watchFolderDeleteSource}</strong> — {t.watchFolderDeleteSourceDesc}
+                  </span>
+                </label>
+              </div>
+            </div>
           </div>
 
-          {/* Discreet Lifetime Statistics in Text Mode */}
-          <div className="pt-2 px-1 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-medium text-slate-600 dark:text-slate-300">
-                {t.lifetimeStatsTitle} :
-              </span>
-              <span>
-                <strong className="text-mint-600 dark:text-mint-400 font-mono font-semibold">
-                  {formatFileSize(lifetimeSavedBytes, language)}
-                </strong>{' '}
-                {t.lifetimeSpaceSaved.toLowerCase()} •{' '}
-                <strong className="text-slate-700 dark:text-slate-200 font-mono font-semibold">
-                  {lifetimeFilesCount}
-                </strong>{' '}
-                {t.lifetimeFilesOptimized.toLowerCase()}
-              </span>
+          {/* 5. Confidentialité & Statistiques d'impact */}
+          <div className="space-y-1.5 pt-0.5">
+            <div className="p-3 rounded-2xl bg-mint-500/5 border border-mint-500/20 text-slate-600 dark:text-slate-300 flex items-start gap-2.5 text-[11px]">
+              <Shield className="w-4 h-4 text-mint-500 shrink-0 mt-0.5" />
+              <div className="min-w-0 leading-relaxed space-y-0.5">
+                <span className="font-semibold text-slate-800 dark:text-slate-100 block text-xs">
+                  {t.privacySection}
+                </span>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {t.privacyItem1} • {t.privacyItem2}
+                </p>
+              </div>
             </div>
 
-            {lifetimeFilesCount > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm(t.resetStatsConfirm)) {
-                    resetLifetimeStats();
-                  }
-                }}
-                className="text-[10px] text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors flex items-center gap-1 cursor-pointer shrink-0 ml-2"
-                title={t.resetStats}
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span>{t.resetStats}</span>
-              </button>
-            )}
+            {/* Statistiques globales textuelles discrètes */}
+            <div className="px-2 py-0.5 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-medium text-slate-600 dark:text-slate-300">
+                  {t.lifetimeStatsTitle} :
+                </span>
+                <span>
+                  <strong className="text-mint-600 dark:text-mint-400 font-mono font-semibold">
+                    {formatFileSize(lifetimeSavedBytes, language)}
+                  </strong>{' '}
+                  {t.lifetimeSpaceSaved.toLowerCase()} •{' '}
+                  <strong className="text-slate-700 dark:text-slate-200 font-mono font-semibold">
+                    {lifetimeFilesCount}
+                  </strong>{' '}
+                  {t.lifetimeFilesOptimized.toLowerCase()}
+                </span>
+              </div>
+
+              {lifetimeFilesCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(t.resetStatsConfirm)) {
+                      resetLifetimeStats();
+                    }
+                  }}
+                  className="text-[10px] text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors flex items-center gap-1 cursor-pointer shrink-0 ml-2"
+                  title={t.resetStats}
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>{t.resetStats}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

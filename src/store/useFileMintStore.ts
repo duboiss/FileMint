@@ -229,10 +229,12 @@ const getInitialPresetId = (profiles: CustomProfile[]): string => {
 
 const getInitialContextMenuMode = (): ContextMenuMode => {
   try {
-    return (localStorage.getItem('filemint_context_menu_mode') as ContextMenuMode) || 'modern';
-  } catch {
-    return 'modern';
-  }
+    const saved = localStorage.getItem('filemint_context_menu_mode') as ContextMenuMode;
+    if (saved === 'disabled' || saved === 'classic' || saved === 'modern') {
+      return saved;
+    }
+  } catch {}
+  return 'modern';
 };
 
 const getInitialNamingPattern = (): string => {
@@ -724,6 +726,13 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
 
     setWatchFolderConfig: async (configUpdate: Partial<WatchFolderConfig>) => {
       const merged = { ...get().watchFolderConfig, ...configUpdate };
+
+      // Resolve effective image options for the watch folder
+      const profileId = merged.profile_id || get().defaultImagePreset;
+      const profile = get().customProfiles.find((p) => p.id === profileId) || get().customProfiles[0];
+      const imageOptions = configUpdate.image_options || (profile ? profile.options : get().imageOptions);
+      merged.image_options = imageOptions;
+
       saveWatchFolderConfigToStorage(merged);
       set({ watchFolderConfig: merged });
 
@@ -732,7 +741,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           await invoke('set_watch_folder_config', {
             config: {
               ...merged,
-              image_options: get().imageOptions,
+              image_options: imageOptions,
               pdf_options: get().pdfOptions,
             },
           });
@@ -779,8 +788,9 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         console.warn('Erreur sauvegarde langue :', err);
       }
       set({ language: lang, t: translations[lang] });
-      if (get().contextMenuEnabled && isTauriEnv()) {
-        get().toggleContextMenu(true);
+      // Only refresh classic context menu labels if classic mode is currently enabled
+      if (get().contextMenuEnabled && get().contextMenuMode === 'classic' && isTauriEnv()) {
+        get().toggleContextMenu(true, 'classic');
       }
     },
 
@@ -822,6 +832,12 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       try {
         localStorage.setItem('filemint_default_preset', presetId);
       } catch {}
+
+      // Keep watch folder in sync if set to follow application default
+      const watchCfg = get().watchFolderConfig;
+      if (!watchCfg.profile_id && profile && watchCfg.enabled && isTauriEnv()) {
+        get().setWatchFolderConfig({ image_options: profile.options });
+      }
     },
 
     addFiles: async (paths: string[]) => {
@@ -1411,11 +1427,28 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
     initSettings: async () => {
       if (!isTauriEnv()) return;
       try {
+        const savedMode = (localStorage.getItem('filemint_context_menu_mode') as ContextMenuMode) || null;
         const res = await invoke<ContextMenuStatus>('get_windows_context_menu_status');
-        set({
-          contextMenuEnabled: res.enabled,
-          contextMenuMode: (res.mode as ContextMenuMode) || get().contextMenuMode,
-        });
+
+        if (savedMode === 'disabled') {
+          // If user explicitly configured disabled, enforce it and clean up any stray registration
+          if (res.enabled) {
+            invoke('toggle_windows_context_menu', {
+              enable: false,
+              mode: 'disabled',
+              lang: get().language,
+            }).catch(() => {});
+          }
+          set({
+            contextMenuEnabled: false,
+            contextMenuMode: 'disabled',
+          });
+        } else {
+          set({
+            contextMenuEnabled: res.enabled,
+            contextMenuMode: (res.mode as ContextMenuMode) || savedMode || get().contextMenuMode,
+          });
+        }
       } catch {
         // Silently ignore if not running in Windows shell environment
       }
@@ -1423,10 +1456,14 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       try {
         const watchCfg = get().watchFolderConfig;
         if (watchCfg.enabled && watchCfg.watch_path) {
+          const profileId = watchCfg.profile_id || get().defaultImagePreset;
+          const profile = get().customProfiles.find((p) => p.id === profileId) || get().customProfiles[0];
+          const imageOptions = watchCfg.image_options || (profile ? profile.options : get().imageOptions);
+
           invoke('set_watch_folder_config', {
             config: {
               ...watchCfg,
-              image_options: get().imageOptions,
+              image_options: imageOptions,
               pdf_options: get().pdfOptions,
             },
           }).catch(() => {});

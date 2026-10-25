@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useFileMintStore } from '../store/useFileMintStore';
-import { getSystemLanguage, Language } from '../i18n/translations';
+import { getSystemLanguage, Language, translations } from '../i18n/translations';
 import { ThemeMode, ContextMenuMode } from '../types';
 import {
   Languages,
@@ -16,7 +16,6 @@ export const WelcomeLanguageModal: React.FC = () => {
     showWelcomeModal,
     setWelcomeModalOpen,
     language,
-    setLanguage,
     theme,
     setTheme,
     contextMenuMode,
@@ -28,6 +27,7 @@ export const WelcomeLanguageModal: React.FC = () => {
   const [selectedContextMenu, setSelectedContextMenu] = useState<ContextMenuMode>(
     contextMenuMode === 'disabled' ? 'disabled' : contextMenuMode || 'modern'
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!showWelcomeModal) return null;
 
@@ -36,11 +36,26 @@ export const WelcomeLanguageModal: React.FC = () => {
     setTheme(mode);
   };
 
-  const handleConfirm = () => {
-    setLanguage(selectedLang);
-    setTheme(selectedTheme);
-    setContextMenuMode(selectedContextMenu);
-    setWelcomeModalOpen(false);
+  const handleConfirm = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      setTheme(selectedTheme);
+      // Persist language directly into localStorage and update store
+      try {
+        localStorage.setItem('filemint_language', selectedLang);
+      } catch {}
+      useFileMintStore.setState({ language: selectedLang, t: translations[selectedLang] });
+
+      // Explicitly apply the chosen context menu mode and wait for completion
+      await setContextMenuMode(selectedContextMenu);
+      setWelcomeModalOpen(false);
+    } catch (err) {
+      console.error('Erreur configuration initiale :', err);
+      setWelcomeModalOpen(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -203,10 +218,25 @@ export const WelcomeLanguageModal: React.FC = () => {
         {/* 5. Confirm */}
         <button
           onClick={handleConfirm}
-          className="w-full py-2.5 rounded-xl bg-mint-500 hover:bg-mint-600 text-slate-950 font-bold text-sm shadow-lg shadow-mint-500/25 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+          disabled={isSubmitting}
+          className={`w-full py-2.5 rounded-xl bg-mint-500 hover:bg-mint-600 text-slate-950 font-bold text-sm shadow-lg shadow-mint-500/25 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer ${
+            isSubmitting ? 'opacity-75 pointer-events-none' : ''
+          }`}
         >
-          <Zap className="w-4 h-4 fill-slate-950" />
-          <span>{selectedLang === 'fr' ? 'Commencer' : 'Get Started'}</span>
+          {isSubmitting ? (
+            <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Zap className="w-4 h-4 fill-slate-950" />
+          )}
+          <span>
+            {isSubmitting
+              ? selectedLang === 'fr'
+                ? 'Configuration en cours...'
+                : 'Setting up...'
+              : selectedLang === 'fr'
+              ? 'Commencer'
+              : 'Get Started'}
+          </span>
         </button>
       </div>
     </div>

@@ -418,8 +418,7 @@ mod tests {
         };
 
         let json = serde_json::to_string(&rule).expect("Serialize error");
-        let deserialized: WatchFolderRule =
-            serde_json::from_str(&json).expect("Deserialize error");
+        let deserialized: WatchFolderRule = serde_json::from_str(&json).expect("Deserialize error");
         assert_eq!(deserialized.id, "rule_1");
         assert_eq!(deserialized.name, Some("Photos Dropbox".to_string()));
         assert!(deserialized.enabled);
@@ -444,10 +443,8 @@ mod tests {
         };
 
         let json = serde_json::to_string(&legacy).expect("Serialize error");
-        let parsed: WatchFolderConfig =
-            serde_json::from_str(&json).expect("Deserialize error");
+        let parsed: WatchFolderConfig = serde_json::from_str(&json).expect("Deserialize error");
         assert!(parsed.enabled);
         assert_eq!(parsed.watch_path, "C:\\LegacyWatch");
     }
 }
-

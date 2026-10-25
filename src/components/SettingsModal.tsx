@@ -5,6 +5,7 @@ import {
   formatFileSize,
   createProfilesExportJson,
   validateAndSanitizeProfiles,
+  isTauriEnv,
 } from '../store/useFileMintStore';
 import {
   X,
@@ -24,6 +25,9 @@ import {
   AlertTriangle,
   FileJson,
   Folder,
+  FolderPlus,
+  Plus,
+  Trash2,
   Loader2,
   RotateCcw,
 } from 'lucide-react';
@@ -64,8 +68,11 @@ export const SettingsModal: React.FC = () => {
     lifetimeSavedBytes,
     lifetimeFilesCount,
     resetLifetimeStats,
-    watchFolderConfig,
-    setWatchFolderConfig,
+    watchFolders,
+    addWatchFolder,
+    updateWatchFolder,
+    removeWatchFolder,
+    toggleWatchFolder,
   } = useFileMintStore();
 
   const handleSelectDefaultCustomFolder = async () => {
@@ -82,31 +89,51 @@ export const SettingsModal: React.FC = () => {
     }
   };
 
-  const handleSelectWatchFolder = async () => {
+  const handleSelectWatchFolder = async (ruleId: string) => {
     try {
       const selected = await openDialog({
         directory: true,
         multiple: false,
       });
       if (selected && typeof selected === 'string') {
-        setWatchFolderConfig({ watch_path: selected, enabled: true });
+        const isDuplicate = watchFolders.some(
+          (r) => r.id !== ruleId && r.watch_path.toLowerCase() === selected.toLowerCase()
+        );
+        if (isDuplicate) {
+          alert(t.duplicateWatchFolderAlert);
+          return;
+        }
+        const folderName = selected.split(/[\\/]/).filter(Boolean).pop() || '';
+        const currentRule = watchFolders.find((r) => r.id === ruleId);
+        updateWatchFolder(ruleId, {
+          watch_path: selected,
+          enabled: true,
+          name: currentRule?.name || folderName,
+        });
       }
     } catch (err) {
       console.error(err);
     }
   };
 
-  const handleSelectWatchOutputFolder = async () => {
+  const handleSelectWatchOutputFolder = async (ruleId: string) => {
     try {
       const selected = await openDialog({
         directory: true,
         multiple: false,
       });
       if (selected && typeof selected === 'string') {
-        setWatchFolderConfig({ output_path: selected });
+        updateWatchFolder(ruleId, { output_path: selected });
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleAddNewWatchFolder = async () => {
+    const newId = await addWatchFolder();
+    if (isTauriEnv()) {
+      handleSelectWatchFolder(newId);
     }
   };
 
@@ -805,170 +832,269 @@ export const SettingsModal: React.FC = () => {
             </div>
           </div>
 
-          {/* 4. Dossier de surveillance automatique */}
+          {/* 4. Dossiers de surveillance automatique */}
           <div className="space-y-1.5">
-            <h4 className="font-bold uppercase tracking-wider text-[10px] text-slate-400 dark:text-slate-500 flex items-center justify-between px-1">
-              <span className="flex items-center gap-1.5">
+            <div className="flex items-center justify-between px-1">
+              <h4 className="font-bold uppercase tracking-wider text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
                 <Folder className="w-3 h-3 text-mint-500" />
-                <span>{t.watchFolderSection}</span>
-              </span>
-              {watchFolderConfig.enabled && watchFolderConfig.watch_path && (
-                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>{t.watchFolderStatusActive}</span>
-                </span>
-              )}
-            </h4>
-
-            <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2.5">
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0 pr-1">
-                  <span className="font-semibold text-slate-800 dark:text-slate-100 text-xs block">
-                    {t.watchFolderEnable}
+                <span>{t.watchFoldersSection}</span>
+              </h4>
+              <div className="flex items-center gap-2">
+                {watchFolders.filter((f) => f.enabled && f.watch_path).length > 0 && (
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>
+                      {watchFolders.filter((f) => f.enabled && f.watch_path).length}{' '}
+                      {watchFolders.filter((f) => f.enabled && f.watch_path).length > 1
+                        ? t.watchFoldersActivePlural
+                        : t.watchFoldersActiveSingular}
+                    </span>
                   </span>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                    {t.watchFolderDesc}
-                  </p>
-                </div>
-
+                )}
                 <button
                   type="button"
-                  role="switch"
-                  aria-checked={watchFolderConfig.enabled}
-                  onClick={() =>
-                    setWatchFolderConfig({
-                      enabled: !watchFolderConfig.enabled,
-                    })
-                  }
-                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    watchFolderConfig.enabled ? 'bg-mint-500' : 'bg-slate-300 dark:bg-slate-700'
-                  }`}
+                  onClick={handleAddNewWatchFolder}
+                  className="px-2 py-0.5 rounded-lg border border-mint-500/30 hover:border-mint-500 hover:bg-mint-500/10 text-mint-600 dark:text-mint-400 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                 >
-                  <span
-                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                      watchFolderConfig.enabled ? 'translate-x-4' : 'translate-x-0'
-                    }`}
-                  />
+                  <Plus className="w-3 h-3" />
+                  <span>{t.addWatchFolder}</span>
                 </button>
               </div>
-
-              <div className="pt-2 border-t border-slate-200/70 dark:border-slate-800/70 space-y-2">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                    {t.watchFolderPath}
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      placeholder={t.watchFolderSelectPlaceholder}
-                      value={watchFolderConfig.watch_path || ''}
-                      className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSelectWatchFolder}
-                      className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
-                    >
-                      <Folder className="w-3.5 h-3.5 text-mint-500" />
-                      <span>{t.watchFolderBrowse}</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                    {t.watchFolderDestPath}
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      placeholder={t.watchFolderDefaultSubfolder}
-                      value={watchFolderConfig.output_path || ''}
-                      className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSelectWatchOutputFolder}
-                      className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
-                    >
-                      <Folder className="w-3.5 h-3.5 text-mint-500" />
-                      <span>{t.watchFolderBrowse}</span>
-                    </button>
-                    {watchFolderConfig.output_path && (
-                      <button
-                        type="button"
-                        onClick={() => setWatchFolderConfig({ output_path: null })}
-                        className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-red-50 hover:text-red-500 text-slate-400 cursor-pointer"
-                        title="Réinitialiser au sous-dossier par défaut"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Profil d'optimisation appliqué */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      {t.watchFolderProfileLabel}
-                    </label>
-                    {(() => {
-                      const activeProfileId = watchFolderConfig.profile_id || defaultImagePreset;
-                      const activeProfile = customProfiles.find((p) => p.id === activeProfileId) || customProfiles[0];
-                      if (!activeProfile) return null;
-                      return (
-                        <span className="text-[10px] font-mono text-mint-600 dark:text-mint-400 font-semibold truncate max-w-[260px]">
-                          {formatResizeSummary(activeProfile.options)} • Q{activeProfile.options.quality} • {activeProfile.options.format}
-                        </span>
-                      );
-                    })()}
-                  </div>
-                  <div className="relative">
-                    <select
-                      value={watchFolderConfig.profile_id || ''}
-                      onChange={(e) => {
-                        const newProfileId = e.target.value || null;
-                        const targetProfile = customProfiles.find((p) => p.id === (newProfileId || defaultImagePreset)) || customProfiles[0];
-                        setWatchFolderConfig({
-                          profile_id: newProfileId,
-                          image_options: targetProfile ? targetProfile.options : undefined,
-                        });
-                      }}
-                      className="w-full py-1.5 px-3 pr-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-800 dark:text-slate-100 text-xs font-medium cursor-pointer appearance-none focus:outline-none focus:border-mint-500"
-                    >
-                      <option value="">
-                        {t.watchFolderProfileDefault} ({customProfiles.find((p) => p.id === defaultImagePreset)?.name || 'Web'})
-                      </option>
-                      {customProfiles.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
-                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
-                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                <label className="flex items-center gap-2.5 pt-1 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={watchFolderConfig.delete_source}
-                    onChange={(e) => setWatchFolderConfig({ delete_source: e.target.checked })}
-                    className="rounded text-mint-500 accent-mint-500"
-                  />
-                  <span className="text-[11px] text-slate-600 dark:text-slate-400">
-                    <strong className="text-slate-700 dark:text-slate-200">{t.watchFolderDeleteSource}</strong> — {t.watchFolderDeleteSourceDesc}
-                  </span>
-                </label>
-              </div>
             </div>
+
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 px-1 leading-snug">
+              {t.watchFoldersDesc}
+            </p>
+
+            {watchFolders.length === 0 ? (
+              <div className="p-4 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 text-center space-y-2">
+                <FolderPlus className="w-7 h-7 text-mint-500/70 mx-auto" />
+                <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
+                  {t.watchFolderEmptyDesc}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleAddNewWatchFolder}
+                  className="mt-1 px-3 py-1.5 rounded-xl bg-mint-500 hover:bg-mint-600 text-white font-semibold text-xs transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{t.addWatchFolder}</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {watchFolders.map((rule, index) => {
+                  const activeProfileId = rule.profile_id || defaultImagePreset;
+                  const activeProfile =
+                    customProfiles.find((p) => p.id === activeProfileId) ||
+                    customProfiles[0];
+
+                  return (
+                    <div
+                      key={rule.id}
+                      className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2.5 transition-all"
+                    >
+                      {/* Card Header */}
+                      <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200/70 dark:border-slate-800/70">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 shrink-0">
+                            #{index + 1}
+                          </span>
+                          <input
+                            type="text"
+                            value={rule.name || ''}
+                            onChange={(e) =>
+                              updateWatchFolder(rule.id, { name: e.target.value })
+                            }
+                            placeholder={
+                              rule.watch_path
+                                ? rule.watch_path.split(/[\\/]/).filter(Boolean).pop() || `Dossier ${index + 1}`
+                                : `Dossier ${index + 1}`
+                            }
+                            className="bg-transparent font-semibold text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-b focus:border-mint-500 max-w-xs truncate"
+                          />
+                          {rule.enabled && rule.watch_path && (
+                            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold shrink-0">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              <span className="hidden sm:inline">Actif</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {/* Enable toggle switch for this rule */}
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={rule.enabled}
+                            onClick={() => toggleWatchFolder(rule.id)}
+                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                              rule.enabled
+                                ? 'bg-mint-500'
+                                : 'bg-slate-300 dark:bg-slate-700'
+                            }`}
+                            title={rule.enabled ? 'Désactiver ce dossier surveillé' : 'Activer ce dossier surveillé'}
+                          >
+                            <span
+                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                                rule.enabled ? 'translate-x-4' : 'translate-x-0'
+                              }`}
+                            />
+                          </button>
+
+                          {/* Delete rule button */}
+                          <button
+                            type="button"
+                            onClick={() => removeWatchFolder(rule.id)}
+                            className="p-1 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+                            title={t.deleteWatchFolder}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Card Body */}
+                      <div className="space-y-2">
+                        {/* Source folder */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                            {t.watchFolderPath}
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              readOnly
+                              placeholder={t.watchFolderSelectPlaceholder}
+                              value={rule.watch_path || ''}
+                              className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSelectWatchFolder(rule.id)}
+                              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                            >
+                              <Folder className="w-3.5 h-3.5 text-mint-500" />
+                              <span>{t.watchFolderBrowse}</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Destination folder */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                            {t.watchFolderDestPath}
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              readOnly
+                              placeholder={t.watchFolderDefaultSubfolder}
+                              value={rule.output_path || ''}
+                              className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSelectWatchOutputFolder(rule.id)}
+                              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                            >
+                              <Folder className="w-3.5 h-3.5 text-mint-500" />
+                              <span>{t.watchFolderBrowse}</span>
+                            </button>
+                            {rule.output_path && (
+                              <button
+                                type="button"
+                                onClick={() => updateWatchFolder(rule.id, { output_path: null })}
+                                className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-red-50 hover:text-red-500 text-slate-400 cursor-pointer"
+                                title={t.watchFolderResetDest}
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Profil d'optimisation appliqué */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                              {t.watchFolderProfileLabel}
+                            </label>
+                            {activeProfile && (
+                              <span className="text-[10px] font-mono text-mint-600 dark:text-mint-400 font-semibold truncate max-w-[260px]">
+                                {formatResizeSummary(activeProfile.options)} • Q{activeProfile.options.quality} • {activeProfile.options.format}
+                              </span>
+                            )}
+                          </div>
+                          <div className="relative">
+                            <select
+                              value={rule.profile_id || ''}
+                              onChange={(e) => {
+                                const newProfileId = e.target.value || null;
+                                const targetProfile =
+                                  customProfiles.find(
+                                    (p) => p.id === (newProfileId || defaultImagePreset)
+                                  ) || customProfiles[0];
+                                updateWatchFolder(rule.id, {
+                                  profile_id: newProfileId,
+                                  image_options: targetProfile ? targetProfile.options : undefined,
+                                });
+                              }}
+                              className="w-full py-1.5 px-3 pr-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-800 dark:text-slate-100 text-xs font-medium cursor-pointer appearance-none focus:outline-none focus:border-mint-500"
+                            >
+                              <option value="">
+                                {t.watchFolderProfileDefault} (
+                                {customProfiles.find((p) => p.id === defaultImagePreset)?.name ||
+                                  'Web'}
+                                )
+                              </option>
+                              {customProfiles.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
+                                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Drop box mode checkbox */}
+                        <label className="flex items-center gap-2.5 pt-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={rule.delete_source}
+                            onChange={(e) =>
+                              updateWatchFolder(rule.id, { delete_source: e.target.checked })
+                            }
+                            className="rounded text-mint-500 accent-mint-500"
+                          />
+                          <span className="text-[11px] text-slate-600 dark:text-slate-400">
+                            <strong className="text-slate-700 dark:text-slate-200">
+                              {t.watchFolderDeleteSource}
+                            </strong>{' '}
+                            — {t.watchFolderDeleteSourceDesc}
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Button to add another folder at bottom of list */}
+                <button
+                  type="button"
+                  onClick={handleAddNewWatchFolder}
+                  className="w-full py-2 px-3 rounded-xl border border-dashed border-mint-500/40 hover:border-mint-500 hover:bg-mint-500/5 text-mint-600 dark:text-mint-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{t.addWatchFolder}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* 5. Confidentialité & Statistiques d'impact */}

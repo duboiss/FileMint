@@ -7,7 +7,7 @@ use crate::engine::batch_runner::{BatchRequest, BatchRunner, BatchSummary};
 use crate::engine::file_manager;
 use crate::engine::image_processor::{self, ImageTransformOptions, PreviewResult};
 use crate::engine::update_checker::{self, UpdateInfo};
-use crate::engine::watch_folder::{WatchFolderConfig, WatchFolderManager};
+use crate::engine::watch_folder::{WatchFolderConfig, WatchFolderManager, WatchFolderRule};
 use crate::shell::windows_registry;
 
 pub struct AppState {
@@ -186,8 +186,23 @@ pub fn get_cli_files(state: State<'_, AppState>) -> Vec<String> {
 }
 
 #[tauri::command]
+pub fn get_watch_folder_rules(state: State<'_, AppState>) -> Vec<WatchFolderRule> {
+    state.watch_manager.get_rules()
+}
+
+#[tauri::command]
+pub fn set_watch_folder_rules(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    rules: Vec<WatchFolderRule>,
+) -> Result<(), String> {
+    state.watch_manager.update_rules(app, rules);
+    Ok(())
+}
+
+#[tauri::command]
 pub fn get_watch_folder_config(state: State<'_, AppState>) -> WatchFolderConfig {
-    state.watch_manager.get_config()
+    state.watch_manager.get_legacy_config()
 }
 
 #[tauri::command]
@@ -196,6 +211,6 @@ pub fn set_watch_folder_config(
     state: State<'_, AppState>,
     config: WatchFolderConfig,
 ) -> Result<(), String> {
-    state.watch_manager.update_config(app, config);
+    state.watch_manager.update_legacy_config(app, config);
     Ok(())
 }

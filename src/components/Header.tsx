@@ -3,9 +3,11 @@ import { useFileMintStore, APP_VERSION } from '../store/useFileMintStore';
 import { Sparkles, Settings, ArrowUpCircle } from 'lucide-react';
 
 export const Header: React.FC = () => {
-  const { setSettingsOpen, updateInfo, t, watchFolderConfig } = useFileMintStore();
+  const { setSettingsOpen, updateInfo, t, watchFolders } = useFileMintStore();
   const isDev = Boolean(import.meta.env.DEV);
   const versionLabel = isDev ? `v${APP_VERSION} Local` : `v${APP_VERSION}`;
+  const activeWatchFolders = watchFolders.filter((f) => f.enabled && f.watch_path);
+  const activeCount = activeWatchFolders.length;
 
   return (
     <header className="h-14 border-b border-slate-200 dark:border-slate-800/80 px-6 flex items-center justify-between bg-white/70 dark:bg-slate-900/70 backdrop-blur-md select-none z-20">
@@ -26,14 +28,16 @@ export const Header: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-2">
-        {watchFolderConfig.enabled && watchFolderConfig.watch_path && (
+        {activeCount > 0 && (
           <button
             onClick={() => setSettingsOpen(true)}
             className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors cursor-pointer"
-            title={`${t.watchFolderStatusActive} : ${watchFolderConfig.watch_path}`}
+            title={`${activeCount > 1 ? `${activeCount} ${t.watchFoldersActivePlural}` : t.watchFolderStatusActive} :\n${activeWatchFolders.map((f) => `• ${f.name ? `${f.name} (${f.watch_path})` : f.watch_path}`).join('\n')}`}
           >
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[11px] hidden sm:inline">{t.watchFolderStatusActive}</span>
+            <span className="text-[11px] hidden sm:inline">
+              {activeCount > 1 ? `${t.watchFolderStatusActive} (${activeCount})` : t.watchFolderStatusActive}
+            </span>
           </button>
         )}
 

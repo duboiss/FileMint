@@ -139,7 +139,20 @@ export interface ContextMenuStatus {
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
+export interface WatchFolderRule {
+  id: string;
+  name?: string;
+  enabled: boolean;
+  watch_path: string;
+  output_path: string | null;
+  delete_source: boolean;
+  profile_id?: string | null;
+  image_options?: ImageTransformOptions | null;
+  pdf_options?: PdfCompressionOptions | null;
+}
+
 export interface WatchFolderConfig {
+  rules?: WatchFolderRule[];
   enabled: boolean;
   watch_path: string;
   output_path: string | null;
@@ -150,6 +163,7 @@ export interface WatchFolderConfig {
 }
 
 export interface WatchProcessedEvent {
+  rule_id?: string | null;
   file_name: string;
   input_path: string;
   output_path: string;

@@ -292,6 +292,18 @@ export interface TranslationDictionary {
   contextMenuWelcomeSubtitle: string;
   watchFolderSection: string;
   watchFolderDesc: string;
+  watchFoldersSection: string;
+  watchFoldersDesc: string;
+  addWatchFolder: string;
+  watchFolderEmpty: string;
+  watchFolderEmptyDesc: string;
+  watchFolderName: string;
+  watchFolderNamePlaceholder: string;
+  deleteWatchFolder: string;
+  watchFoldersActivePlural: string;
+  watchFoldersActiveSingular: string;
+  duplicateWatchFolderAlert: string;
+  watchFolderResetDest: string;
   watchFolderEnable: string;
   watchFolderEnableDesc: string;
   watchFolderPath: string;
@@ -607,8 +619,20 @@ export const translations: Record<Language, TranslationDictionary> = {
     contextMenuBadgeRecommended: 'Recommandé',
     contextMenuWelcomeTitle: 'Menu contextuel (clic droit Windows) :',
     contextMenuWelcomeSubtitle: 'Accédez directement à FileMint au clic droit dans l\'Explorateur.',
-    watchFolderSection: 'Dossier de surveillance automatique',
-    watchFolderDesc: 'Compresse silencieusement en arrière-plan tout fichier (image ou PDF) déposé dans ce dossier.',
+    watchFolderSection: 'Dossiers de surveillance automatique',
+    watchFolderDesc: 'Compresse silencieusement en arrière-plan vos fichiers (images ou PDF) déposés dans vos dossiers surveillés.',
+    watchFoldersSection: 'Dossiers de surveillance automatique',
+    watchFoldersDesc: 'Compresse silencieusement en arrière-plan vos fichiers déposés dans vos dossiers avec leurs propres profils et destinations.',
+    addWatchFolder: 'Ajouter un dossier surveillé',
+    watchFolderEmpty: 'Aucun dossier surveillé configuré',
+    watchFolderEmptyDesc: 'Ajoutez un ou plusieurs dossiers pour traiter automatiquement vos fichiers (images et PDF) dès leur dépôt avec leurs profils et dossiers de sortie dédiés.',
+    watchFolderName: 'Nom de la règle (optionnel)',
+    watchFolderNamePlaceholder: 'Ex: Captures, Photos, Scans...',
+    deleteWatchFolder: 'Supprimer ce dossier surveillé',
+    watchFoldersActivePlural: 'dossiers actifs',
+    watchFoldersActiveSingular: 'dossier actif',
+    duplicateWatchFolderAlert: 'Ce dossier est déjà surveillé par une autre règle.',
+    watchFolderResetDest: 'Réinitialiser au sous-dossier par défaut',
     watchFolderEnable: 'Activer la surveillance automatique',
     watchFolderEnableDesc: 'Traite automatiquement les fichiers dès leur enregistrement ou dépôt dans le dossier.',
     watchFolderPath: 'Dossier surveillé :',
@@ -923,8 +947,20 @@ export const translations: Record<Language, TranslationDictionary> = {
     contextMenuBadgeRecommended: 'Recommended',
     contextMenuWelcomeTitle: 'Context menu (Windows right-click):',
     contextMenuWelcomeSubtitle: 'Access FileMint directly via right-click in Explorer.',
-    watchFolderSection: 'Automatic Watch Folder (Hot Folder)',
-    watchFolderDesc: 'Silently optimizes in the background any file (image or PDF) dropped into this folder.',
+    watchFolderSection: 'Automatic Watch Folders',
+    watchFolderDesc: 'Silently optimizes in the background any file (image or PDF) dropped into your watched folders.',
+    watchFoldersSection: 'Automatic Watch Folders',
+    watchFoldersDesc: 'Silently compresses in background files dropped into your folders with their own profiles and output destinations.',
+    addWatchFolder: 'Add watched folder',
+    watchFolderEmpty: 'No watched folders configured',
+    watchFolderEmptyDesc: 'Add one or more watched folders to automatically process files (images and PDFs) as soon as they are dropped, with dedicated profiles and destinations.',
+    watchFolderName: 'Rule name (optional)',
+    watchFolderNamePlaceholder: 'E.g.: Screenshots, Photos, Scans...',
+    deleteWatchFolder: 'Delete this watched folder',
+    watchFoldersActivePlural: 'active folders',
+    watchFoldersActiveSingular: 'active folder',
+    duplicateWatchFolderAlert: 'This folder is already watched by another rule.',
+    watchFolderResetDest: 'Reset to default subfolder',
     watchFolderEnable: 'Enable automatic folder watching',
     watchFolderEnableDesc: 'Automatically compresses files as soon as they are saved or dropped into the folder.',
     watchFolderPath: 'Watched folder:',

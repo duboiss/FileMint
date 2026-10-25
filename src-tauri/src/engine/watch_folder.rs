@@ -10,13 +10,37 @@ use tauri::{AppHandle, Emitter};
 use crate::engine::image_processor::{self, ImageTransformOptions};
 use crate::engine::pdf_processor::{self, PdfCompressionOptions};
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct WatchFolderConfig {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WatchFolderRule {
+    pub id: String,
+    #[serde(default)]
+    pub name: Option<String>,
     pub enabled: bool,
     pub watch_path: String,
     pub output_path: Option<String>,
     #[serde(default)]
     pub delete_source: bool,
+    #[serde(default)]
+    pub profile_id: Option<String>,
+    #[serde(default)]
+    pub image_options: Option<ImageTransformOptions>,
+    #[serde(default)]
+    pub pdf_options: Option<PdfCompressionOptions>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct WatchFolderConfig {
+    #[serde(default)]
+    pub rules: Vec<WatchFolderRule>,
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub watch_path: String,
+    pub output_path: Option<String>,
+    #[serde(default)]
+    pub delete_source: bool,
+    #[serde(default)]
+    pub profile_id: Option<String>,
     #[serde(default)]
     pub image_options: Option<ImageTransformOptions>,
     #[serde(default)]
@@ -25,6 +49,8 @@ pub struct WatchFolderConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WatchProcessedEvent {
+    #[serde(default)]
+    pub rule_id: Option<String>,
     pub file_name: String,
     pub input_path: String,
     pub output_path: String,
@@ -36,8 +62,8 @@ pub struct WatchProcessedEvent {
 }
 
 pub struct WatchFolderManager {
-    config: Mutex<WatchFolderConfig>,
-    stop_flag: Mutex<Option<Arc<AtomicBool>>>,
+    rules: Mutex<Vec<WatchFolderRule>>,
+    stop_flags: Mutex<Vec<Arc<AtomicBool>>>,
 }
 
 impl Default for WatchFolderManager {
@@ -49,47 +75,105 @@ impl Default for WatchFolderManager {
 impl WatchFolderManager {
     pub fn new() -> Self {
         Self {
-            config: Mutex::new(WatchFolderConfig::default()),
-            stop_flag: Mutex::new(None),
+            rules: Mutex::new(Vec::new()),
+            stop_flags: Mutex::new(Vec::new()),
         }
     }
 
-    pub fn get_config(&self) -> WatchFolderConfig {
-        self.config.lock().unwrap().clone()
+    pub fn get_rules(&self) -> Vec<WatchFolderRule> {
+        self.rules.lock().unwrap().clone()
     }
 
-    pub fn update_config(&self, app: AppHandle, new_config: WatchFolderConfig) {
-        // Stop any running loop
+    pub fn get_legacy_config(&self) -> WatchFolderConfig {
+        let rules = self.rules.lock().unwrap().clone();
+        if let Some(first) = rules.first() {
+            WatchFolderConfig {
+                rules: rules.clone(),
+                enabled: first.enabled,
+                watch_path: first.watch_path.clone(),
+                output_path: first.output_path.clone(),
+                delete_source: first.delete_source,
+                profile_id: first.profile_id.clone(),
+                image_options: first.image_options.clone(),
+                pdf_options: first.pdf_options.clone(),
+            }
+        } else {
+            WatchFolderConfig {
+                rules,
+                ..Default::default()
+            }
+        }
+    }
+
+    pub fn update_rules(&self, app: AppHandle, new_rules: Vec<WatchFolderRule>) {
+        // Stop any running loops
         {
-            let mut flag_guard = self.stop_flag.lock().unwrap();
-            if let Some(ref flag) = *flag_guard {
+            let mut flag_guard = self.stop_flags.lock().unwrap();
+            for flag in flag_guard.iter() {
                 flag.store(true, Ordering::SeqCst);
             }
-            *flag_guard = None;
+            flag_guard.clear();
         }
 
-        let mut cfg = self.config.lock().unwrap();
-        *cfg = new_config.clone();
+        let mut stored_rules = self.rules.lock().unwrap();
+        *stored_rules = new_rules.clone();
 
-        if cfg.enabled && !cfg.watch_path.trim().is_empty() {
-            let path = PathBuf::from(&cfg.watch_path);
-            if path.is_dir() {
-                let stop_flag = Arc::new(AtomicBool::new(false));
-                {
-                    let mut flag_guard = self.stop_flag.lock().unwrap();
-                    *flag_guard = Some(stop_flag.clone());
-                }
-                let config_clone = new_config;
+        let mut new_flags = Vec::new();
+        let mut seen_paths = HashSet::new();
 
-                tauri::async_runtime::spawn(async move {
-                    run_watch_loop(app, config_clone, stop_flag).await;
-                });
+        for rule in new_rules.into_iter() {
+            if !rule.enabled || rule.watch_path.trim().is_empty() {
+                continue;
             }
+
+            let watch_path = PathBuf::from(&rule.watch_path);
+            if !watch_path.is_dir() {
+                continue;
+            }
+
+            let canonical = watch_path
+                .canonicalize()
+                .unwrap_or_else(|_| watch_path.clone());
+            if !seen_paths.insert(canonical) {
+                continue;
+            }
+
+            let stop_flag = Arc::new(AtomicBool::new(false));
+            new_flags.push(stop_flag.clone());
+
+            let app_clone = app.clone();
+            tauri::async_runtime::spawn(async move {
+                run_watch_loop(app_clone, rule, stop_flag).await;
+            });
+        }
+
+        let mut flag_guard = self.stop_flags.lock().unwrap();
+        *flag_guard = new_flags;
+    }
+
+    pub fn update_legacy_config(&self, app: AppHandle, config: WatchFolderConfig) {
+        if !config.rules.is_empty() {
+            self.update_rules(app, config.rules);
+        } else if !config.watch_path.trim().is_empty() {
+            let rule = WatchFolderRule {
+                id: "default".to_string(),
+                name: Some("Dossier principal".to_string()),
+                enabled: config.enabled,
+                watch_path: config.watch_path,
+                output_path: config.output_path,
+                delete_source: config.delete_source,
+                profile_id: config.profile_id,
+                image_options: config.image_options,
+                pdf_options: config.pdf_options,
+            };
+            self.update_rules(app, vec![rule]);
+        } else {
+            self.update_rules(app, Vec::new());
         }
     }
 }
 
-fn process_watched_file(path: &Path, config: &WatchFolderConfig) -> Result<(PathBuf, u64, u64)> {
+fn process_watched_file(path: &Path, rule: &WatchFolderRule) -> Result<(PathBuf, u64, u64)> {
     let orig_len = std::fs::metadata(path)?.len();
     if orig_len == 0 {
         return Err(anyhow!("Fichier vide"));
@@ -107,14 +191,14 @@ fn process_watched_file(path: &Path, config: &WatchFolderConfig) -> Result<(Path
         .to_lowercase();
 
     // Resolve destination folder
-    let dest_dir = if let Some(ref custom_dest) = config.output_path {
+    let dest_dir = if let Some(ref custom_dest) = rule.output_path {
         if !custom_dest.trim().is_empty() {
             PathBuf::from(custom_dest)
         } else {
-            PathBuf::from(&config.watch_path).join("FileMint_Optimized")
+            PathBuf::from(&rule.watch_path).join("FileMint_Optimized")
         }
     } else {
-        PathBuf::from(&config.watch_path).join("FileMint_Optimized")
+        PathBuf::from(&rule.watch_path).join("FileMint_Optimized")
     };
 
     if !dest_dir.exists() {
@@ -127,12 +211,12 @@ fn process_watched_file(path: &Path, config: &WatchFolderConfig) -> Result<(Path
         .unwrap_or("document");
 
     if ext == "pdf" {
-        let pdf_opts = config.pdf_options.clone().unwrap_or_default();
+        let pdf_opts = rule.pdf_options.clone().unwrap_or_default();
         let out_file = dest_dir.join(file_name);
         let res = pdf_processor::compress_pdf(path, &out_file, &pdf_opts)?;
         Ok((out_file, res.original_bytes, res.compressed_bytes))
     } else {
-        let img_opts = config.image_options.clone().unwrap_or_default();
+        let img_opts = rule.image_options.clone().unwrap_or_default();
         let (img, orig_format) = image_processor::load_dynamic_image(path)?;
         let (bytes, target_format, _, _, _) =
             image_processor::process_image_to_memory(&img, orig_format, &img_opts)?;
@@ -152,12 +236,12 @@ fn process_watched_file(path: &Path, config: &WatchFolderConfig) -> Result<(Path
     }
 }
 
-async fn run_watch_loop(app: AppHandle, config: WatchFolderConfig, stop_flag: Arc<AtomicBool>) {
-    let watch_dir = PathBuf::from(&config.watch_path);
+async fn run_watch_loop(app: AppHandle, rule: WatchFolderRule, stop_flag: Arc<AtomicBool>) {
+    let watch_dir = PathBuf::from(&rule.watch_path);
     let mut processed_signatures: HashSet<(PathBuf, u64, Option<SystemTime>)> = HashSet::new();
 
     // Populate initial existing files so they are not re-processed immediately unless delete_source is set
-    if !config.delete_source {
+    if !rule.delete_source {
         if let Ok(entries) = std::fs::read_dir(&watch_dir) {
             for entry in entries.flatten() {
                 if let Ok(meta) = entry.metadata() {
@@ -264,11 +348,12 @@ async fn run_watch_loop(app: AppHandle, config: WatchFolderConfig, stop_flag: Ar
                 continue;
             }
 
-            let result = process_watched_file(&path, &config);
+            let result = process_watched_file(&path, &rule);
             match result {
                 Ok((out_path, orig_len, final_len)) => {
                     let saved = (orig_len as i64) - (final_len as i64);
                     let event = WatchProcessedEvent {
+                        rule_id: Some(rule.id.clone()),
                         file_name: file_name.clone(),
                         input_path: path.to_string_lossy().to_string(),
                         output_path: out_path.to_string_lossy().to_string(),
@@ -280,7 +365,15 @@ async fn run_watch_loop(app: AppHandle, config: WatchFolderConfig, stop_flag: Ar
                     };
                     let _ = app.emit("filemint://watch-file-processed", &event);
 
-                    if config.delete_source {
+                    if let Ok(meta_out) = std::fs::metadata(&out_path) {
+                        processed_signatures.insert((
+                            out_path.clone(),
+                            meta_out.len(),
+                            meta_out.modified().ok(),
+                        ));
+                    }
+
+                    if rule.delete_source {
                         let _ = std::fs::remove_file(&path);
                     } else {
                         processed_signatures.insert(sig);
@@ -288,6 +381,7 @@ async fn run_watch_loop(app: AppHandle, config: WatchFolderConfig, stop_flag: Ar
                 }
                 Err(err) => {
                     let event = WatchProcessedEvent {
+                        rule_id: Some(rule.id.clone()),
                         file_name: file_name.clone(),
                         input_path: path.to_string_lossy().to_string(),
                         output_path: String::new(),
@@ -304,3 +398,56 @@ async fn run_watch_loop(app: AppHandle, config: WatchFolderConfig, stop_flag: Ar
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_watch_folder_rule_serialization() {
+        let rule = WatchFolderRule {
+            id: "rule_1".to_string(),
+            name: Some("Photos Dropbox".to_string()),
+            enabled: true,
+            watch_path: "C:\\Drop".to_string(),
+            output_path: Some("C:\\Out".to_string()),
+            delete_source: true,
+            profile_id: Some("preset_web".to_string()),
+            image_options: None,
+            pdf_options: None,
+        };
+
+        let json = serde_json::to_string(&rule).expect("Serialize error");
+        let deserialized: WatchFolderRule =
+            serde_json::from_str(&json).expect("Deserialize error");
+        assert_eq!(deserialized.id, "rule_1");
+        assert_eq!(deserialized.name, Some("Photos Dropbox".to_string()));
+        assert!(deserialized.enabled);
+        assert!(deserialized.delete_source);
+        assert_eq!(deserialized.output_path, Some("C:\\Out".to_string()));
+    }
+
+    #[test]
+    fn test_legacy_watch_folder_config_compatibility() {
+        let manager = WatchFolderManager::new();
+        assert!(manager.get_rules().is_empty());
+
+        let legacy = WatchFolderConfig {
+            rules: vec![],
+            enabled: true,
+            watch_path: "C:\\LegacyWatch".to_string(),
+            output_path: None,
+            delete_source: false,
+            profile_id: None,
+            image_options: None,
+            pdf_options: None,
+        };
+
+        let json = serde_json::to_string(&legacy).expect("Serialize error");
+        let parsed: WatchFolderConfig =
+            serde_json::from_str(&json).expect("Deserialize error");
+        assert!(parsed.enabled);
+        assert_eq!(parsed.watch_path, "C:\\LegacyWatch");
+    }
+}
+

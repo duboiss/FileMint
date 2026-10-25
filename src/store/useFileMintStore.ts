@@ -15,6 +15,7 @@ import {
   ContextMenuStatus,
   ThemeMode,
   WatchFolderConfig,
+  WatchFolderRule,
   WatchProcessedEvent,
 } from '../types';
 import {
@@ -353,27 +354,69 @@ const saveLifetimeStatsToStorage = (bytesSaved: number, filesCount: number) => {
   } catch {}
 };
 
-const WATCH_FOLDER_STORAGE_KEY = 'filemint_watch_folder_config';
+const WATCH_FOLDERS_STORAGE_KEY = 'filemint_watch_folders';
+const LEGACY_WATCH_FOLDER_KEY = 'filemint_watch_folder_config';
 
-const getInitialWatchFolderConfig = (): WatchFolderConfig => {
+const getInitialWatchFolders = (): WatchFolderRule[] => {
   try {
-    const raw = localStorage.getItem(WATCH_FOLDER_STORAGE_KEY);
+    const raw = localStorage.getItem(WATCH_FOLDERS_STORAGE_KEY);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+    // Check legacy single watch folder configuration
+    const legacyRaw = localStorage.getItem(LEGACY_WATCH_FOLDER_KEY);
+    if (legacyRaw) {
+      const legacy = JSON.parse(legacyRaw);
+      if (legacy && (legacy.watch_path || legacy.enabled)) {
+        const migrated: WatchFolderRule = {
+          id: 'watch_default',
+          name: '',
+          enabled: Boolean(legacy.enabled),
+          watch_path: legacy.watch_path || '',
+          output_path: legacy.output_path || null,
+          delete_source: Boolean(legacy.delete_source),
+          profile_id: legacy.profile_id || null,
+          image_options: legacy.image_options || null,
+          pdf_options: legacy.pdf_options || null,
+        };
+        saveWatchFoldersToStorage([migrated]);
+        return [migrated];
+      }
     }
   } catch {}
+  return [];
+};
+
+const saveWatchFoldersToStorage = (folders: WatchFolderRule[]) => {
+  try {
+    localStorage.setItem(WATCH_FOLDERS_STORAGE_KEY, JSON.stringify(folders));
+  } catch {}
+};
+
+const getInitialWatchFolderConfig = (rules: WatchFolderRule[]): WatchFolderConfig => {
+  const first = rules[0];
+  if (first) {
+    return {
+      rules,
+      enabled: first.enabled,
+      watch_path: first.watch_path,
+      output_path: first.output_path,
+      delete_source: first.delete_source,
+      profile_id: first.profile_id,
+      image_options: first.image_options,
+      pdf_options: first.pdf_options,
+    };
+  }
   return {
+    rules: [],
     enabled: false,
     watch_path: '',
     output_path: null,
     delete_source: false,
   };
-};
-
-const saveWatchFolderConfigToStorage = (config: WatchFolderConfig) => {
-  try {
-    localStorage.setItem(WATCH_FOLDER_STORAGE_KEY, JSON.stringify(config));
-  } catch {}
 };
 
 const loadCustomProfilesFromStorage = (dict?: TranslationDictionary): CustomProfile[] => {
@@ -590,9 +633,15 @@ interface FileMintState {
   recordBatchCompletion: (summary: BatchSummary) => void;
   resetLifetimeStats: () => void;
 
+  watchFolders: WatchFolderRule[];
   watchFolderConfig: WatchFolderConfig;
   lastWatchEvent: WatchProcessedEvent | null;
   watchToastVisible: boolean;
+  setWatchFolders: (rules: WatchFolderRule[]) => Promise<void>;
+  addWatchFolder: (rule?: Partial<WatchFolderRule>) => Promise<string>;
+  updateWatchFolder: (id: string, update: Partial<WatchFolderRule>) => Promise<void>;
+  removeWatchFolder: (id: string) => Promise<void>;
+  toggleWatchFolder: (id: string, enabled?: boolean) => Promise<void>;
   setWatchFolderConfig: (config: Partial<WatchFolderConfig>) => Promise<void>;
   recordWatchProcessed: (event: WatchProcessedEvent) => void;
   dismissWatchToast: () => void;
@@ -656,6 +705,36 @@ interface FileMintState {
 let previewDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let previewRequestId = 0;
 
+const syncWatchFoldersToBackend = async (
+  rules: WatchFolderRule[],
+  store: {
+    defaultImagePreset: string;
+    customProfiles: CustomProfile[];
+    imageOptions: ImageTransformOptions;
+    pdfOptions: PdfCompressionOptions;
+  }
+) => {
+  if (!isTauriEnv()) return;
+  const resolved = rules.map((r) => {
+    const profileId = r.profile_id || store.defaultImagePreset;
+    const profile =
+      store.customProfiles.find((p) => p.id === profileId) ||
+      store.customProfiles[0];
+    const imageOptions =
+      r.image_options || (profile ? profile.options : store.imageOptions);
+    return {
+      ...r,
+      image_options: imageOptions,
+      pdf_options: store.pdfOptions,
+    };
+  });
+  try {
+    await invoke('set_watch_folder_rules', { rules: resolved });
+  } catch (err) {
+    console.error('Erreur synchronisation dossiers surveillés :', err);
+  }
+};
+
 export const useFileMintStore = create<FileMintState>((set, get) => {
   const initialLangData = getInitialLanguageData();
   const initialProfiles = loadCustomProfilesFromStorage(translations[initialLangData.language]);
@@ -664,6 +743,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
   const initialTab = getInitialTab();
   const initialTheme = getInitialTheme();
   applyThemeToDom(initialTheme);
+  const initialWatchFolders = getInitialWatchFolders();
 
   return {
     screen: 'home',
@@ -720,34 +800,64 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       set({ lifetimeSavedBytes: 0, lifetimeFilesCount: 0 });
     },
 
-    watchFolderConfig: getInitialWatchFolderConfig(),
+    watchFolders: initialWatchFolders,
+    watchFolderConfig: getInitialWatchFolderConfig(initialWatchFolders),
     lastWatchEvent: null,
     watchToastVisible: false,
 
+    setWatchFolders: async (rules: WatchFolderRule[]) => {
+      saveWatchFoldersToStorage(rules);
+      set({
+        watchFolders: rules,
+        watchFolderConfig: getInitialWatchFolderConfig(rules),
+      });
+      await syncWatchFoldersToBackend(rules, get());
+    },
+
+    addWatchFolder: async (rule?: Partial<WatchFolderRule>): Promise<string> => {
+      const id = `watch_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const newRule: WatchFolderRule = {
+        id,
+        name: rule?.name || '',
+        enabled: rule?.enabled ?? true,
+        watch_path: rule?.watch_path || '',
+        output_path: rule?.output_path ?? null,
+        delete_source: rule?.delete_source ?? false,
+        profile_id: rule?.profile_id ?? null,
+      };
+      const updated = [...get().watchFolders, newRule];
+      await get().setWatchFolders(updated);
+      return id;
+    },
+
+    updateWatchFolder: async (id: string, update: Partial<WatchFolderRule>) => {
+      const updated = get().watchFolders.map((r) => {
+        if (r.id !== id) return r;
+        return { ...r, ...update };
+      });
+      await get().setWatchFolders(updated);
+    },
+
+    removeWatchFolder: async (id: string) => {
+      const updated = get().watchFolders.filter((r) => r.id !== id);
+      await get().setWatchFolders(updated);
+    },
+
+    toggleWatchFolder: async (id: string, enabled?: boolean) => {
+      const updated = get().watchFolders.map((r) => {
+        if (r.id !== id) return r;
+        const nextEnabled = enabled !== undefined ? enabled : !r.enabled;
+        return { ...r, enabled: nextEnabled };
+      });
+      await get().setWatchFolders(updated);
+    },
+
     setWatchFolderConfig: async (configUpdate: Partial<WatchFolderConfig>) => {
-      const merged = { ...get().watchFolderConfig, ...configUpdate };
-
-      // Resolve effective image options for the watch folder
-      const profileId = merged.profile_id || get().defaultImagePreset;
-      const profile = get().customProfiles.find((p) => p.id === profileId) || get().customProfiles[0];
-      const imageOptions = configUpdate.image_options || (profile ? profile.options : get().imageOptions);
-      merged.image_options = imageOptions;
-
-      saveWatchFolderConfigToStorage(merged);
-      set({ watchFolderConfig: merged });
-
-      if (isTauriEnv()) {
-        try {
-          await invoke('set_watch_folder_config', {
-            config: {
-              ...merged,
-              image_options: imageOptions,
-              pdf_options: get().pdfOptions,
-            },
-          });
-        } catch (err) {
-          console.error('Erreur configuration dossier surveillé :', err);
-        }
+      const currentRules = get().watchFolders;
+      if (currentRules.length === 0) {
+        await get().addWatchFolder(configUpdate);
+      } else {
+        await get().updateWatchFolder(currentRules[0].id, configUpdate);
       }
     },
 
@@ -833,10 +943,10 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         localStorage.setItem('filemint_default_preset', presetId);
       } catch {}
 
-      // Keep watch folder in sync if set to follow application default
-      const watchCfg = get().watchFolderConfig;
-      if (!watchCfg.profile_id && profile && watchCfg.enabled && isTauriEnv()) {
-        get().setWatchFolderConfig({ image_options: profile.options });
+      // Keep watch folders in sync
+      const watchFolders = get().watchFolders;
+      if (watchFolders.length > 0 && isTauriEnv()) {
+        syncWatchFoldersToBackend(watchFolders, get());
       }
     },
 
@@ -1454,19 +1564,9 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       }
 
       try {
-        const watchCfg = get().watchFolderConfig;
-        if (watchCfg.enabled && watchCfg.watch_path) {
-          const profileId = watchCfg.profile_id || get().defaultImagePreset;
-          const profile = get().customProfiles.find((p) => p.id === profileId) || get().customProfiles[0];
-          const imageOptions = watchCfg.image_options || (profile ? profile.options : get().imageOptions);
-
-          invoke('set_watch_folder_config', {
-            config: {
-              ...watchCfg,
-              image_options: imageOptions,
-              pdf_options: get().pdfOptions,
-            },
-          }).catch(() => {});
+        const watchFolders = get().watchFolders;
+        if (watchFolders.some((f) => f.enabled && f.watch_path)) {
+          syncWatchFoldersToBackend(watchFolders, get());
         }
       } catch {}
     },

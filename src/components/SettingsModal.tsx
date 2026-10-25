@@ -25,7 +25,6 @@ import {
   FileJson,
   Folder,
   Loader2,
-  Sparkles,
   RotateCcw,
 } from 'lucide-react';
 import { save as saveDialog, open as openDialog } from '@tauri-apps/plugin-dialog';
@@ -303,57 +302,6 @@ export const SettingsModal: React.FC = () => {
         </div>
 
         <div className="p-6 space-y-6 overflow-y-auto text-xs">
-          {/* Lifetime Statistics & Disk Impact */}
-          <div className="space-y-3">
-            <h4 className="font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-mint-500" />
-                <span>{t.lifetimeStatsTitle}</span>
-              </span>
-              {lifetimeFilesCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (window.confirm(t.resetStatsConfirm)) {
-                      resetLifetimeStats();
-                    }
-                  }}
-                  className="text-[10px] text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors font-medium flex items-center gap-1 cursor-pointer"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>{t.resetStats}</span>
-                </button>
-              )}
-            </h4>
-
-            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3.5 rounded-xl bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/60 flex flex-col justify-between">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                    {t.lifetimeSpaceSaved}
-                  </span>
-                  <div className="text-xl font-black font-mono text-mint-500 mt-1">
-                    {formatFileSize(lifetimeSavedBytes, language)}
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/60 flex flex-col justify-between">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                    {t.lifetimeFilesOptimized}
-                  </span>
-                  <div className="text-xl font-black font-mono text-slate-800 dark:text-slate-100 mt-1">
-                    {lifetimeFilesCount}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
-                <Shield className="w-3.5 h-3.5 text-mint-500 shrink-0" />
-                <span>{t.lifetimeLocalNotice}</span>
-              </div>
-            </div>
-          </div>
-
           <div className="space-y-3">
             <h4 className="font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <Languages className="w-3.5 h-3.5 text-mint-500" />
@@ -988,6 +936,41 @@ export const SettingsModal: React.FC = () => {
               <li>{t.privacyItem2}</li>
               <li>{t.privacyItem3}</li>
             </ul>
+          </div>
+
+          {/* Discreet Lifetime Statistics in Text Mode */}
+          <div className="pt-2 px-1 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-medium text-slate-600 dark:text-slate-300">
+                {t.lifetimeStatsTitle} :
+              </span>
+              <span>
+                <strong className="text-mint-600 dark:text-mint-400 font-mono font-semibold">
+                  {formatFileSize(lifetimeSavedBytes, language)}
+                </strong>{' '}
+                {t.lifetimeSpaceSaved.toLowerCase()} •{' '}
+                <strong className="text-slate-700 dark:text-slate-200 font-mono font-semibold">
+                  {lifetimeFilesCount}
+                </strong>{' '}
+                {t.lifetimeFilesOptimized.toLowerCase()}
+              </span>
+            </div>
+
+            {lifetimeFilesCount > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm(t.resetStatsConfirm)) {
+                    resetLifetimeStats();
+                  }
+                }}
+                className="text-[10px] text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors flex items-center gap-1 cursor-pointer shrink-0 ml-2"
+                title={t.resetStats}
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>{t.resetStats}</span>
+              </button>
+            )}
           </div>
         </div>
 

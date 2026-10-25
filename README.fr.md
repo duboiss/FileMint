@@ -64,10 +64,11 @@
 - **Compression par Taille Cible :** Respectez les limites de poids imposées par les portails administratifs et courriels.
 - **Optimisation Structurelle :** Recompression FlateDecode et nettoyage d'objets sans altérer les textes sélectionnables ni les liens.
 
-### 📂 Dossier de Surveillance Automatique
-- **Surveillance en Arrière-Plan :** Surveille un dossier de votre choix et optimise automatiquement tout fichier déposé.
-- **Mode Boîte de Dépôt :** Option pour supprimer le fichier source après traitement réussi (idéal pour les dossiers de transit).
-- **Retour Visuel Discret :** Toast flottant de confirmation et pastille animée dans l'en-tête de l'application.
+### 📂 Dossiers de Surveillance Automatique
+- **Surveillance Multi-Dossiers :** Configurez autant de dossiers surveillés que vous le souhaitez, avec exécution asynchrone indépendante en arrière-plan.
+- **Profils & Destinations Personnalisés :** Associez à chaque dossier surveillé son propre profil d'optimisation (Web, Qualité, Léger ou profil sur-mesure) et son dossier de sortie dédié.
+- **Mode Boîte de Dépôt :** Option pour supprimer le fichier source après traitement réussi (idéal pour les dossiers temporaires de transit).
+- **Contrôle & Retour Visuel :** Nommez et activez/désactivez chaque règle individuellement, avec pastille animée et compteur dynamique dans l'en-tête (`Surveillance active (2)`).
 
 ### 📊 Statistiques d'Impact & Renommage
 - **Compteur à Vie :** Suivez le cumul d'espace disque économisé et de fichiers traités (100% local, réinitialisable).

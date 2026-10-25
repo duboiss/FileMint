@@ -64,10 +64,11 @@
 - **Target Size Optimization:** Fit PDFs under upload thresholds for government or career portals.
 - **Structural Optimization:** FlateDecode recompression and object cleanup without altering selectable text or links.
 
-### 📂 Automatic Watch Folder (*Hot Folder*)
-- **Background Monitoring:** Monitors a chosen folder and automatically optimizes dropped images & PDFs.
-- **Drop Box Mode:** Optionally deletes source files upon success (ideal for temporary intake folders).
-- **Subtle Feedback:** Floating completion toasts and header status pulse indicator.
+### 📂 Automatic Watch Folders
+- **Multi-Folder Background Monitoring:** Configure unlimited watched folders running concurrently in the background.
+- **Per-Folder Profiles & Destinations:** Assign dedicated optimization profiles (Web, Quality, Light, or custom presets) and custom destination folders to each watched folder.
+- **Drop Box Mode:** Optionally delete source files upon success (ideal for temporary drop boxes).
+- **Per-Rule Control & Status:** Name, toggle, or delete rules individually, with live counter and animated pulse in the app header (`Watching active (2)`).
 
 ### 📊 Lifetime Storage Stats & Renaming
 - **Lifetime Impact:** Tracks cumulative disk space saved and total files optimized (100% local, reset anytime).

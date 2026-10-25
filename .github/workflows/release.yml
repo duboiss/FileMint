@@ -60,7 +60,7 @@ jobs:
           Copy-Item src-tauri/target/release/filemint_lib.dll src-tauri/sparse_package/filemint_lib.dll -Force
 
       - name: Build Tauri Application & Publish Release
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

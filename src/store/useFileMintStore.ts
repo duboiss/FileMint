@@ -24,7 +24,9 @@ import {
   getSystemLanguage,
 } from '../i18n/translations';
 
-export const APP_VERSION = '1.2.0';
+import packageJson from '../../package.json';
+
+export const APP_VERSION = packageJson.version;
 
 export const formatFileSize = (bytes: number, language: string = 'fr'): string => {
   const units = language === 'en' ? ['B', 'KB', 'MB', 'GB'] : ['o', 'Ko', 'Mo', 'Go'];

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { useFileMintStore } from '../store/useFileMintStore';
+import { useFileMintStore, formatFileSize } from '../store/useFileMintStore';
 import { open } from '@tauri-apps/plugin-dialog';
-import { FileUp, Image as ImageIcon, FileText, ShieldCheck, Zap } from 'lucide-react';
+import { FileUp, Image as ImageIcon, FileText, ShieldCheck, Zap, Sparkles } from 'lucide-react';
 
 export const Dropzone: React.FC = () => {
-  const { addFiles, t } = useFileMintStore();
+  const { addFiles, t, lifetimeSavedBytes, lifetimeFilesCount, language } = useFileMintStore();
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handlePickFiles = async (types?: 'images' | 'pdf') => {
@@ -33,6 +33,22 @@ export const Dropzone: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 max-w-4xl mx-auto w-full overflow-y-auto">
+      {lifetimeFilesCount > 0 && (
+        <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-mint-500/10 border border-mint-500/20 text-mint-700 dark:text-mint-300 text-xs font-medium mb-5 shadow-sm animate-fadeIn">
+          <Sparkles className="w-4 h-4 text-mint-500 shrink-0" />
+          <span>
+            <strong className="font-bold text-slate-900 dark:text-white">
+              {formatFileSize(lifetimeSavedBytes, language)}
+            </strong>{' '}
+            {t.lifetimePill} •{' '}
+            <strong className="font-bold text-slate-900 dark:text-white">
+              {lifetimeFilesCount}
+            </strong>{' '}
+            {t.lifetimePillFiles}
+          </span>
+        </div>
+      )}
+
       {/* Main drop target */}
       <div
         onDragOver={(e) => {

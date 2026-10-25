@@ -49,6 +49,7 @@ export interface ImageTransformOptions {
   grayscale: boolean;
   metadata_policy: MetadataPolicy;
   compress?: boolean;
+  target_size_kb?: number | null;
 }
 
 export type PdfProfile = 'Readable' | 'Balanced' | 'Compact';
@@ -57,6 +58,7 @@ export interface PdfCompressionOptions {
   profile: PdfProfile;
   optimize_structure: boolean;
   recompress_images: boolean;
+  target_size_kb?: number | null;
 }
 
 export type DestinationMode =
@@ -127,3 +129,23 @@ export interface ContextMenuStatus {
 }
 
 export type ThemeMode = 'system' | 'light' | 'dark';
+
+export interface WatchFolderConfig {
+  enabled: boolean;
+  watch_path: string;
+  output_path: string | null;
+  delete_source: boolean;
+  image_options?: ImageTransformOptions | null;
+  pdf_options?: PdfCompressionOptions | null;
+}
+
+export interface WatchProcessedEvent {
+  file_name: string;
+  input_path: string;
+  output_path: string;
+  original_bytes: number;
+  final_bytes: number;
+  saved_bytes: number;
+  success: boolean;
+  error?: string | null;
+}

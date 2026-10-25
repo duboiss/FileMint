@@ -43,9 +43,16 @@ export const SideBySidePreview: React.FC = () => {
 
   // Specific rendering for PDF documents
   if (activeFile.fileType === 'pdf') {
-    const estimatedPercent =
-      pdfOptions.profile === 'Compact' ? 65 : pdfOptions.profile === 'Balanced' ? 45 : 25;
-    const estimatedFinal = Math.round(activeFile.sizeBytes * (1 - estimatedPercent / 100));
+    const isTargetSize = Boolean(pdfOptions.target_size_kb && pdfOptions.target_size_kb > 0);
+    const targetBytes = (pdfOptions.target_size_kb || 0) * 1024;
+    const estimatedPercent = isTargetSize
+      ? (activeFile.sizeBytes > 0 && activeFile.sizeBytes > targetBytes
+          ? Math.round(((activeFile.sizeBytes - targetBytes) / activeFile.sizeBytes) * 100)
+          : 0)
+      : (pdfOptions.profile === 'Compact' ? 65 : pdfOptions.profile === 'Balanced' ? 45 : 25);
+    const estimatedFinal = isTargetSize
+      ? Math.min(activeFile.sizeBytes, targetBytes)
+      : Math.round(activeFile.sizeBytes * (1 - estimatedPercent / 100));
 
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-8 bg-slate-100/50 dark:bg-slate-950/40 select-none">
@@ -95,11 +102,26 @@ export const SideBySidePreview: React.FC = () => {
           </div>
 
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            {t.pdfProfileSelected} :{' '}
-            <span className="font-semibold text-slate-800 dark:text-slate-200">
-              {pdfOptions.profile}
-            </span>
-            . {t.pdfExplanation}
+            {isTargetSize ? (
+              <>
+                <span className="font-semibold text-mint-600 dark:text-mint-400">
+                  {t.targetSizeTitle} : ≤ {(pdfOptions.target_size_kb || 0) >= 1024
+                    ? `${((pdfOptions.target_size_kb || 0) / 1024).toFixed(
+                        (pdfOptions.target_size_kb || 0) % 1024 === 0 ? 0 : 1
+                      )} ${language === 'en' ? 'MB' : 'Mo'}`
+                    : `${pdfOptions.target_size_kb} ${language === 'en' ? 'KB' : 'Ko'}`}
+                </span>
+                . {t.pdfTargetSizeDesc}
+              </>
+            ) : (
+              <>
+                {t.pdfProfileSelected} :{' '}
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  {pdfOptions.profile}
+                </span>
+                . {t.pdfExplanation}
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -138,6 +160,22 @@ export const SideBySidePreview: React.FC = () => {
               </span>
             )}
           </div>
+
+          {imageOptions.target_size_kb && imageOptions.compress !== false && (
+            <span
+              className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-mint-500/15 text-mint-600 dark:text-mint-400 font-bold text-[10px] shrink-0"
+              title={`${t.targetSizeTitle} : ≤ ${imageOptions.target_size_kb} Ko`}
+            >
+              <span>🎯 ≤</span>
+              <span>
+                {imageOptions.target_size_kb >= 1024
+                  ? `${(imageOptions.target_size_kb / 1024).toFixed(
+                      imageOptions.target_size_kb % 1024 === 0 ? 0 : 1
+                    )} ${language === 'en' ? 'MB' : 'Mo'}`
+                  : `${imageOptions.target_size_kb} ${language === 'en' ? 'KB' : 'Ko'}`}
+              </span>
+            </span>
+          )}
 
           {activeFile.hasGps && (
             <span

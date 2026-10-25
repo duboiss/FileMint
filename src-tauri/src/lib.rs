@@ -27,6 +27,7 @@ pub fn run() {
     let app_state = AppState {
         runner: Mutex::new(BatchRunner::new()),
         cli_files: Mutex::new(args),
+        watch_manager: engine::watch_folder::WatchFolderManager::new(),
     };
 
     tauri::Builder::default()
@@ -45,6 +46,8 @@ pub fn run() {
             commands::toggle_windows_context_menu,
             commands::get_windows_context_menu_status,
             commands::get_cli_files,
+            commands::get_watch_folder_config,
+            commands::set_watch_folder_config,
         ])
         .setup(|_app| {
             // Start named pipe IPC server to receive subsequent CLI / context menu files

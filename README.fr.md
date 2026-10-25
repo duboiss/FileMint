@@ -28,152 +28,85 @@
 </p>
 
 > [!NOTE]
-> **✨ Projet Vibe-Codé avec IA**  
-> FileMint est une application entièrement conçue et **vibe-codée avec une IA** (Google DeepMind Antigravity). L'intégralité du code (moteurs natifs en Rust, interface React & Tailwind, tests unitaires, intégration système Windows/macOS/Linux) a été développée en pair programming interactif avec l'IA.
+> **✨ Projet Vibe-Codé avec IA** — FileMint est une application conçue et **vibe-codée avec une IA** (Google DeepMind Antigravity). L'ensemble des moteurs Rust, de l'interface React & Tailwind et des intégrations système a été développé en pair programming interactif.
 
 ---
 
 ## 🌟 Principes Fondateurs
 
-1. **🔒 100 % Local & Privé :** Aucune donnée, photo ou document ne quitte jamais votre machine. Aucun compte requis, aucune dépendance cloud, zéro collecte de télémétrie.
-2. **⚡ Performance Native :** Moteur d'encodage et de traitement de flux multi-threadé écrit en Rust (`image`, `oxipng`, `lopdf`, `rayon`).
-3. **🛡️ Sanctuarisation des Originaux :** Vos fichiers source restent intacts. Les sorties sont enregistrées par défaut dans un sous-dossier sécurisé (personnalisable, ex. `./FileMint/` ou `./Optimisé/`), avec prévention intelligente d'écrasement accidentel.
-4. **👁️ Prévisualisation Temps Réel :** Comparateur split et côte à côte avec calcul instantané en mémoire du gain de poids avant tout enregistrement.
-5. **🪟 Intégration Système :** Menu contextuel Windows 11 moderne & classique, actions rapides macOS Finder et support Linux universel (`xdg-open`).
+- **🔒 100 % Local & Privé :** Zéro cloud, aucun compte, aucune télémétrie. Vos fichiers ne quittent jamais votre machine.
+- **⚡ Performance Native :** Moteur d'optimisation d'images et PDF multi-threadé en Rust (`image`, `oxipng`, `lopdf`, `rayon`).
+- **🛡️ Non Destructif :** Vos originaux restent intacts ; sorties vers des sous-dossiers dédiés avec gestion anti-écrasement.
+- **👁️ Comparateur Temps Réel :** Curseur avant/après interactif et calcul instantané du gain en mémoire.
+- **🪟 Intégration Système Complète :** Menu contextuel Windows (moderne & classique), dossiers surveillés, macOS et Linux.
 
 ---
 
-## 📸 Captures d'Écran & Déroulement
+## 📸 Aperçu de l'Interface
 
-### 1. Dépôt de fichiers ou Menu Contextuel
-Glissez-déposez vos fichiers ou ouvrez-les d'un clic droit dans l'Explorateur Windows / Finder :
-
-<p align="center">
-  <img src="docs/screenshots/dropzone.png" alt="Écran de dépôt FileMint" width="800" />
-</p>
-
-### 2. Studio de Retouche & Optimisation d'Images
-Ajustez dimensions, qualité, format et métadonnées avec prévisualisation instantanée avant/après :
-
-<p align="center">
-  <img src="docs/screenshots/app-main.png" alt="Studio d'optimisation d'images" width="800" />
-</p>
-
-### 3. Profils de Compression PDF
-Basculez en un clic entre Lisible, Équilibré et Compact :
-
-<p align="center">
-  <img src="docs/screenshots/pdf-compression.png" alt="Profils de compression PDF" width="800" />
-</p>
-
-### 4. Bilan du Traitement & Transparence
-Visualisez le gain d'espace disque obtenu, les fichiers renommés et ouvrez le dossier en un clic :
-
-<p align="center">
-  <img src="docs/screenshots/results-summary.png" alt="Écran de résultats FileMint" width="800" />
-</p>
+| Écran d'accueil & Dépôt | Profils de compression PDF | Bilan & Économies disque |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/dropzone.png" alt="Dépôt" width="280" /> | <img src="docs/screenshots/pdf-compression.png" alt="Profils PDF" width="280" /> | <img src="docs/screenshots/results-summary.png" alt="Bilan" width="280" /> |
 
 ---
 
 ## 🚀 Fonctionnalités Clés
 
-### 🖼️ Traitement d'Images
-- **Dimensions & Redimensionnement :**
-  - Dimensions en pixels, pourcentages, limitation maximale (*Max bounds*, ex. 1920×1080).
-  - Préservation du ratio d'aspect, blocage de l'agrandissement (*no upscale*).
-- **Retouche & Effets :**
-  - Rotation (0°, 90°, 180°, 270°), retournement miroir horizontal/vertical, conversion monochrome (N&B).
-- **Compression intelligente :**
-  - Curseur de qualité continue (10–100) et préréglages rapides (Léger, Équilibré, Max).
-  - Mode sans perte (*Lossless*) pour PNG et WebP.
-  - **Débrayage de la compression :** possibilité de désactiver totalement la compression pour conserver les flux d'origine au bit près.
-- **Protection de la vie privée (Métadonnées) :**
-  - Suppression sélective des coordonnées GPS tout en préservant les paramètres de prise de vue.
-  - Nettoyage total des métadonnées (EXIF, GPS, auteur, modèle d'appareil).
-- **Conversion multi-format :**
-  - Prise en charge JPEG, PNG (avec canal alpha), WebP, AVIF (AV1 haute efficacité), BMP, GIF, TIFF.
+### 🖼️ Optimisation & Conversion d'Images
+- **Dimensions & Retouche :** Pixels, pourcentages, limitation maximale (*Max bounds*), rotations (90°/180°/270°), miroirs et noir & blanc.
+- **Mode Taille Cible (Ko / Mo max) :** Fixez un plafond strict (200 Ko, 500 Ko, 1 Mo, 2 Mo, 5 Mo, sur-mesure). FileMint détermine la qualité optimale et le sous-échantillonnage Lanczos par dichotomie.
+- **Qualité & Sans perte :** Curseur 10–100, préréglages (Léger, Équilibré, Max), mode lossless (PNG/WebP), ou débrayage complet de la compression.
+- **Vie privée & Métadonnées :** Suppression sélective des coordonnées GPS ou nettoyage EXIF intégral.
+- **Formats :** JPEG, PNG (avec transparence), WebP, AVIF, BMP, GIF et TIFF.
 
-### 📄 Documents PDF
-- **3 Profils de compression locale :**
-  - *Lisible* (~200-250 DPI) : clarté optimale pour documents bureautiques et impression.
-  - *Équilibré* (~150 DPI) : parfait pour les envois réguliers par e-mail.
-  - *Compact* (~100 DPI) : idéal pour les scans de factures et l'archivage.
-- **Optimisation structurelle :** Nettoyage des objets orphelins, recompression FlateDecode sans altérer les textes sélectionnables, liens ou signets.
+### 📄 Compression de Documents PDF
+- **3 Profils Dédiés :** *Lisible* (~200–250 DPI), *Équilibré* (~150 DPI) et *Compact* (~100 DPI).
+- **Compression par Taille Cible :** Respectez les limites de poids imposées par les portails administratifs et courriels.
+- **Optimisation Structurelle :** Recompression FlateDecode et nettoyage d'objets sans altérer les textes sélectionnables ni les liens.
 
-### 🏷️ Renommage par Lot avec Masques Dynamiques
-- Personnalisez vos noms de fichiers exportés grâce à des variables contextuelles :
-  - `{nom}` : nom d'origine sans extension
-  - `{profil}` / `{profile}` : profil de compression PDF appliqué (*lisible*, *equilibre*, *compact*)
-  - `{largeur}` / `{w}` et `{hauteur}` / `{h}` : dimensions réelles finales (images)
-  - `{qualite}` / `{q}` : niveau de qualité appliqué (images)
-  - `{index}` (`01`, `02`...) ou `{index3}` (`001`, `002`...) : indexation séquentielle
-  - `{date}` (`YYYY-MM-DD`) et `{annee}`
-  - `{format}` : extension de sortie (images uniquement ; les PDF restent toujours en `.pdf`)
-- **Adaptation automatique au contexte :** L'interface adapte dynamiquement les masques et variables suggérés selon que vous traitez des images ou des documents PDF (masquage automatique des variables sans objet et nettoyage automatique des séparateurs orphelins).
-- Assainissement strict et automatique des caractères interdits par les systèmes de fichiers.
+### 📂 Dossier de Surveillance Automatique (*Hot Folder*)
+- **Surveillance en Arrière-Plan :** Surveille un dossier de votre choix et optimise automatiquement tout fichier déposé.
+- **Mode Boîte de Dépôt :** Option pour supprimer le fichier source après traitement réussi (idéal pour les dossiers de transit).
+- **Retour Visuel Discret :** Toast flottant de confirmation et pastille animée dans l'en-tête de l'application.
 
-### 📁 Emplacement d'Exportation Configurable
-- Choix de l'emplacement de destination :
-  - **Sous-dossier relatif personnalisable :** définissez librement le nom du dossier (par défaut `FileMint`, ou `Optimisé`, `Web`...), à la volée ou de manière permanente dans les Réglages.
-  - **Même dossier que l'original :** avec détection automatique des collisions et suffixage sécurisé `(1)`.
-  - **Dossier fixe dédié :** choisissez un dossier cible absolu sur votre disque.
-
-### ⚙️ Profils Personnalisés & Export / Import
-- Créez, renommez, modifiez et supprimez vos propres profils de traitement.
-- Exportez et importez vos profils au format JSON pour les synchroniser entre plusieurs postes.
+### 📊 Statistiques d'Impact & Renommage
+- **Compteur à Vie :** Suivez le cumul d'espace disque économisé et de fichiers traités (100% local, réinitialisable).
+- **Masques Dynamiques Contextuels :** Renommez vos lots avec `{nom}`, `{profil}`, `{largeur}`, `{qualite}`, `{date}`, `{index}`.
+- **Destinations Flexibles :** Sous-dossier dédié (par défaut), même dossier avec suffixe `(1)`, ou dossier fixe personnalisé.
 
 ---
 
 ## 💻 Téléchargement & Installation
 
-Rendez-vous sur la page des [**Releases GitHub**](https://github.com/duboiss/FileMint/releases) pour télécharger la dernière version pour votre système d'exploitation.
+Téléchargez la dernière version sur la page [**GitHub Releases**](https://github.com/duboiss/FileMint/releases) :
 
-| Système | Format disponible |
+| Système d'exploitation | Formats disponibles |
 |---|---|
-| **Windows** (10 / 11) | Installateur NSIS (`.exe`) & Package MSI (`.msi`) |
+| **Windows** (10 / 11) | Installateur NSIS (`.exe`) & Paquet MSI (`.msi`) |
 | **macOS** (Apple Silicon & Intel) | Image disque (`.dmg`) |
-| **Linux** (Debian, Ubuntu, etc.) | Paquet `.deb` & binaire `.AppImage` |
+| **Linux** (Debian, Ubuntu, etc.) | Paquet `.deb` & binaire autonome `.AppImage` |
 
-> [!NOTE]
-> **Remarque pour Windows (SmartScreen) :**  
-> FileMint est un logiciel open-source gratuit. En l'absence de certificat de signature d'entreprise payant (plusieurs centaines d'euros par an), Windows SmartScreen peut afficher un écran d'avertissement bleu au premier lancement (*« Windows a protégé votre ordinateur »*).  
-> Pour lancer l'application : cliquez sur **« Informations complémentaires »** puis sur **« Exécuter quand même »**. Le code source est entièrement public, auditable et vérifié par notre pipeline d'intégration continue GitHub Actions.
+> [!TIP]
+> **Avertissement Windows SmartScreen :** En tant que logiciel open source sans certificat payant d'entreprise, Windows peut afficher un écran bleu au premier lancement. Cliquez sur **« Informations complémentaires »** puis **« Exécuter quand même »**.
 
 ---
 
 ## 🛠️ Développement & Compilation
 
-### Prérequis
-- [Node.js](https://nodejs.org/) v22+ (v26 LTS recommandé)
-- [Rust](https://rustup.rs/) v1.80+ avec `cargo`
-- Outils de compilation C++ selon l'OS (Visual Studio C++ Build Tools sur Windows, Xcode CLT sur macOS, `libwebkit2gtk-4.1-dev` sur Linux).
-
-### Instructions
 ```bash
-# 1. Cloner le dépôt
-git clone https://github.com/duboiss/FileMint.git
-cd FileMint
-
-# 2. Installer les dépendances frontend
+# Cloner et installer
+git clone https://github.com/duboiss/FileMint.git && cd FileMint
 npm install
 
-# 3. Lancer en mode développement (Hot Reload)
+# Lancer en mode développement (Hot Reload)
 npm run tauri dev
 
-# 4. Compiler l'exécutable final optimisé
+# Compiler les binaires de production
 npm run tauri build
 ```
 
 ---
 
-## 🤝 Contribution & Sécurité
-
-- Pour contribuer, consultez notre [Guide de contribution](CONTRIBUTING.md).
-- Pour signaler une vulnérabilité de sécurité, consultez notre [Politique de sécurité](.github/SECURITY.md).
-
----
-
 ## ⚖️ Licence
 
-Ce projet est sous licence open-source [**MIT**](LICENSE).  
-Copyright (c) 2026 Steven DUBOIS et les contributeurs de FileMint.
+Sous licence open source [**MIT**](LICENSE). Copyright (c) 2026 Steven DUBOIS et contributeurs FileMint.

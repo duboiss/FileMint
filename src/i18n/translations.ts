@@ -127,6 +127,14 @@ export interface TranslationDictionary {
   noCompressionTitle: string;
   noCompressionNotice: string;
   noCompressionBadge: string;
+  compressionModeQuality: string;
+  compressionModeTargetSize: string;
+  targetSizeTitle: string;
+  targetSizeDesc: string;
+  targetSizeQuickPills: string;
+  targetSizeCustomLabel: string;
+  pdfPresetProfiles: string;
+  pdfTargetSizeDesc: string;
   encodingQuality: string;
   qualityLight: string;
   qualityBalanced: string;
@@ -251,6 +259,15 @@ export interface TranslationDictionary {
 
   // Settings
   settingsTitle: string;
+  lifetimeStatsTitle: string;
+  lifetimeSpaceSaved: string;
+  lifetimeFilesOptimized: string;
+  lifetimeLocalNotice: string;
+  lifetimeMilestone: string;
+  lifetimePill: string;
+  lifetimePillFiles: string;
+  resetStats: string;
+  resetStatsConfirm: string;
   appearance: string;
   themeDarkLabel: string;
   themeLightLabel: string;
@@ -272,6 +289,20 @@ export interface TranslationDictionary {
   contextMenuBadgeRecommended: string;
   contextMenuWelcomeTitle: string;
   contextMenuWelcomeSubtitle: string;
+  watchFolderSection: string;
+  watchFolderDesc: string;
+  watchFolderEnable: string;
+  watchFolderEnableDesc: string;
+  watchFolderPath: string;
+  watchFolderBrowse: string;
+  watchFolderSelectPlaceholder: string;
+  watchFolderDestPath: string;
+  watchFolderDefaultSubfolder: string;
+  watchFolderDeleteSource: string;
+  watchFolderDeleteSourceDesc: string;
+  watchFolderStatusActive: string;
+  watchFolderStatusIdle: string;
+  watchFolderProcessedToast: string;
   updatesSection: string;
   updateCheckLabel: string;
   updateCheckDesc: string;
@@ -410,6 +441,14 @@ export const translations: Record<Language, TranslationDictionary> = {
     noCompressionTitle: 'Compression désactivée',
     noCompressionNotice: 'Les images ne subiront aucune compression destructrice. Si aucun redimensionnement ou effet n\'est appliqué, les fichiers originaux restent strictement intacts.',
     noCompressionBadge: 'Qualité source',
+    compressionModeQuality: 'Qualité manuelle',
+    compressionModeTargetSize: 'Taille cible max',
+    targetSizeTitle: 'Poids cible maximal',
+    targetSizeDesc: 'FileMint optimise automatiquement la compression et les dimensions pour que le fichier ne dépasse jamais ce seuil (idéal pour formulaires administratifs et uploads).',
+    targetSizeQuickPills: 'Objectifs fréquents :',
+    targetSizeCustomLabel: 'Taille limite :',
+    pdfPresetProfiles: 'Profils prédéfinis',
+    pdfTargetSizeDesc: 'FileMint rééchantillonne les flux et images intégrées pour que le document final respecte cette limite de poids.',
     encodingQuality: 'Qualité d\'encodage :',
     qualityLight: 'Léger',
     qualityBalanced: 'Équilibré',
@@ -529,27 +568,50 @@ export const translations: Record<Language, TranslationDictionary> = {
     newBatch: 'Nouveau traitement',
 
     settingsTitle: 'Réglages de FileMint',
+    lifetimeStatsTitle: 'Impact & Statistiques d\'utilisation',
+    lifetimeSpaceSaved: 'Espace disque économisé',
+    lifetimeFilesOptimized: 'Fichiers optimisés',
+    lifetimeLocalNotice: '100% calculé et stocké localement sur cet ordinateur.',
+    lifetimeMilestone: 'Impact cumulé depuis l\'installation',
+    lifetimePill: 'économisés au total',
+    lifetimePillFiles: 'fichiers optimisés',
+    resetStats: 'Réinitialiser les compteurs',
+    resetStatsConfirm: 'Voulez-vous vraiment remettre à zéro les compteurs d\'espace économisé et de fichiers ?',
     appearance: 'Apparence & Thème',
     themeDarkLabel: 'Thème Sombre',
     themeLightLabel: 'Thème Clair',
     languageSection: 'Langue de l\'application',
     defaultTabSection: 'Onglet par défaut au chargement d\'image',
     defaultPresetSection: 'Profil image appliqué par défaut',
-    systemIntegration: 'Intégration système (Windows)',
-    contextMenuLabel: 'Menu contextuel de l\'Explorateur Windows',
-    contextMenuDesc: 'Accédez à FileMint d\'un clic droit sur vos images et PDF.',
-    contextMenuLevelTitle: 'Style d\'intégration dans Windows :',
+    systemIntegration: 'Menu contextuel Windows',
+    contextMenuLabel: 'Menu contextuel (clic droit dans l\'Explorateur)',
+    contextMenuDesc: 'Accédez directement à FileMint d\'un clic droit sur vos images et PDF.',
+    contextMenuLevelTitle: 'Style de menu contextuel (clic droit) :',
     contextMenuDisabled: 'Désactivé',
-    contextMenuDisabledDesc: 'Aucun raccourci au clic droit dans l\'Explorateur.',
+    contextMenuDisabledDesc: 'Ne pas afficher FileMint au clic droit dans l\'Explorateur.',
     contextMenuModern: 'Moderne (Windows 11)',
-    contextMenuModernDesc: 'Menu principal direct au clic droit.',
-    contextMenuClassic: 'Classique (Windows 10)',
-    contextMenuClassicDesc: 'Sous-menu « Afficher plus d\'options » ou Windows 10.',
+    contextMenuModernDesc: 'Visible directement au premier clic droit.',
+    contextMenuClassic: 'Classique (Windows 10 / 11)',
+    contextMenuClassicDesc: 'Dans le menu « Afficher plus d\'options » ou sous Windows 10.',
     contextMenuRefreshNotice: 'L\'intégration classique est immédiate. L\'extension moderne s\'applique à la prochaine ouverture de l\'Explorateur ou au redémarrage.',
     contextMenuApplying: 'Configuration du menu contextuel Windows en cours...',
     contextMenuBadgeRecommended: 'Recommandé',
-    contextMenuWelcomeTitle: 'Intégration au clic droit :',
-    contextMenuWelcomeSubtitle: 'Choisissez comment accéder à FileMint depuis vos fichiers.',
+    contextMenuWelcomeTitle: 'Menu contextuel (clic droit Windows) :',
+    contextMenuWelcomeSubtitle: 'Accédez directement à FileMint au clic droit dans l\'Explorateur.',
+    watchFolderSection: 'Dossier de surveillance automatique (Hot Folder)',
+    watchFolderDesc: 'Compresse silencieusement en arrière-plan tout fichier (image ou PDF) déposé dans ce dossier.',
+    watchFolderEnable: 'Activer la surveillance automatique',
+    watchFolderEnableDesc: 'Traite automatiquement les fichiers dès leur enregistrement ou dépôt dans le dossier.',
+    watchFolderPath: 'Dossier surveillé :',
+    watchFolderBrowse: 'Parcourir...',
+    watchFolderSelectPlaceholder: 'Sélectionner un dossier à surveiller...',
+    watchFolderDestPath: 'Dossier de sortie des fichiers optimisés :',
+    watchFolderDefaultSubfolder: 'Sous-dossier FileMint_Optimized par défaut',
+    watchFolderDeleteSource: 'Boîte de dépôt : supprimer le fichier source après succès',
+    watchFolderDeleteSourceDesc: 'Idéal si vous utilisez un dossier temporaire dédié au dépôt de fichiers.',
+    watchFolderStatusActive: 'Surveillance active',
+    watchFolderStatusIdle: 'Surveillance en attente de configuration',
+    watchFolderProcessedToast: 'Fichier optimisé automatiquement :',
     updatesSection: 'Mises à jour logicielles',
     updateCheckLabel: 'Vérification automatique au démarrage',
     updateCheckDesc: 'Consulte discrètement GitHub Releases (sans télémétrie ni envoi de données privées).',
@@ -687,6 +749,14 @@ export const translations: Record<Language, TranslationDictionary> = {
     noCompressionTitle: 'Compression disabled',
     noCompressionNotice: 'Images will not undergo any lossy compression. If no resizing or effect is applied, original files remain strictly bit-exact.',
     noCompressionBadge: 'Source quality',
+    compressionModeQuality: 'Manual Quality',
+    compressionModeTargetSize: 'Target Max Size',
+    targetSizeTitle: 'Maximum target file size',
+    targetSizeDesc: 'FileMint automatically adjusts compression and dimensions so the file never exceeds this limit (ideal for administrative portals and email attachments).',
+    targetSizeQuickPills: 'Quick targets:',
+    targetSizeCustomLabel: 'Size limit:',
+    pdfPresetProfiles: 'Preset profiles',
+    pdfTargetSizeDesc: 'FileMint recompresses streams and embedded images so the final PDF stays below this target file size.',
     encodingQuality: 'Encoding quality:',
     qualityLight: 'Light',
     qualityBalanced: 'Balanced',
@@ -806,27 +876,50 @@ export const translations: Record<Language, TranslationDictionary> = {
     newBatch: 'New batch',
 
     settingsTitle: 'FileMint Settings',
+    lifetimeStatsTitle: 'Impact & Lifetime Statistics',
+    lifetimeSpaceSaved: 'Disk space saved',
+    lifetimeFilesOptimized: 'Optimized files',
+    lifetimeLocalNotice: '100% computed and stored locally on this machine.',
+    lifetimeMilestone: 'Lifetime impact since installation',
+    lifetimePill: 'saved in total',
+    lifetimePillFiles: 'files optimized',
+    resetStats: 'Reset counters',
+    resetStatsConfirm: 'Are you sure you want to reset all lifetime storage and file counters?',
     appearance: 'Appearance & Theme',
     themeDarkLabel: 'Dark Theme',
     themeLightLabel: 'Light Theme',
     languageSection: 'Application Language',
     defaultTabSection: 'Default tab on image upload',
     defaultPresetSection: 'Default image profile',
-    systemIntegration: 'System Integration (Windows)',
-    contextMenuLabel: 'Windows Explorer Context Menu',
-    contextMenuDesc: 'Access FileMint with a right-click on your images and PDFs.',
-    contextMenuLevelTitle: 'Windows integration style:',
+    systemIntegration: 'Windows Context Menu',
+    contextMenuLabel: 'Context menu (right-click in Explorer)',
+    contextMenuDesc: 'Access FileMint directly with a right-click on your images and PDFs.',
+    contextMenuLevelTitle: 'Context menu style (right-click):',
     contextMenuDisabled: 'Disabled',
-    contextMenuDisabledDesc: 'No right-click shortcuts in Windows Explorer.',
+    contextMenuDisabledDesc: 'Do not show FileMint on right-click in Explorer.',
     contextMenuModern: 'Modern (Windows 11)',
-    contextMenuModernDesc: 'Direct top-level right-click menu.',
-    contextMenuClassic: 'Classic (Windows 10)',
-    contextMenuClassicDesc: 'Inside "Show more options" sub-menu or Windows 10.',
+    contextMenuModernDesc: 'Directly visible on the primary right-click menu.',
+    contextMenuClassic: 'Classic (Windows 10 / 11)',
+    contextMenuClassicDesc: 'Inside "Show more options" or on Windows 10.',
     contextMenuRefreshNotice: 'Classic integration is immediate. Modern extension applies upon next Explorer launch or restart.',
     contextMenuApplying: 'Configuring Windows context menu...',
     contextMenuBadgeRecommended: 'Recommended',
-    contextMenuWelcomeTitle: 'Right-click integration:',
-    contextMenuWelcomeSubtitle: 'Choose how to access FileMint from your files.',
+    contextMenuWelcomeTitle: 'Context menu (Windows right-click):',
+    contextMenuWelcomeSubtitle: 'Access FileMint directly via right-click in Explorer.',
+    watchFolderSection: 'Automatic Watch Folder (Hot Folder)',
+    watchFolderDesc: 'Silently optimizes in the background any file (image or PDF) dropped into this folder.',
+    watchFolderEnable: 'Enable automatic folder watching',
+    watchFolderEnableDesc: 'Automatically compresses files as soon as they are saved or dropped into the folder.',
+    watchFolderPath: 'Watched folder:',
+    watchFolderBrowse: 'Browse...',
+    watchFolderSelectPlaceholder: 'Select a folder to watch...',
+    watchFolderDestPath: 'Optimized files destination folder:',
+    watchFolderDefaultSubfolder: 'Default FileMint_Optimized subfolder',
+    watchFolderDeleteSource: 'Drop box mode: delete source file after success',
+    watchFolderDeleteSourceDesc: 'Perfect if you use a dedicated temporary folder for dropping files.',
+    watchFolderStatusActive: 'Watching active',
+    watchFolderStatusIdle: 'Watcher waiting for setup',
+    watchFolderProcessedToast: 'File automatically optimized:',
     updatesSection: 'Software Updates',
     updateCheckLabel: 'Automatic check on startup',
     updateCheckDesc: 'Discreetly checks GitHub Releases (no telemetry, no private data sent).',

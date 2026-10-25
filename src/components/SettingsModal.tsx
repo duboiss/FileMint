@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   useFileMintStore,
   formatResizeSummary,
+  formatFileSize,
   createProfilesExportJson,
   validateAndSanitizeProfiles,
 } from '../store/useFileMintStore';
@@ -25,13 +26,12 @@ import {
   Folder,
   Loader2,
   Sparkles,
-  Layers,
-  EyeOff,
+  RotateCcw,
 } from 'lucide-react';
 import { save as saveDialog, open as openDialog } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { open as openUrl } from '@tauri-apps/plugin-shell';
-import { CustomProfile, ImageConfigTab } from '../types';
+import { CustomProfile, ImageConfigTab, ContextMenuMode } from '../types';
 import { getSystemLanguage } from '../i18n/translations';
 
 export const SettingsModal: React.FC = () => {
@@ -58,6 +58,11 @@ export const SettingsModal: React.FC = () => {
     theme,
     setTheme,
     t,
+    lifetimeSavedBytes,
+    lifetimeFilesCount,
+    resetLifetimeStats,
+    watchFolderConfig,
+    setWatchFolderConfig,
   } = useFileMintStore();
 
   const handleSelectDefaultCustomFolder = async () => {
@@ -68,6 +73,34 @@ export const SettingsModal: React.FC = () => {
       });
       if (selected && typeof selected === 'string') {
         setDestinationConfig({ mode: { Custom: selected } });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSelectWatchFolder = async () => {
+    try {
+      const selected = await openDialog({
+        directory: true,
+        multiple: false,
+      });
+      if (selected && typeof selected === 'string') {
+        setWatchFolderConfig({ watch_path: selected, enabled: true });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSelectWatchOutputFolder = async () => {
+    try {
+      const selected = await openDialog({
+        directory: true,
+        multiple: false,
+      });
+      if (selected && typeof selected === 'string') {
+        setWatchFolderConfig({ output_path: selected });
       }
     } catch (err) {
       console.error(err);
@@ -270,6 +303,57 @@ export const SettingsModal: React.FC = () => {
         </div>
 
         <div className="p-6 space-y-6 overflow-y-auto text-xs">
+          {/* Lifetime Statistics & Disk Impact */}
+          <div className="space-y-3">
+            <h4 className="font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-mint-500" />
+                <span>{t.lifetimeStatsTitle}</span>
+              </span>
+              {lifetimeFilesCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(t.resetStatsConfirm)) {
+                      resetLifetimeStats();
+                    }
+                  }}
+                  className="text-[10px] text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors font-medium flex items-center gap-1 cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>{t.resetStats}</span>
+                </button>
+              )}
+            </h4>
+
+            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3.5 rounded-xl bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/60 flex flex-col justify-between">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    {t.lifetimeSpaceSaved}
+                  </span>
+                  <div className="text-xl font-black font-mono text-mint-500 mt-1">
+                    {formatFileSize(lifetimeSavedBytes, language)}
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/60 flex flex-col justify-between">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    {t.lifetimeFilesOptimized}
+                  </span>
+                  <div className="text-xl font-black font-mono text-slate-800 dark:text-slate-100 mt-1">
+                    {lifetimeFilesCount}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
+                <Shield className="w-3.5 h-3.5 text-mint-500 shrink-0" />
+                <span>{t.lifetimeLocalNotice}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-3">
             <h4 className="font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <Languages className="w-3.5 h-3.5 text-mint-500" />
@@ -405,138 +489,166 @@ export const SettingsModal: React.FC = () => {
                   contextMenuLoading ? 'opacity-70 pointer-events-none' : ''
                 }`}
               >
-                {/* 1. Modern */}
-                <button
-                  type="button"
-                  disabled={contextMenuLoading}
-                  onClick={() => setContextMenuMode('modern')}
-                  className={`w-full p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                    contextMenuEnabled && contextMenuMode === 'modern'
-                      ? 'border-mint-500 bg-mint-500/10 text-slate-900 dark:text-white shadow-sm ring-1 ring-mint-500/30'
-                      : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                        contextMenuEnabled && contextMenuMode === 'modern'
-                          ? 'bg-mint-500/20 text-mint-500'
-                          : 'bg-slate-200/60 dark:bg-slate-700/60 text-slate-400'
-                      }`}
-                    >
-                      <Sparkles className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs text-slate-800 dark:text-slate-100">
-                          {t.contextMenuModern}
-                        </span>
-                        <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-mint-500/20 text-mint-600 dark:text-mint-400 border border-mint-500/30">
-                          {t.contextMenuBadgeRecommended}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        {t.contextMenuModernDesc}
-                      </p>
-                    </div>
+                <div className="relative">
+                  <select
+                    disabled={contextMenuLoading}
+                    value={!contextMenuEnabled || contextMenuMode === 'disabled' ? 'disabled' : contextMenuMode}
+                    onChange={(e) => setContextMenuMode(e.target.value as ContextMenuMode)}
+                    className="w-full py-2.5 px-3 pr-10 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-800/80 text-sm font-medium focus:outline-none focus:border-mint-500 transition-colors cursor-pointer appearance-none text-slate-800 dark:text-slate-100"
+                  >
+                    <option value="modern">
+                      {t.contextMenuModern} • {t.contextMenuBadgeRecommended}
+                    </option>
+                    <option value="classic">
+                      {t.contextMenuClassic}
+                    </option>
+                    <option value="disabled">
+                      {t.contextMenuDisabled}
+                    </option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                      <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                    </svg>
                   </div>
-                  <div className="shrink-0 flex items-center">
-                    {contextMenuEnabled && contextMenuMode === 'modern' ? (
-                      <div className="w-5 h-5 rounded-full bg-mint-500 text-slate-950 flex items-center justify-center shadow-sm">
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      </div>
-                    ) : (
-                      <div className="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600" />
-                    )}
-                  </div>
-                </button>
+                </div>
 
-                {/* 2. Classic */}
-                <button
-                  type="button"
-                  disabled={contextMenuLoading}
-                  onClick={() => setContextMenuMode('classic')}
-                  className={`w-full p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                    contextMenuEnabled && contextMenuMode === 'classic'
-                      ? 'border-mint-500 bg-mint-500/10 text-slate-900 dark:text-white shadow-sm ring-1 ring-mint-500/30'
-                      : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                        contextMenuEnabled && contextMenuMode === 'classic'
-                          ? 'bg-mint-500/20 text-mint-500'
-                          : 'bg-slate-200/60 dark:bg-slate-700/60 text-slate-400'
-                      }`}
-                    >
-                      <Layers className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="font-bold text-xs text-slate-800 dark:text-slate-100 block">
-                        {t.contextMenuClassic}
-                      </span>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        {t.contextMenuClassicDesc}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="shrink-0 flex items-center">
-                    {contextMenuEnabled && contextMenuMode === 'classic' ? (
-                      <div className="w-5 h-5 rounded-full bg-mint-500 text-slate-950 flex items-center justify-center shadow-sm">
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      </div>
-                    ) : (
-                      <div className="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600" />
-                    )}
-                  </div>
-                </button>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {(!contextMenuEnabled || contextMenuMode === 'disabled') && t.contextMenuDisabledDesc}
+                  {contextMenuEnabled && contextMenuMode === 'modern' && t.contextMenuModernDesc}
+                  {contextMenuEnabled && contextMenuMode === 'classic' && t.contextMenuClassicDesc}
+                </p>
 
-                {/* 3. Disabled */}
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 italic block pt-0.5">
+                  {t.contextMenuRefreshNotice}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Automatic Watch Folder (Hot Folder) */}
+          <div className="space-y-3">
+            <h4 className="font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Folder className="w-3.5 h-3.5 text-mint-500" />
+                <span>{t.watchFolderSection}</span>
+              </span>
+              {watchFolderConfig.enabled && watchFolderConfig.watch_path && (
+                <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>{t.watchFolderStatusActive}</span>
+                </span>
+              )}
+            </h4>
+
+            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-4">
+              {/* Enable Switch */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 pr-1">
+                  <div className="font-semibold text-slate-800 dark:text-slate-100 text-xs">
+                    {t.watchFolderEnable}
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                    {t.watchFolderDesc}
+                  </p>
+                </div>
+
                 <button
                   type="button"
-                  disabled={contextMenuLoading}
-                  onClick={() => setContextMenuMode('disabled')}
-                  className={`w-full p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                    !contextMenuEnabled || contextMenuMode === 'disabled'
-                      ? 'border-slate-400 dark:border-slate-600 bg-slate-200/50 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-400/30'
-                      : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                  role="switch"
+                  aria-checked={watchFolderConfig.enabled}
+                  onClick={() =>
+                    setWatchFolderConfig({
+                      enabled: !watchFolderConfig.enabled,
+                    })
+                  }
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ml-2 ${
+                    watchFolderConfig.enabled ? 'bg-mint-500' : 'bg-slate-300 dark:bg-slate-700'
                   }`}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                        !contextMenuEnabled || contextMenuMode === 'disabled'
-                          ? 'bg-slate-300/60 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
-                          : 'bg-slate-200/60 dark:bg-slate-700/60 text-slate-400'
-                      }`}
-                    >
-                      <EyeOff className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="font-bold text-xs text-slate-800 dark:text-slate-100 block">
-                        {t.contextMenuDisabled}
-                      </span>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        {t.contextMenuDisabledDesc}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="shrink-0 flex items-center">
-                    {!contextMenuEnabled || contextMenuMode === 'disabled' ? (
-                      <div className="w-5 h-5 rounded-full bg-slate-600 text-white flex items-center justify-center shadow-sm">
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      </div>
-                    ) : (
-                      <div className="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600" />
-                    )}
-                  </div>
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                      watchFolderConfig.enabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
                 </button>
               </div>
 
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 italic block text-center pt-1">
-                {t.contextMenuRefreshNotice}
-              </span>
+              {/* Watched Directory Picker */}
+              <div className="space-y-1.5 pt-1 border-t border-slate-200 dark:border-slate-700/60">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {t.watchFolderPath}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    placeholder={t.watchFolderSelectPlaceholder}
+                    value={watchFolderConfig.watch_path || ''}
+                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSelectWatchFolder}
+                    className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                  >
+                    <Folder className="w-3.5 h-3.5 text-mint-500" />
+                    <span>{t.watchFolderBrowse}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Output Directory Picker */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {t.watchFolderDestPath}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    placeholder={t.watchFolderDefaultSubfolder}
+                    value={watchFolderConfig.output_path || ''}
+                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSelectWatchOutputFolder}
+                    className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                  >
+                    <Folder className="w-3.5 h-3.5 text-mint-500" />
+                    <span>{t.watchFolderBrowse}</span>
+                  </button>
+                  {watchFolderConfig.output_path && (
+                    <button
+                      type="button"
+                      onClick={() => setWatchFolderConfig({ output_path: null })}
+                      className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-red-50 hover:text-red-500 text-slate-400 cursor-pointer"
+                      title="Réinitialiser au sous-dossier par défaut"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Delete source toggle (drop box mode) */}
+              <label className="flex items-start gap-2.5 pt-2 border-t border-slate-200 dark:border-slate-700/60 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={watchFolderConfig.delete_source}
+                  onChange={(e) => setWatchFolderConfig({ delete_source: e.target.checked })}
+                  className="rounded text-mint-500 accent-mint-500 mt-0.5"
+                />
+                <div>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 block text-xs">
+                    {t.watchFolderDeleteSource}
+                  </span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {t.watchFolderDeleteSourceDesc}
+                  </span>
+                </div>
+              </label>
             </div>
           </div>
 

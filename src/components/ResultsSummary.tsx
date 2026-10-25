@@ -1,10 +1,10 @@
 import React from 'react';
 import { useFileMintStore, formatFileSize } from '../store/useFileMintStore';
 import { invoke } from '@tauri-apps/api/core';
-import { CheckCircle2, AlertCircle, FolderOpen, RotateCcw, ArrowDownRight, FileText, Image as ImageIcon } from 'lucide-react';
+import { CheckCircle2, AlertCircle, FolderOpen, RotateCcw, ArrowDownRight, FileText, Image as ImageIcon, Sparkles } from 'lucide-react';
 
 export const ResultsSummary: React.FC = () => {
-  const { batchSummary, resetToHome, t, language } = useFileMintStore();
+  const { batchSummary, resetToHome, t, language, lifetimeSavedBytes, lifetimeFilesCount } = useFileMintStore();
 
   if (!batchSummary) {
     return null;
@@ -76,6 +76,30 @@ export const ResultsSummary: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {lifetimeFilesCount > 0 && (
+          <div className="w-full max-w-lg mx-auto p-3.5 rounded-2xl bg-mint-500/5 dark:bg-mint-500/10 border border-mint-500/20 flex items-center justify-between text-xs mb-8">
+            <div className="flex items-center gap-2.5 text-left">
+              <div className="h-8 w-8 rounded-xl bg-mint-500/20 flex items-center justify-center text-mint-500">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold text-slate-800 dark:text-slate-100 block">
+                  {t.lifetimeMilestone}
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {lifetimeFilesCount} {t.lifetimePillFiles}
+                </span>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="font-mono font-black text-mint-600 dark:text-mint-400 text-sm">
+                {formatFileSize(lifetimeSavedBytes, language)}
+              </span>
+              <span className="text-[10px] text-slate-400 block">{t.lifetimePill}</span>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center gap-3">
           <button

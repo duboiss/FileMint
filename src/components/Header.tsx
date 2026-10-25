@@ -3,7 +3,7 @@ import { useFileMintStore, APP_VERSION } from '../store/useFileMintStore';
 import { Sparkles, Settings, ArrowUpCircle } from 'lucide-react';
 
 export const Header: React.FC = () => {
-  const { setSettingsOpen, updateInfo, t } = useFileMintStore();
+  const { setSettingsOpen, updateInfo, t, watchFolderConfig } = useFileMintStore();
   const isDev = Boolean(import.meta.env.DEV);
   const versionLabel = isDev ? `v${APP_VERSION} Local` : `v${APP_VERSION}`;
 
@@ -26,6 +26,17 @@ export const Header: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-2">
+        {watchFolderConfig.enabled && watchFolderConfig.watch_path && (
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors cursor-pointer"
+            title={`${t.watchFolderStatusActive} : ${watchFolderConfig.watch_path}`}
+          >
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[11px] hidden sm:inline">{t.watchFolderStatusActive}</span>
+          </button>
+        )}
+
         {updateInfo?.has_update && (
           <button
             onClick={() => setSettingsOpen(true)}

@@ -7,11 +7,13 @@ use crate::engine::batch_runner::{BatchRequest, BatchRunner, BatchSummary};
 use crate::engine::file_manager;
 use crate::engine::image_processor::{self, ImageTransformOptions, PreviewResult};
 use crate::engine::update_checker::{self, UpdateInfo};
+use crate::engine::watch_folder::{WatchFolderConfig, WatchFolderManager};
 use crate::shell::windows_registry;
 
 pub struct AppState {
     pub runner: Mutex<BatchRunner>,
     pub cli_files: Mutex<Vec<String>>,
+    pub watch_manager: WatchFolderManager,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -172,4 +174,19 @@ pub fn get_windows_context_menu_status() -> ContextMenuStatus {
 pub fn get_cli_files(state: State<'_, AppState>) -> Vec<String> {
     let mut files = state.cli_files.lock().unwrap();
     std::mem::take(&mut *files)
+}
+
+#[tauri::command]
+pub fn get_watch_folder_config(state: State<'_, AppState>) -> WatchFolderConfig {
+    state.watch_manager.get_config()
+}
+
+#[tauri::command]
+pub fn set_watch_folder_config(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    config: WatchFolderConfig,
+) -> Result<(), String> {
+    state.watch_manager.update_config(app, config);
+    Ok(())
 }

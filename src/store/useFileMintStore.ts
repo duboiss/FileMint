@@ -14,6 +14,8 @@ import {
   ContextMenuMode,
   ContextMenuStatus,
   ThemeMode,
+  WatchFolderConfig,
+  WatchProcessedEvent,
 } from '../types';
 import {
   Language,
@@ -319,6 +321,57 @@ const getInitialLanguageData = (): { language: Language; showWelcome: boolean } 
 const CUSTOM_PROFILES_STORAGE_KEY = 'filemint_custom_presets';
 export const MAX_CUSTOM_PROFILES = 20;
 
+const LIFETIME_SAVED_BYTES_KEY = 'filemint_lifetime_bytes_saved';
+const LIFETIME_FILES_COUNT_KEY = 'filemint_lifetime_files_count';
+
+const getInitialLifetimeSavedBytes = (): number => {
+  try {
+    const raw = localStorage.getItem(LIFETIME_SAVED_BYTES_KEY);
+    return raw ? Math.max(0, parseInt(raw, 10) || 0) : 0;
+  } catch {
+    return 0;
+  }
+};
+
+const getInitialLifetimeFilesCount = (): number => {
+  try {
+    const raw = localStorage.getItem(LIFETIME_FILES_COUNT_KEY);
+    return raw ? Math.max(0, parseInt(raw, 10) || 0) : 0;
+  } catch {
+    return 0;
+  }
+};
+
+const saveLifetimeStatsToStorage = (bytesSaved: number, filesCount: number) => {
+  try {
+    localStorage.setItem(LIFETIME_SAVED_BYTES_KEY, String(Math.max(0, bytesSaved)));
+    localStorage.setItem(LIFETIME_FILES_COUNT_KEY, String(Math.max(0, filesCount)));
+  } catch {}
+};
+
+const WATCH_FOLDER_STORAGE_KEY = 'filemint_watch_folder_config';
+
+const getInitialWatchFolderConfig = (): WatchFolderConfig => {
+  try {
+    const raw = localStorage.getItem(WATCH_FOLDER_STORAGE_KEY);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch {}
+  return {
+    enabled: false,
+    watch_path: '',
+    output_path: null,
+    delete_source: false,
+  };
+};
+
+const saveWatchFolderConfigToStorage = (config: WatchFolderConfig) => {
+  try {
+    localStorage.setItem(WATCH_FOLDER_STORAGE_KEY, JSON.stringify(config));
+  } catch {}
+};
+
 const loadCustomProfilesFromStorage = (dict?: TranslationDictionary): CustomProfile[] => {
   try {
     const raw = localStorage.getItem(CUSTOM_PROFILES_STORAGE_KEY);
@@ -389,7 +442,13 @@ const generateLocalBrowserPreview = (
   let estimatedBytes: number;
   let savedPercentage: number;
 
-  if (isCompressionDisabled && isNoTransform) {
+  if (imageOptions.target_size_kb && imageOptions.target_size_kb > 0 && !isCompressionDisabled) {
+    const targetBytes = imageOptions.target_size_kb * 1024;
+    estimatedBytes = Math.min(activeFile.sizeBytes, targetBytes);
+    savedPercentage = activeFile.sizeBytes > 0
+      ? Math.max(0, Math.round(((activeFile.sizeBytes - estimatedBytes) / activeFile.sizeBytes) * 100))
+      : 0;
+  } else if (isCompressionDisabled && isNoTransform) {
     estimatedBytes = activeFile.sizeBytes;
     savedPercentage = 0;
   } else {
@@ -522,6 +581,18 @@ interface FileMintState {
   batchProgress: ProgressEventPayload | null;
   batchSummary: BatchSummary | null;
 
+  lifetimeSavedBytes: number;
+  lifetimeFilesCount: number;
+  recordBatchCompletion: (summary: BatchSummary) => void;
+  resetLifetimeStats: () => void;
+
+  watchFolderConfig: WatchFolderConfig;
+  lastWatchEvent: WatchProcessedEvent | null;
+  watchToastVisible: boolean;
+  setWatchFolderConfig: (config: Partial<WatchFolderConfig>) => Promise<void>;
+  recordWatchProcessed: (event: WatchProcessedEvent) => void;
+  dismissWatchToast: () => void;
+
   language: Language;
   showWelcomeModal: boolean;
   t: TranslationDictionary;
@@ -623,6 +694,66 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
     batchRunning: false,
     batchProgress: null,
     batchSummary: null,
+
+    lifetimeSavedBytes: getInitialLifetimeSavedBytes(),
+    lifetimeFilesCount: getInitialLifetimeFilesCount(),
+
+    recordBatchCompletion: (summary: BatchSummary) => {
+      const addSaved = Math.max(0, summary.total_saved_bytes);
+      const addFiles = summary.success_count;
+      const nextSaved = get().lifetimeSavedBytes + addSaved;
+      const nextFiles = get().lifetimeFilesCount + addFiles;
+      saveLifetimeStatsToStorage(nextSaved, nextFiles);
+      set({ lifetimeSavedBytes: nextSaved, lifetimeFilesCount: nextFiles });
+    },
+
+    resetLifetimeStats: () => {
+      saveLifetimeStatsToStorage(0, 0);
+      set({ lifetimeSavedBytes: 0, lifetimeFilesCount: 0 });
+    },
+
+    watchFolderConfig: getInitialWatchFolderConfig(),
+    lastWatchEvent: null,
+    watchToastVisible: false,
+
+    setWatchFolderConfig: async (configUpdate: Partial<WatchFolderConfig>) => {
+      const merged = { ...get().watchFolderConfig, ...configUpdate };
+      saveWatchFolderConfigToStorage(merged);
+      set({ watchFolderConfig: merged });
+
+      if (isTauriEnv()) {
+        try {
+          await invoke('set_watch_folder_config', {
+            config: {
+              ...merged,
+              image_options: get().imageOptions,
+              pdf_options: get().pdfOptions,
+            },
+          });
+        } catch (err) {
+          console.error('Erreur configuration dossier surveillé :', err);
+        }
+      }
+    },
+
+    recordWatchProcessed: (event: WatchProcessedEvent) => {
+      const nextSaved = get().lifetimeSavedBytes + Math.max(0, event.saved_bytes);
+      const nextFiles = get().lifetimeFilesCount + 1;
+      saveLifetimeStatsToStorage(nextSaved, nextFiles);
+      set({
+        lifetimeSavedBytes: nextSaved,
+        lifetimeFilesCount: nextFiles,
+        lastWatchEvent: event,
+        watchToastVisible: true,
+      });
+      setTimeout(() => {
+        set({ watchToastVisible: false });
+      }, 5000);
+    },
+
+    dismissWatchToast: () => {
+      set({ watchToastVisible: false });
+    },
 
     settingsOpen: false,
     updateCheckEnabled: getInitialUpdateCheckEnabled(),
@@ -1101,25 +1232,27 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           });
         }
 
+        const mockSummary: BatchSummary = {
+          total_items: files.length,
+          success_count: files.length,
+          failure_count: 0,
+          total_original_bytes: files.reduce((acc, f) => acc + f.sizeBytes, 0),
+          total_final_bytes: files.reduce((acc, f) => acc + Math.round(f.sizeBytes * 0.45), 0),
+          total_saved_bytes: savedTotal,
+          cancelled: false,
+          items: files.map((f) => ({
+            file_name: f.name,
+            original_size: f.sizeBytes,
+            final_size: Math.round(f.sizeBytes * 0.45),
+            success: true,
+            error: null,
+            output_path: `./FileMint/${f.name}`,
+          })),
+        };
+        get().recordBatchCompletion(mockSummary);
         set({
           batchRunning: false,
-          batchSummary: {
-            total_items: files.length,
-            success_count: files.length,
-            failure_count: 0,
-            total_original_bytes: files.reduce((acc, f) => acc + f.sizeBytes, 0),
-            total_final_bytes: files.reduce((acc, f) => acc + Math.round(f.sizeBytes * 0.45), 0),
-            total_saved_bytes: savedTotal,
-            cancelled: false,
-            items: files.map((f) => ({
-              file_name: f.name,
-              original_size: f.sizeBytes,
-              final_size: Math.round(f.sizeBytes * 0.45),
-              success: true,
-              error: null,
-              output_path: `./FileMint/${f.name}`,
-            })),
-          },
+          batchSummary: mockSummary,
         });
         return;
       }
@@ -1145,6 +1278,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
             destination: destinationConfig,
           },
         });
+        get().recordBatchCompletion(summary);
         set({ batchSummary: summary, batchRunning: false });
       } catch (err) {
         console.error('Erreur durant le traitement par lot :', err);
@@ -1257,6 +1391,19 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       } catch {
         // Silently ignore if not running in Windows shell environment
       }
+
+      try {
+        const watchCfg = get().watchFolderConfig;
+        if (watchCfg.enabled && watchCfg.watch_path) {
+          invoke('set_watch_folder_config', {
+            config: {
+              ...watchCfg,
+              image_options: get().imageOptions,
+              pdf_options: get().pdfOptions,
+            },
+          }).catch(() => {});
+        }
+      } catch {}
     },
   };
 });

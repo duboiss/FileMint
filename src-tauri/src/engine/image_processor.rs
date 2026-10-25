@@ -62,6 +62,8 @@ pub struct ImageTransformOptions {
     pub metadata_policy: MetadataPolicy,
     #[serde(default = "default_compress")]
     pub compress: bool,
+    #[serde(default)]
+    pub target_size_kb: Option<u32>,
 }
 
 fn default_compress() -> bool {
@@ -83,6 +85,7 @@ impl Default for ImageTransformOptions {
             grayscale: false,
             metadata_policy: MetadataPolicy::RemoveGps,
             compress: true,
+            target_size_kb: None,
         }
     }
 }
@@ -328,6 +331,83 @@ pub fn calculate_target_dimensions(
     }
 }
 
+pub fn encode_single_image(
+    img: &DynamicImage,
+    target_format: ImageFormat,
+    quality: u8,
+    lossless: bool,
+    compress: bool,
+) -> Result<(Vec<u8>, bool)> {
+    let (w, h) = img.dimensions();
+    let mut transparency_warning = false;
+
+    let final_img = match target_format {
+        ImageFormat::Jpeg => {
+            if img.color().has_alpha() {
+                transparency_warning = true;
+                let rgba = img.to_rgba8();
+                let mut rgb = ImageBuffer::new(w, h);
+                for (x, y, pixel) in rgba.enumerate_pixels() {
+                    let alpha = (pixel[3] as f32) / 255.0;
+                    let r = ((pixel[0] as f32) * alpha + 255.0 * (1.0 - alpha)) as u8;
+                    let g = ((pixel[1] as f32) * alpha + 255.0 * (1.0 - alpha)) as u8;
+                    let b = ((pixel[2] as f32) * alpha + 255.0 * (1.0 - alpha)) as u8;
+                    rgb.put_pixel(x, y, Rgb([r, g, b]));
+                }
+                DynamicImage::ImageRgb8(rgb)
+            } else {
+                DynamicImage::ImageRgb8(img.to_rgb8())
+            }
+        }
+        _ => img.clone(),
+    };
+
+    let mut output_bytes = Vec::new();
+    let mut cursor = Cursor::new(&mut output_bytes);
+
+    let effective_quality = if !compress {
+        100
+    } else {
+        quality.clamp(1, 100)
+    };
+
+    match target_format {
+        ImageFormat::Jpeg => {
+            let mut encoder =
+                image::codecs::jpeg::JpegEncoder::new_with_quality(&mut cursor, effective_quality);
+            encoder.encode_image(&final_img)?;
+        }
+        ImageFormat::Png => {
+            if lossless && compress {
+                final_img.write_to(&mut cursor, ImageFormat::Png)?;
+                let oxi_options = oxipng::Options::from_preset(2);
+                if let Ok(optimized) = oxipng::optimize_from_memory(&output_bytes, &oxi_options) {
+                    output_bytes = optimized;
+                }
+            } else {
+                final_img.write_to(&mut cursor, ImageFormat::Png)?;
+            }
+        }
+        ImageFormat::WebP => {
+            final_img.write_to(&mut cursor, ImageFormat::WebP)?;
+        }
+        ImageFormat::Avif => {
+            let encoder = image::codecs::avif::AvifEncoder::new_with_speed_quality(
+                &mut cursor,
+                6,
+                effective_quality,
+            );
+            let color = final_img.color();
+            encoder.write_image(final_img.as_bytes(), w, h, color.into())?;
+        }
+        other => {
+            final_img.write_to(&mut cursor, other)?;
+        }
+    }
+
+    Ok((output_bytes, transparency_warning))
+}
+
 pub fn process_image_to_memory(
     img: &DynamicImage,
     orig_format: ImageFormat,
@@ -353,72 +433,120 @@ pub fn process_image_to_memory(
         OutputFormat::Avif => ImageFormat::Avif,
     };
 
-    let mut transparency_warning = false;
-    let final_img = match target_format {
-        ImageFormat::Jpeg => {
-            // Composite transparent alpha onto white background to prevent dark artifacts in JPEG
-            if processed_img.color().has_alpha() {
-                transparency_warning = true;
-                let rgba = processed_img.to_rgba8();
-                let mut rgb = ImageBuffer::new(new_w, new_h);
-                for (x, y, pixel) in rgba.enumerate_pixels() {
-                    let alpha = (pixel[3] as f32) / 255.0;
-                    let r = ((pixel[0] as f32) * alpha + 255.0 * (1.0 - alpha)) as u8;
-                    let g = ((pixel[1] as f32) * alpha + 255.0 * (1.0 - alpha)) as u8;
-                    let b = ((pixel[2] as f32) * alpha + 255.0 * (1.0 - alpha)) as u8;
-                    rgb.put_pixel(x, y, Rgb([r, g, b]));
+    // If target size mode is requested
+    if let Some(target_kb) = options.target_size_kb {
+        if target_kb > 0 && options.compress {
+            let target_bytes = (target_kb as usize) * 1024;
+            let is_quality_tunable = matches!(target_format, ImageFormat::Jpeg | ImageFormat::Avif);
+
+            if is_quality_tunable {
+                let mut cur_img = processed_img;
+                let mut cur_w = new_w;
+                let mut cur_h = new_h;
+
+                // Binary search on quality (10 to 95)
+                let mut low = 10u8;
+                let mut high = 95u8;
+                let mut best_fit: Option<(Vec<u8>, bool)> = None;
+
+                for _ in 0..6 {
+                    if low > high {
+                        break;
+                    }
+                    let mid = (low + high) / 2;
+                    if let Ok((bytes, warn)) =
+                        encode_single_image(&cur_img, target_format, mid, options.lossless, true)
+                    {
+                        if bytes.len() <= target_bytes {
+                            best_fit = Some((bytes, warn));
+                            low = mid + 1; // Try higher quality
+                        } else {
+                            if mid <= 10 {
+                                break;
+                            }
+                            high = mid - 1;
+                        }
+                    } else {
+                        break;
+                    }
                 }
-                DynamicImage::ImageRgb8(rgb)
-            } else {
-                DynamicImage::ImageRgb8(processed_img.to_rgb8())
-            }
-        }
-        _ => processed_img,
-    };
 
-    let mut output_bytes = Vec::new();
-    let mut cursor = Cursor::new(&mut output_bytes);
-
-    let effective_quality = if !options.compress {
-        100
-    } else {
-        options.quality.clamp(1, 100)
-    };
-
-    match target_format {
-        ImageFormat::Jpeg => {
-            let mut encoder =
-                image::codecs::jpeg::JpegEncoder::new_with_quality(&mut cursor, effective_quality);
-            encoder.encode_image(&final_img)?;
-        }
-        ImageFormat::Png => {
-            if options.lossless && options.compress {
-                final_img.write_to(&mut cursor, ImageFormat::Png)?;
-                // Lossless optimization via oxipng
-                let oxi_options = oxipng::Options::from_preset(2);
-                if let Ok(optimized) = oxipng::optimize_from_memory(&output_bytes, &oxi_options) {
-                    output_bytes = optimized;
+                if let Some((bytes, warn)) = best_fit {
+                    return Ok((bytes, target_format, cur_w, cur_h, warn));
                 }
+
+                // If even quality 10 exceeds target size, downscale resolution proportionally
+                let (bytes_at_10, warn) =
+                    encode_single_image(&cur_img, target_format, 10, options.lossless, true)?;
+                if bytes_at_10.len() > target_bytes && cur_w > 64 && cur_h > 64 {
+                    let scale_factor = ((target_bytes as f64) / (bytes_at_10.len() as f64))
+                        .sqrt()
+                        .clamp(0.2, 0.95);
+                    cur_w = ((cur_w as f64) * scale_factor).round().max(32.0) as u32;
+                    cur_h = ((cur_h as f64) * scale_factor).round().max(32.0) as u32;
+                    cur_img = cur_img.resize_exact(cur_w, cur_h, FilterType::Lanczos3);
+
+                    let (downscaled_bytes, _) =
+                        encode_single_image(&cur_img, target_format, 45, options.lossless, true)?;
+                    if downscaled_bytes.len() <= target_bytes {
+                        return Ok((downscaled_bytes, target_format, cur_w, cur_h, warn));
+                    } else {
+                        let (final_bytes, _) = encode_single_image(
+                            &cur_img,
+                            target_format,
+                            15,
+                            options.lossless,
+                            true,
+                        )?;
+                        return Ok((final_bytes, target_format, cur_w, cur_h, warn));
+                    }
+                }
+
+                return Ok((bytes_at_10, target_format, cur_w, cur_h, warn));
             } else {
-                final_img.write_to(&mut cursor, ImageFormat::Png)?;
+                // Non-quality-tunable format (e.g. PNG / WebP): test direct encode first
+                let (initial_bytes, warn) = encode_single_image(
+                    &processed_img,
+                    target_format,
+                    options.quality,
+                    options.lossless,
+                    true,
+                )?;
+                if initial_bytes.len() <= target_bytes {
+                    return Ok((initial_bytes, target_format, new_w, new_h, warn));
+                }
+
+                // Downscale resolution to meet target bytes
+                let mut cur_img = processed_img;
+                let mut cur_w = new_w;
+                let mut cur_h = new_h;
+                let scale_factor = ((target_bytes as f64) / (initial_bytes.len() as f64))
+                    .sqrt()
+                    .clamp(0.25, 0.95);
+                cur_w = ((cur_w as f64) * scale_factor).round().max(32.0) as u32;
+                cur_h = ((cur_h as f64) * scale_factor).round().max(32.0) as u32;
+                cur_img = cur_img.resize_exact(cur_w, cur_h, FilterType::Lanczos3);
+
+                let (downscaled_bytes, _) = encode_single_image(
+                    &cur_img,
+                    target_format,
+                    options.quality,
+                    options.lossless,
+                    true,
+                )?;
+                return Ok((downscaled_bytes, target_format, cur_w, cur_h, warn));
             }
-        }
-        ImageFormat::WebP => {
-            final_img.write_to(&mut cursor, ImageFormat::WebP)?;
-        }
-        ImageFormat::Avif => {
-            let encoder = image::codecs::avif::AvifEncoder::new_with_speed_quality(
-                &mut cursor,
-                6,
-                effective_quality,
-            );
-            let color = final_img.color();
-            encoder.write_image(final_img.as_bytes(), new_w, new_h, color.into())?;
-        }
-        other => {
-            final_img.write_to(&mut cursor, other)?;
         }
     }
+
+    // Standard encoding path
+    let (output_bytes, transparency_warning) = encode_single_image(
+        &processed_img,
+        target_format,
+        options.quality,
+        options.lossless,
+        options.compress,
+    )?;
 
     Ok((
         output_bytes,
@@ -585,7 +713,21 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
 
     // Estimate output size based on target pixel area and format ratio
     let area_ratio = ((target_w as f64) * (target_h as f64)) / ((orig_w as f64) * (orig_h as f64));
-    let (estimated_bytes, saved_percentage) = if !options.compress {
+    let (estimated_bytes, saved_percentage) = if let Some(target_kb) = options.target_size_kb {
+        if target_kb > 0 && options.compress {
+            let target_bytes = (target_kb as u64) * 1024;
+            let est = target_bytes.min(original_bytes);
+            let saved = if original_bytes > 0 && original_bytes > est {
+                let diff = (original_bytes as f64) - (est as f64);
+                ((diff / (original_bytes as f64)) * 100.0).max(0.0) as f32
+            } else {
+                0.0
+            };
+            (est, saved)
+        } else {
+            (original_bytes, 0.0)
+        }
+    } else if !options.compress {
         let is_format_same = matches!(options.format, OutputFormat::Original);
         let has_pixel_transformations = options.rotation != 0
             || options.flip_horizontal
@@ -789,5 +931,34 @@ mod tests {
         assert_eq!(format, ImageFormat::Jpeg);
         assert_eq!((w, h), (50, 50));
         assert!(!bytes.is_empty());
+    }
+
+    #[test]
+    fn test_target_size_mode() {
+        let mut img = DynamicImage::new_rgb8(600, 400);
+        for x in 0..600 {
+            for y in 0..400 {
+                img.as_mut_rgb8().unwrap().put_pixel(
+                    x,
+                    y,
+                    Rgb([(x % 256) as u8, (y % 256) as u8, ((x + y) % 256) as u8]),
+                );
+            }
+        }
+        let opts = ImageTransformOptions {
+            format: OutputFormat::Jpeg,
+            target_size_kb: Some(25), // Target max 25 KB
+            compress: true,
+            ..Default::default()
+        };
+        let res = process_image_to_memory(&img, ImageFormat::Jpeg, &opts);
+        assert!(res.is_ok());
+        let (bytes, format, _, _, _) = res.unwrap();
+        assert_eq!(format, ImageFormat::Jpeg);
+        assert!(
+            bytes.len() <= 25 * 1024,
+            "Output size {} exceeded target 25600 bytes",
+            bytes.len()
+        );
     }
 }

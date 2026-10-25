@@ -133,6 +133,15 @@ pub async fn check_update(current_version: String) -> Option<UpdateInfo> {
     update_checker::check_for_updates(&current_version).await
 }
 
+#[tauri::command]
+pub async fn download_and_install_update(
+    app: AppHandle,
+    download_url: String,
+    asset_name: String,
+) -> Result<(), String> {
+    update_checker::download_and_install(&app, &download_url, &asset_name).await
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextMenuStatus {
     pub enabled: bool,

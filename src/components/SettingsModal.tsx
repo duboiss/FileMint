@@ -40,6 +40,10 @@ export const SettingsModal: React.FC = () => {
     updateCheckEnabled,
     setUpdateCheckEnabled,
     updateInfo,
+    updateDownloading,
+    updateProgress,
+    updateError,
+    installUpdate,
     contextMenuEnabled,
     contextMenuMode,
     contextMenuLoading,
@@ -908,17 +912,63 @@ export const SettingsModal: React.FC = () => {
               </div>
 
               {updateInfo?.has_update && (
-                <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
-                  <span className="text-mint-500 font-semibold">
-                    {t.updateAvailable} (v{updateInfo.latest_version})
-                  </span>
-                  <button
-                    onClick={() => openUrl(updateInfo.release_notes_url)}
-                    className="flex items-center gap-1 text-[11px] text-mint-600 dark:text-mint-400 underline font-medium cursor-pointer"
-                  >
-                    <span>{t.openDownloadPage}</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </button>
+                <div className="pt-3 border-t border-slate-200 dark:border-slate-700/60 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-mint-500 font-semibold text-xs flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5" />
+                      <span>{t.updateAvailable} (v{updateInfo.latest_version})</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openUrl(updateInfo.release_notes_url)}
+                      className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                    >
+                      <span>{t.updateReleaseNotes}</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  {updateDownloading ? (
+                    <div className="space-y-1.5 p-3 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                      <div className="flex justify-between items-center text-[11px]">
+                        <span className="text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1.5">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-mint-500" />
+                          <span>{updateProgress >= 100 ? t.updateInstalling : t.updateDownloading}</span>
+                        </span>
+                        <span className="font-mono font-bold text-mint-500">{updateProgress}%</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                        <div
+                          className="h-full bg-mint-500 transition-all duration-200 rounded-full"
+                          style={{ width: `${updateProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  ) : updateInfo.download_url ? (
+                    <button
+                      type="button"
+                      onClick={() => installUpdate()}
+                      className="w-full py-2 px-3 rounded-xl bg-mint-500 hover:bg-mint-600 text-slate-950 font-bold text-xs shadow-md shadow-mint-500/20 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{t.updateDownloadAndInstall} (v{updateInfo.latest_version})</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => openUrl(updateInfo.release_notes_url)}
+                      className="w-full py-2 px-3 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>{t.openDownloadPage}</span>
+                    </button>
+                  )}
+
+                  {updateError && (
+                    <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-[11px]">
+                      {t.updateError} : {updateError}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

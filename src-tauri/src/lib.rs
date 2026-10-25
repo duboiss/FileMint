@@ -43,6 +43,7 @@ pub fn run() {
             commands::cancel_batch_processing,
             commands::open_path_in_explorer,
             commands::check_update,
+            commands::download_and_install_update,
             commands::toggle_windows_context_menu,
             commands::get_windows_context_menu_status,
             commands::get_cli_files,

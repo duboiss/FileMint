@@ -602,6 +602,9 @@ interface FileMintState {
   settingsOpen: boolean;
   updateCheckEnabled: boolean;
   updateInfo: UpdateInfo | null;
+  updateDownloading: boolean;
+  updateProgress: number;
+  updateError: string | null;
   contextMenuEnabled: boolean;
   contextMenuMode: ContextMenuMode;
   contextMenuLoading: boolean;
@@ -643,6 +646,7 @@ interface FileMintState {
   cancelBatch: () => Promise<void>;
   resetToHome: () => void;
   checkUpdates: () => Promise<void>;
+  installUpdate: () => Promise<void>;
   toggleContextMenu: (enable: boolean, mode?: ContextMenuMode) => Promise<void>;
   initSettings: () => Promise<void>;
 }
@@ -760,6 +764,9 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
     settingsOpen: false,
     updateCheckEnabled: getInitialUpdateCheckEnabled(),
     updateInfo: null,
+    updateDownloading: false,
+    updateProgress: 0,
+    updateError: null,
     contextMenuEnabled: false,
     contextMenuMode: getInitialContextMenuMode(),
     contextMenuLoading: false,
@@ -1331,6 +1338,25 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         }
       } catch {
         // Silently ignore if offline
+      }
+    },
+
+    installUpdate: async () => {
+      const info = get().updateInfo;
+      if (!info || !info.download_url || !info.asset_name) return;
+      set({ updateDownloading: true, updateProgress: 0, updateError: null });
+
+      try {
+        await invoke('download_and_install_update', {
+          downloadUrl: info.download_url,
+          assetName: info.asset_name,
+        });
+      } catch (err: unknown) {
+        console.error('Update failed:', err);
+        set({
+          updateDownloading: false,
+          updateError: err instanceof Error ? err.message : String(err),
+        });
       }
     },
 

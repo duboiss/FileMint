@@ -14,7 +14,7 @@ import { BatchProgress } from './components/BatchProgress';
 import { ResultsSummary } from './components/ResultsSummary';
 import { SettingsModal } from './components/SettingsModal';
 import { WelcomeLanguageModal } from './components/WelcomeLanguageModal';
-import { ProgressEventPayload, WatchProcessedEvent } from './types';
+import { ProgressEventPayload, WatchProcessedEvent, UpdateProgressPayload } from './types';
 import { Sparkles, X } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -155,6 +155,18 @@ export const App: React.FC = () => {
       }
     });
 
+    // Listen to in-app update download progress events
+    const unlistenUpdate = listen<UpdateProgressPayload>(
+      'filemint://update-download-progress',
+      (event) => {
+        if (event.payload) {
+          useFileMintStore.setState({
+            updateProgress: event.payload.percent,
+          });
+        }
+      }
+    );
+
     // Keyboard shortcuts: Ctrl+O (open files), Ctrl+Enter (start batch)
     const handleKeyDown = async (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
@@ -194,6 +206,7 @@ export const App: React.FC = () => {
       unlistenCli.then((f) => f());
       unlistenDrop.then((f) => f());
       unlistenWatch.then((f) => f());
+      unlistenUpdate.then((f) => f());
     };
   }, []);
 

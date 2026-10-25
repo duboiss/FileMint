@@ -119,6 +119,15 @@ export interface UpdateInfo {
   has_update: boolean;
   latest_version: string;
   release_notes_url: string;
+  download_url?: string | null;
+  asset_name?: string | null;
+  asset_size?: number | null;
+}
+
+export interface UpdateProgressPayload {
+  downloaded_bytes: number;
+  total_bytes: number;
+  percent: number;
 }
 
 export type ContextMenuMode = 'disabled' | 'modern' | 'classic';

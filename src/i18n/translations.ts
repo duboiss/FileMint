@@ -311,6 +311,11 @@ export interface TranslationDictionary {
   upToDate: string;
   updateAvailable: string;
   openDownloadPage: string;
+  updateDownloadAndInstall: string;
+  updateDownloading: string;
+  updateInstalling: string;
+  updateError: string;
+  updateReleaseNotes: string;
   privacySection: string;
   privacyP1: string;
   privacyItem1: string;
@@ -620,6 +625,11 @@ export const translations: Record<Language, TranslationDictionary> = {
     upToDate: 'FileMint est à jour',
     updateAvailable: 'Nouvelle version disponible !',
     openDownloadPage: 'Télécharger',
+    updateDownloadAndInstall: 'Mettre à jour et redémarrer',
+    updateDownloading: 'Téléchargement de la mise à jour...',
+    updateInstalling: 'Lancement de l\'installeur et redémarrage...',
+    updateError: 'Échec du téléchargement de la mise à jour',
+    updateReleaseNotes: 'Notes de version',
     privacySection: 'Engagement de confidentialité & Traitement local',
     privacyP1: 'FileMint est conçu dès sa conception pour respecter scrupuleusement votre vie privée :',
     privacyItem1: 'Zéro télémétrie, zéro traceur, zéro cookie, aucun compte utilisateur requis.',
@@ -928,6 +938,11 @@ export const translations: Record<Language, TranslationDictionary> = {
     upToDate: 'FileMint is up to date',
     updateAvailable: 'New version available!',
     openDownloadPage: 'Download',
+    updateDownloadAndInstall: 'Update and restart',
+    updateDownloading: 'Downloading update...',
+    updateInstalling: 'Launching installer and restarting...',
+    updateError: 'Failed to download update',
+    updateReleaseNotes: 'Release notes',
     privacySection: 'Privacy Commitment & Local Processing',
     privacyP1: 'FileMint is engineered from the ground up to scrupulously respect your privacy:',
     privacyItem1: 'Zero telemetry, zero trackers, zero cookies, no user account required.',

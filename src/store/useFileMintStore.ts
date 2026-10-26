@@ -30,11 +30,20 @@ import packageJson from '../../package.json';
 export const APP_VERSION = packageJson.version;
 
 export const formatFileSize = (bytes: number, language: string = 'fr'): string => {
-  const units = language === 'en' ? ['B', 'KB', 'MB', 'GB'] : ['o', 'Ko', 'Mo', 'Go'];
-  if (!bytes || bytes <= 0) return `0 ${units[0]}`;
-  if (bytes < 1024) return `${bytes} ${units[0]}`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} ${units[1]}`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} ${units[2]}`;
+  const isFr = language === 'fr';
+  if (!bytes || bytes <= 0) {
+    return isFr ? '0 octet' : '0 B';
+  }
+  if (bytes < 1024) {
+    return isFr ? `${bytes} ${bytes > 1 ? 'octets' : 'octet'}` : `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} ${isFr ? 'Ko' : 'KB'}`;
+  }
+  if (bytes < 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(2)} ${isFr ? 'Mo' : 'MB'}`;
+  }
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} ${isFr ? 'Go' : 'GB'}`;
 };
 
 export const isTauriEnv = (): boolean => {

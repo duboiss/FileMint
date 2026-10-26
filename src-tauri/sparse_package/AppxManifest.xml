@@ -13,7 +13,7 @@
   <Identity
       Name="FileMint.ModernContextMenu"
       Publisher="CN=FileMint"
-      Version="1.7.1.0"
+      Version="1.7.2.0"
       ProcessorArchitecture="x64" />
 
   <Properties>

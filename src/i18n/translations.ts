@@ -327,6 +327,10 @@ export interface TranslationDictionary {
   checking: string;
   upToDate: string;
   updateAvailable: string;
+  updateAction: string;
+  updateRestartToApply: string;
+  updateRestartShort: string;
+  updateRetry: string;
   openDownloadPage: string;
   updateDownloadAndInstall: string;
   updateDownloading: string;
@@ -658,6 +662,10 @@ export const translations: Record<Language, TranslationDictionary> = {
     checking: 'Vérification en cours...',
     upToDate: 'FileMint est à jour',
     updateAvailable: 'Nouvelle version disponible !',
+    updateAction: 'Mettre à jour vers v{version}',
+    updateRestartToApply: 'Redémarrer pour appliquer la mise à jour',
+    updateRestartShort: 'Redémarrer',
+    updateRetry: 'Erreur • Réessayer',
     openDownloadPage: 'Télécharger',
     updateDownloadAndInstall: 'Mettre à jour et redémarrer',
     updateDownloading: 'Téléchargement de la mise à jour...',
@@ -988,6 +996,10 @@ export const translations: Record<Language, TranslationDictionary> = {
     checking: 'Checking...',
     upToDate: 'FileMint is up to date',
     updateAvailable: 'New version available!',
+    updateAction: 'Update to v{version}',
+    updateRestartToApply: 'Restart to apply update',
+    updateRestartShort: 'Restart',
+    updateRetry: 'Error • Retry',
     openDownloadPage: 'Download',
     updateDownloadAndInstall: 'Update and restart',
     updateDownloading: 'Downloading update...',

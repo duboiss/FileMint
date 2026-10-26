@@ -1,9 +1,20 @@
 import React from 'react';
 import { useFileMintStore, APP_VERSION } from '../store/useFileMintStore';
-import { Sparkles, Settings, ArrowUpCircle } from 'lucide-react';
+import { Sparkles, Settings, RotateCcw, Loader2, AlertCircle, Download } from 'lucide-react';
 
 export const Header: React.FC = () => {
-  const { setSettingsOpen, updateInfo, t, watchFolders } = useFileMintStore();
+  const {
+    setSettingsOpen,
+    updateInfo,
+    updateDownloading,
+    updateDownloaded,
+    updateProgress,
+    updateError,
+    downloadUpdate,
+    installAndRestart,
+    t,
+    watchFolders,
+  } = useFileMintStore();
   const isDev = Boolean(import.meta.env.DEV);
   const versionLabel = isDev ? `v${APP_VERSION} Local` : `v${APP_VERSION}`;
   const activeWatchFolders = watchFolders.filter((f) => f.enabled && f.watch_path);
@@ -41,14 +52,63 @@ export const Header: React.FC = () => {
           </button>
         )}
 
+        {/* Update System in Header */}
         {updateInfo?.has_update && (
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-mint-500/15 text-mint-600 dark:text-mint-300 border border-mint-500/30 hover:bg-mint-500/25 transition-colors"
-          >
-            <ArrowUpCircle className="w-3.5 h-3.5" />
-            <span>{t.updateAvailable}</span>
-          </button>
+          <>
+            {updateDownloaded ? (
+              <button
+                type="button"
+                onClick={() => installAndRestart()}
+                className="flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl bg-mint-500 hover:bg-mint-600 text-slate-950 shadow-sm shadow-mint-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer animate-fadeIn"
+                title={`${t.updateRestartToApply} (v${updateInfo.latest_version})`}
+              >
+                <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden sm:inline">
+                  {t.updateRestartToApply}
+                </span>
+                <span className="sm:hidden">
+                  {t.updateRestartShort}
+                </span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-slate-950/20 font-mono">
+                  v{updateInfo.latest_version}
+                </span>
+              </button>
+            ) : updateDownloading ? (
+              <div
+                className="relative flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-xl bg-mint-500/10 text-mint-600 dark:text-mint-400 border border-mint-500/30 overflow-hidden select-none"
+                title={`${t.updateDownloading} (${updateProgress}%)`}
+              >
+                <div
+                  className="absolute inset-y-0 left-0 bg-mint-500/20 transition-all duration-200"
+                  style={{ width: `${updateProgress}%` }}
+                />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-mint-500 shrink-0 relative z-10" />
+                <span className="relative z-10">
+                  {t.updateDownloading}... <strong className="font-mono">{updateProgress}%</strong>
+                </span>
+              </div>
+            ) : updateError ? (
+              <button
+                type="button"
+                onClick={() => downloadUpdate()}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 hover:bg-red-500/25 transition-colors cursor-pointer"
+                title={updateError}
+              >
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{t.updateRetry}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => downloadUpdate()}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-mint-500/15 text-mint-600 dark:text-mint-300 border border-mint-500/30 hover:bg-mint-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                title={t.updateAction.replace('{version}', updateInfo.latest_version)}
+              >
+                <Download className="w-3.5 h-3.5 shrink-0 text-mint-500" />
+                <span>{t.updateAction.replace('{version}', updateInfo.latest_version)}</span>
+              </button>
+            )}
+          </>
         )}
 
         <button

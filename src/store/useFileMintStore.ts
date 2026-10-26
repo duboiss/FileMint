@@ -718,6 +718,7 @@ interface FileMintState {
   updateCheckEnabled: boolean;
   updateInfo: UpdateInfo | null;
   updateDownloading: boolean;
+  updateDownloaded: boolean;
   updateProgress: number;
   updateError: string | null;
   contextMenuEnabled: boolean;
@@ -761,6 +762,8 @@ interface FileMintState {
   cancelBatch: () => Promise<void>;
   resetToHome: () => void;
   checkUpdates: () => Promise<void>;
+  downloadUpdate: () => Promise<void>;
+  installAndRestart: () => Promise<void>;
   installUpdate: () => Promise<void>;
   toggleContextMenu: (enable: boolean, mode?: ContextMenuMode) => Promise<void>;
   initSettings: () => Promise<void>;
@@ -948,6 +951,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
     updateCheckEnabled: getInitialUpdateCheckEnabled(),
     updateInfo: null,
     updateDownloading: false,
+    updateDownloaded: false,
     updateProgress: 0,
     updateError: null,
     contextMenuEnabled: false,
@@ -1524,30 +1528,60 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           currentVersion: APP_VERSION,
         });
         if (info && info.has_update) {
-          set({ updateInfo: info });
+          set({
+            updateInfo: info,
+            updateDownloaded: Boolean(info.is_downloaded),
+          });
         }
       } catch {
         // Silently ignore if offline
       }
     },
 
-    installUpdate: async () => {
+    downloadUpdate: async () => {
       const info = get().updateInfo;
       if (!info || !info.download_url || !info.asset_name) return;
-      set({ updateDownloading: true, updateProgress: 0, updateError: null });
+      set({
+        updateDownloading: true,
+        updateDownloaded: false,
+        updateProgress: 0,
+        updateError: null,
+      });
 
       try {
-        await invoke('download_and_install_update', {
+        await invoke('download_update', {
           downloadUrl: info.download_url,
           assetName: info.asset_name,
+          version: info.latest_version,
         });
-      } catch (err: unknown) {
-        console.error('Update failed:', err);
         set({
           updateDownloading: false,
+          updateDownloaded: true,
+          updateProgress: 100,
+        });
+      } catch (err: unknown) {
+        console.error('Update download failed:', err);
+        set({
+          updateDownloading: false,
+          updateDownloaded: false,
           updateError: err instanceof Error ? err.message : String(err),
         });
       }
+    },
+
+    installAndRestart: async () => {
+      try {
+        await invoke('install_update');
+      } catch (err: unknown) {
+        console.error('Install update failed:', err);
+        set({
+          updateError: err instanceof Error ? err.message : String(err),
+        });
+      }
+    },
+
+    installUpdate: async () => {
+      await get().installAndRestart();
     },
 
     setContextMenuMode: async (mode: ContextMenuMode) => {

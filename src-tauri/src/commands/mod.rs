@@ -134,6 +134,21 @@ pub async fn check_update(current_version: String) -> Option<UpdateInfo> {
 }
 
 #[tauri::command]
+pub async fn download_update(
+    app: AppHandle,
+    download_url: String,
+    asset_name: String,
+    version: String,
+) -> Result<(), String> {
+    update_checker::download_update(&app, &download_url, &asset_name, &version).await
+}
+
+#[tauri::command]
+pub async fn install_update(app: AppHandle) -> Result<(), String> {
+    update_checker::install_update_and_restart(&app)
+}
+
+#[tauri::command]
 pub async fn download_and_install_update(
     app: AppHandle,
     download_url: String,

@@ -23,6 +23,11 @@ pub fn run() {
         return;
     }
 
+    // Apply pending update if ready and opened normally
+    if args.is_empty() && engine::update_checker::apply_pending_update_on_startup() {
+        return;
+    }
+
     // Primary instance: hold initial files for frontend mount
     let app_state = AppState {
         runner: Mutex::new(BatchRunner::new()),
@@ -43,6 +48,8 @@ pub fn run() {
             commands::cancel_batch_processing,
             commands::open_path_in_explorer,
             commands::check_update,
+            commands::download_update,
+            commands::install_update,
             commands::download_and_install_update,
             commands::toggle_windows_context_menu,
             commands::get_windows_context_menu_status,

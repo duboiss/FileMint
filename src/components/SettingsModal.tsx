@@ -11,9 +11,7 @@ import {
 import {
   X,
   Shield,
-  Globe,
   MousePointer,
-  ExternalLink,
   Sliders,
   Languages,
   Check,
@@ -34,7 +32,6 @@ import {
 } from 'lucide-react';
 import { save as saveDialog, open as openDialog } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
-import { open as openUrl } from '@tauri-apps/plugin-shell';
 import { CustomProfile, ImageConfigTab, ContextMenuMode } from '../types';
 import { getSystemLanguage } from '../i18n/translations';
 
@@ -42,13 +39,6 @@ export const SettingsModal: React.FC = () => {
   const {
     settingsOpen,
     setSettingsOpen,
-    updateCheckEnabled,
-    setUpdateCheckEnabled,
-    updateInfo,
-    updateDownloading,
-    updateProgress,
-    updateError,
-    installUpdate,
     contextMenuEnabled,
     contextMenuMode,
     contextMenuLoading,
@@ -444,103 +434,6 @@ export const SettingsModal: React.FC = () => {
                     <span>{t.themeDark}</span>
                   </button>
                 </div>
-              </div>
-
-              {/* Mises à jour logicielles */}
-              <div className="py-2.5 space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-lg bg-mint-500/10 text-mint-500 flex items-center justify-center shrink-0">
-                      <Globe className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs block">
-                        {t.updatesSection}
-                      </span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
-                        {t.updateCheckLabel}
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={updateCheckEnabled}
-                    onClick={() => setUpdateCheckEnabled(!updateCheckEnabled)}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      updateCheckEnabled ? 'bg-mint-500' : 'bg-slate-300 dark:bg-slate-700'
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                        updateCheckEnabled ? 'translate-x-4' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {/* Banner si mise à jour disponible */}
-                {updateInfo?.has_update && (
-                  <div className="p-2.5 rounded-xl bg-mint-500/10 border border-mint-500/25 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-mint-600 dark:text-mint-400 font-semibold text-xs flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5" />
-                        <span>{t.updateAvailable} (v{updateInfo.latest_version})</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => openUrl(updateInfo.release_notes_url)}
-                        className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
-                      >
-                        <span>{t.updateReleaseNotes}</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </button>
-                    </div>
-
-                    {updateDownloading ? (
-                      <div className="space-y-1.5 p-2 rounded-lg bg-white/60 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60">
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1.5">
-                            <Loader2 className="w-3.5 h-3.5 animate-spin text-mint-500" />
-                            <span>{updateProgress >= 100 ? t.updateInstalling : t.updateDownloading}</span>
-                          </span>
-                          <span className="font-mono font-bold text-mint-500">{updateProgress}%</span>
-                        </div>
-                        <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                          <div
-                            className="h-full bg-mint-500 transition-all duration-200 rounded-full"
-                            style={{ width: `${updateProgress}%` }}
-                          />
-                        </div>
-                      </div>
-                    ) : updateInfo.download_url ? (
-                      <button
-                        type="button"
-                        onClick={() => installUpdate()}
-                        className="w-full py-1.5 px-3 rounded-lg bg-mint-500 hover:bg-mint-600 text-slate-950 font-bold text-xs shadow-sm shadow-mint-500/20 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>{t.updateDownloadAndInstall} (v{updateInfo.latest_version})</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => openUrl(updateInfo.release_notes_url)}
-                        className="w-full py-1.5 px-3 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        <span>{t.openDownloadPage}</span>
-                      </button>
-                    )}
-
-                    {updateError && (
-                      <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-[11px]">
-                        {t.updateError} : {updateError}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
 
               {/* Menu contextuel Windows */}

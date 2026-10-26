@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Move,
   Loader2,
+  FileText,
 } from 'lucide-react';
 
 interface LargePreviewModalProps {
@@ -33,11 +34,18 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
     language,
     imageOptions,
     setImageOptions,
+    pdfOptions,
     preview: storePreview,
     previewLoading,
   } = useFileMintStore();
 
   const currentPreview = storePreview || propPreview;
+
+  const isImage = activeFile?.fileType !== 'pdf';
+  const isCompressionActive = isImage && imageOptions.compress !== false;
+  const isTargetSizeMode = Boolean(imageOptions.target_size_kb && imageOptions.target_size_kb > 0);
+  const isLossless = Boolean(imageOptions.lossless);
+  const canAdjustQuality = isCompressionActive && !isTargetSizeMode && !isLossless;
 
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'split' | 'sideBySide' | 'single'>('split');
@@ -104,9 +112,13 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
         setZoomLevel(1);
         setPanOffset({ x: 0, y: 0 });
       } else if (e.key === '[') {
-        setImageOptions({ quality: Math.max(10, qualityRef.current - 5), lossless: false });
+        if (canAdjustQuality) {
+          setImageOptions({ quality: Math.max(10, qualityRef.current - 5), lossless: false, compress: true });
+        }
       } else if (e.key === ']') {
-        setImageOptions({ quality: Math.min(100, qualityRef.current + 5), lossless: false });
+        if (canAdjustQuality) {
+          setImageOptions({ quality: Math.min(100, qualityRef.current + 5), lossless: false, compress: true });
+        }
       }
     };
 
@@ -412,77 +424,125 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
         </div>
 
         <div className="px-6 py-2.5 border-t border-slate-800 bg-slate-900/95 backdrop-blur-md z-20 flex flex-wrap items-center justify-between gap-4 text-xs">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-slate-300 font-semibold shrink-0">
-              <Sliders className="w-3.5 h-3.5 text-mint-400" />
-              <span>{t.encodingQuality}</span>
+          {!isImage ? (
+            <div className="flex items-center gap-2 text-slate-300">
+              <FileText className="w-4 h-4 text-mint-400" />
+              <span>
+                {t.pdfProfileSelected} :{' '}
+                <strong className="text-white font-semibold">{pdfOptions.profile}</strong>
+              </span>
             </div>
-
-            <div className="flex items-center bg-slate-800/90 p-0.5 rounded-xl border border-slate-700/60 shrink-0">
+          ) : !isCompressionActive ? (
+            <div className="flex items-center gap-3">
+              <span className="px-2.5 py-1 rounded-xl bg-slate-800 text-slate-400 border border-slate-700/60 font-medium">
+                {t.noCompression}
+              </span>
               <button
                 type="button"
-                onClick={() => setImageOptions({ quality: 50, lossless: false })}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                  imageOptions.quality === 50 && !imageOptions.lossless
-                    ? 'bg-mint-500 text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
-                }`}
-                title="50% - Qualité légère"
+                onClick={() => setImageOptions({ compress: true })}
+                className="px-3 py-1 rounded-xl bg-mint-500 hover:bg-mint-400 text-slate-950 font-bold transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
               >
-                {t.qualityLight} (50)
-              </button>
-              <button
-                type="button"
-                onClick={() => setImageOptions({ quality: 75, lossless: false })}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                  imageOptions.quality === 75 && !imageOptions.lossless
-                    ? 'bg-mint-500 text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
-                }`}
-                title="75% - Qualité équilibrée"
-              >
-                {t.qualityBalanced} (75)
-              </button>
-              <button
-                type="button"
-                onClick={() => setImageOptions({ quality: 100, lossless: false })}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                  imageOptions.quality === 100 && !imageOptions.lossless
-                    ? 'bg-mint-500 text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
-                }`}
-                title="100% - Qualité maximum"
-              >
-                {t.qualityMax} (100)
+                {t.enableCompression}
               </button>
             </div>
-          </div>
+          ) : isTargetSizeMode ? (
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-1 rounded-xl bg-mint-500/10 text-mint-400 border border-mint-500/20 font-bold">
+                {t.compressionModeTargetSize} : ≤ {imageOptions.target_size_kb} Ko
+              </span>
+            </div>
+          ) : isLossless ? (
+            <div className="flex items-center gap-3">
+              <span className="px-2.5 py-1 rounded-xl bg-mint-500/10 text-mint-400 border border-mint-500/20 font-bold">
+                {t.lossless}
+              </span>
+              <button
+                type="button"
+                onClick={() => setImageOptions({ lossless: false })}
+                className="text-xs text-slate-400 hover:text-slate-200 underline cursor-pointer"
+              >
+                {t.compressionModeQuality}
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 text-slate-300 font-semibold shrink-0">
+                  <Sliders className="w-3.5 h-3.5 text-mint-400" />
+                  <span>{t.encodingQuality}</span>
+                </div>
 
-          <div className="flex-1 min-w-[200px] max-w-sm flex items-center gap-3">
-            <input
-              type="range"
-              min="10"
-              max="100"
-              step="1"
-              value={imageOptions.quality}
-              onChange={(e) => setImageOptions({ quality: Number(e.target.value), lossless: false })}
-              className="w-full accent-mint-500 cursor-pointer"
-            />
-            <span className="font-mono font-bold text-mint-400 bg-mint-500/10 px-2.5 py-1 rounded-lg border border-mint-500/20 text-xs min-w-[54px] text-center shrink-0">
-              {imageOptions.quality}%
-            </span>
-          </div>
+                <div className="flex items-center bg-slate-800/90 p-0.5 rounded-xl border border-slate-700/60 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setImageOptions({ quality: 50, lossless: false, compress: true })}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                      imageOptions.quality === 50 && !imageOptions.lossless
+                        ? 'bg-mint-500 text-slate-950 font-bold shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                    }`}
+                    title="50% - Qualité légère"
+                  >
+                    {t.qualityLight} (50)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImageOptions({ quality: 75, lossless: false, compress: true })}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                      imageOptions.quality === 75 && !imageOptions.lossless
+                        ? 'bg-mint-500 text-slate-950 font-bold shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                    }`}
+                    title="75% - Qualité équilibrée"
+                  >
+                    {t.qualityBalanced} (75)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImageOptions({ quality: 100, lossless: false, compress: true })}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                      imageOptions.quality === 100 && !imageOptions.lossless
+                        ? 'bg-mint-500 text-slate-950 font-bold shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                    }`}
+                    title="100% - Qualité maximum"
+                  >
+                    {t.qualityMax} (100)
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 min-w-[200px] max-w-sm flex items-center gap-3">
+                <input
+                  type="range"
+                  min="10"
+                  max="100"
+                  step="1"
+                  value={imageOptions.quality}
+                  onChange={(e) =>
+                    setImageOptions({ quality: Number(e.target.value), lossless: false, compress: true })
+                  }
+                  className="w-full accent-mint-500 cursor-pointer"
+                />
+                <span className="font-mono font-bold text-mint-400 bg-mint-500/10 px-2.5 py-1 rounded-lg border border-mint-500/20 text-xs min-w-[54px] text-center shrink-0">
+                  {imageOptions.quality}%
+                </span>
+              </div>
+            </>
+          )}
 
           <div className="flex items-center gap-4 shrink-0">
-            <label className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white transition-colors">
-              <input
-                type="checkbox"
-                checked={imageOptions.lossless}
-                onChange={(e) => setImageOptions({ lossless: e.target.checked })}
-                className="rounded text-mint-500 accent-mint-500 cursor-pointer"
-              />
-              <span className="text-xs font-medium">{t.lossless}</span>
-            </label>
+            {canAdjustQuality && (
+              <label className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white transition-colors">
+                <input
+                  type="checkbox"
+                  checked={imageOptions.lossless}
+                  onChange={(e) => setImageOptions({ lossless: e.target.checked })}
+                  className="rounded text-mint-500 accent-mint-500 cursor-pointer"
+                />
+                <span className="text-xs font-medium">{t.lossless}</span>
+              </label>
+            )}
 
             <div className="w-[1px] h-4 bg-slate-800" />
 
@@ -494,7 +554,9 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
             ) : currentPreview ? (
               <div className="flex items-center gap-2 font-mono text-xs">
                 <span className="text-slate-400">{t.result}</span>
-                <strong className="text-mint-400">{formatFileSize(currentPreview.estimated_bytes, language)}</strong>
+                <strong className="text-mint-400">
+                  {formatFileSize(currentPreview.estimated_bytes, language)}
+                </strong>
                 {currentPreview.saved_percentage > 0 && (
                   <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px]">
                     -{currentPreview.saved_percentage.toFixed(0)}%
@@ -507,14 +569,43 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
 
         <div className="h-8 px-6 border-t border-slate-800/80 bg-slate-950/60 flex items-center justify-between text-[11px] text-slate-400">
           <div className="flex items-center gap-4">
-            <span>{t.shortcuts} <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">Esc</kbd> {t.shortcutEsc}</span>
-            <span><kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">+</kbd> / <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">-</kbd> {t.shortcutZoom}</span>
-            <span><kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">[</kbd> / <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">]</kbd> {t.compressionLevel}</span>
-            <span><kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">0</kbd> {t.shortcutReset}</span>
+            <span>
+              {t.shortcuts}{' '}
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+                Esc
+              </kbd>{' '}
+              {t.shortcutEsc}
+            </span>
+            <span>
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+                +
+              </kbd>{' '}
+              /{' '}
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+                -
+              </kbd>{' '}
+              {t.shortcutZoom}
+            </span>
+            {canAdjustQuality && (
+              <span>
+                <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+                  [
+                </kbd>{' '}
+                /{' '}
+                <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+                  ]
+                </kbd>{' '}
+                {t.compressionLevel}
+              </span>
+            )}
+            <span>
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+                0
+              </kbd>{' '}
+              {t.shortcutReset}
+            </span>
           </div>
-          <div>
-            {t.privacyBadge}
-          </div>
+          <div>{t.privacyBadge}</div>
         </div>
       </div>
     </div>

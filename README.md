@@ -17,6 +17,7 @@
 <p align="center">
   <a href="https://github.com/duboiss/FileMint/releases"><img src="https://img.shields.io/github/v/release/duboiss/FileMint?color=10b981&logo=github" alt="Release" /></a>
   <a href="https://github.com/duboiss/FileMint/actions/workflows/ci.yml"><img src="https://github.com/duboiss/FileMint/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>
+  <a href="https://github.com/duboiss/FileMint/actions/workflows/codeql.yml"><img src="https://github.com/duboiss/FileMint/actions/workflows/codeql.yml/badge.svg" alt="CodeQL" /></a>
   <img src="https://img.shields.io/badge/Vibe%20Coded-with%20AI-8b5cf6?logo=sparkles&logoColor=white" alt="Vibe Coded" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
   <a href="https://tauri.app/"><img src="https://img.shields.io/badge/Tauri-v2-24c8db?logo=tauri&logoColor=white" alt="Tauri v2" /></a>

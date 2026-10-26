@@ -349,7 +349,7 @@ mod tests {
         let catalog_id = doc.trailer.get(b"Root").unwrap().as_reference().unwrap();
         let catalog = doc.get_object(catalog_id).unwrap().as_dict().unwrap();
         let pages_id = catalog.get(b"Pages").unwrap().as_reference().unwrap();
-        
+
         let page2_id = doc.add_object(doc.get_object(page1_id).unwrap().clone());
         let pages_obj = doc.get_object_mut(pages_id).unwrap().as_dict_mut().unwrap();
         let mut kids = pages_obj.get(b"Kids").unwrap().as_array().unwrap().clone();
@@ -376,7 +376,9 @@ mod tests {
 
     #[test]
     fn test_generate_pdf_preview() {
-        let path = std::path::Path::new(r"C:\Users\Steven\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lopdf-0.35.0\assets\example.pdf");
+        let path = std::path::Path::new(
+            r"C:\Users\Steven\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lopdf-0.35.0\assets\example.pdf",
+        );
         let opts = PdfCompressionOptions::default();
         let preview = generate_pdf_preview(path, &opts).unwrap();
         assert_eq!(preview.total_pages, 1);

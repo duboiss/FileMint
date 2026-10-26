@@ -649,7 +649,7 @@ export const SettingsModal: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-3 gap-1.5 text-xs font-semibold">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs font-semibold">
                       {customProfiles.map((p) => {
                         const isSelected =
                           (defaultImagePreset || customProfiles[0]?.id) === p.id;

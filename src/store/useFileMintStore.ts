@@ -55,8 +55,25 @@ export const isTauriEnv = (): boolean => {
   return typeof w.__TAURI_INTERNALS__?.ipc === 'function' || typeof w.__TAURI_IPC__ === 'function';
 };
 
-export const getPresetOptions = (preset: 'web' | 'quality' | 'light' | string): ImageTransformOptions => {
-  if (preset === 'quality' || preset === 'preset_quality') {
+export const getPresetOptions = (
+  preset: 'none' | 'web' | 'quality' | 'light' | string
+): ImageTransformOptions => {
+  if (preset === 'none' || preset === 'preset_none') {
+    return {
+      resize_mode: { None: null },
+      maintain_aspect_ratio: true,
+      do_not_upscale: true,
+      format: 'Original',
+      quality: 100,
+      lossless: true,
+      rotation: 0,
+      flip_horizontal: false,
+      flip_vertical: false,
+      grayscale: false,
+      metadata_policy: 'KeepAll',
+      compress: false,
+    };
+  } else if (preset === 'quality' || preset === 'preset_quality') {
     return {
       resize_mode: { None: null },
       maintain_aspect_ratio: true,
@@ -105,6 +122,12 @@ export const getPresetOptions = (preset: 'web' | 'quality' | 'light' | string): 
 };
 
 export const getDefaultProfiles = (dict?: TranslationDictionary): CustomProfile[] => [
+  {
+    id: 'preset_none',
+    name: dict?.presetNone || 'Aucun',
+    options: getPresetOptions('none'),
+    createdAt: 0,
+  },
   {
     id: 'preset_web',
     name: dict?.presetWeb || 'Web',
@@ -225,16 +248,35 @@ const getInitialTab = (): ImageConfigTab => {
 
 const getInitialPresetId = (profiles: CustomProfile[]): string => {
   try {
+    const migrated = localStorage.getItem('filemint_default_preset_v2');
+    if (!migrated) {
+      localStorage.setItem('filemint_default_preset_v2', 'true');
+      const saved = localStorage.getItem('filemint_default_preset');
+      if (!saved || saved === 'web' || saved === 'preset_web') {
+        localStorage.setItem('filemint_default_preset', 'preset_none');
+        return 'preset_none';
+      }
+    }
+
     const saved = localStorage.getItem('filemint_default_preset');
     if (saved) {
       // Map legacy names if present
-      const mapped = saved === 'web' ? 'preset_web' : saved === 'quality' ? 'preset_quality' : saved === 'light' ? 'preset_light' : saved;
+      const mapped =
+        saved === 'none'
+          ? 'preset_none'
+          : saved === 'web'
+          ? 'preset_web'
+          : saved === 'quality'
+          ? 'preset_quality'
+          : saved === 'light'
+          ? 'preset_light'
+          : saved;
       if (profiles.some((p) => p.id === mapped)) {
         return mapped;
       }
     }
   } catch {}
-  return profiles[0]?.id || 'preset_web';
+  return profiles.find((p) => p.id === 'preset_none')?.id || profiles[0]?.id || 'preset_none';
 };
 
 const getInitialContextMenuMode = (): ContextMenuMode => {
@@ -434,6 +476,19 @@ const loadCustomProfilesFromStorage = (dict?: TranslationDictionary): CustomProf
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
+        // Ensure preset_none is available
+        const hasNone = parsed.some((p: CustomProfile) => p.id === 'preset_none');
+        if (!hasNone) {
+          const noneProfile: CustomProfile = {
+            id: 'preset_none',
+            name: dict?.presetNone || 'Aucun',
+            options: getPresetOptions('none'),
+            createdAt: 0,
+          };
+          const merged = [noneProfile, ...parsed].slice(0, MAX_CUSTOM_PROFILES);
+          saveCustomProfilesToStorage(merged);
+          return merged;
+        }
         return parsed.slice(0, MAX_CUSTOM_PROFILES);
       }
     }
@@ -767,10 +822,10 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
 
     defaultImageTab: initialTab,
     defaultImagePreset: initialPresetId,
-    selectedImagePreset: initialActiveProfile?.id || 'preset_web',
+    selectedImagePreset: initialActiveProfile?.id || 'preset_none',
     imageOptions: initialActiveProfile
       ? JSON.parse(JSON.stringify(initialActiveProfile.options))
-      : getPresetOptions('web'),
+      : getPresetOptions('none'),
     customProfiles: initialProfiles,
     activeCustomProfileId: initialActiveProfile?.id || null,
 
@@ -1061,11 +1116,11 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         files: demo,
         screen: 'config',
         activePreviewIndex: 0,
-        selectedImagePreset: defaultProfile?.id || 'preset_web',
+        selectedImagePreset: defaultProfile?.id || 'preset_none',
         activeCustomProfileId: defaultProfile?.id || null,
         imageOptions: defaultProfile
           ? JSON.parse(JSON.stringify(defaultProfile.options))
-          : getPresetOptions('web'),
+          : getPresetOptions('none'),
       });
       get().refreshPreview();
     },
@@ -1256,11 +1311,11 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       set({
         customProfiles: sanitized,
         activeCustomProfileId: newDefaultId || null,
-        selectedImagePreset: newDefaultId || 'preset_web',
+        selectedImagePreset: newDefaultId || 'preset_none',
         defaultImagePreset: newDefaultId,
         imageOptions: firstProfile
           ? JSON.parse(JSON.stringify(firstProfile.options))
-          : getPresetOptions('web'),
+          : getPresetOptions('none'),
       });
       get().refreshPreview();
       return true;
@@ -1454,11 +1509,11 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         batchProgress: null,
         batchSummary: null,
         batchRunning: false,
-        selectedImagePreset: defaultProfile?.id || 'preset_web',
+        selectedImagePreset: defaultProfile?.id || 'preset_none',
         activeCustomProfileId: defaultProfile?.id || null,
         imageOptions: defaultProfile
           ? JSON.parse(JSON.stringify(defaultProfile.options))
-          : getPresetOptions('web'),
+          : getPresetOptions('none'),
       });
     },
 

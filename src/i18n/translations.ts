@@ -73,6 +73,8 @@ export interface TranslationDictionary {
   grayscale: string;
   grayscaleDesc: string;
   resetManipulations: string;
+  presetNone: string;
+  presetNoneDesc: string;
   presetWeb: string;
   presetWebDesc: string;
   presetQuality: string;
@@ -407,6 +409,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     grayscale: 'Niveaux de gris (Noir & Blanc)',
     grayscaleDesc: 'Convertit l\'image en monochrome pur sans altérer la netteté.',
     resetManipulations: 'Réinitialiser les retouches',
+    presetNone: 'Aucun',
+    presetNoneDesc: 'Conserve le fichier d\'origine sans modification, redimensionnement ni compression.',
     presetWeb: 'Web',
     presetWebDesc: 'Max 1920×1080 px, format WebP, qualité 75%',
     presetQuality: 'Qualité',
@@ -735,6 +739,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     grayscale: 'Grayscale (Black & White)',
     grayscaleDesc: 'Converts image to pure monochrome while retaining crisp details.',
     resetManipulations: 'Reset adjustments',
+    presetNone: 'None',
+    presetNoneDesc: 'Preserves the original file without modification, resizing, or compression.',
     presetWeb: 'Web',
     presetWebDesc: 'Max 1920×1080 px, WebP format, 75% quality',
     presetQuality: 'Quality',

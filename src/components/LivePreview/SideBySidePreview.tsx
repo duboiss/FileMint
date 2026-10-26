@@ -33,6 +33,7 @@ export const SideBySidePreview: React.FC = () => {
   const [splitPos, setSplitPos] = useState<number>(50);
   const [isLargeModalOpen, setIsLargeModalOpen] = useState(false);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+  const [showPdfDocDetails, setShowPdfDocDetails] = useState(false);
 
   const updateSplitPosition = (clientX: number, target: HTMLElement) => {
     const rect = target.getBoundingClientRect();
@@ -84,8 +85,10 @@ export const SideBySidePreview: React.FC = () => {
     );
   }
 
-  // Specific rendering for PDF documents
-  if (activeFile.fileType === 'pdf') {
+  const isPdf = activeFile.fileType === 'pdf';
+
+  // Specific rendering for PDF documents when user toggles details or when visual preview is unavailable
+  if (isPdf && (showPdfDocDetails || (!preview?.data_url && !previewLoading))) {
     const isTargetSize = Boolean(pdfOptions.target_size_kb && pdfOptions.target_size_kb > 0);
     const targetBytes = (pdfOptions.target_size_kb || 0) * 1024;
     const estimatedPercent = isTargetSize
@@ -144,7 +147,7 @@ export const SideBySidePreview: React.FC = () => {
             </div>
           </div>
 
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
             {isTargetSize ? (
               <>
                 <span className="font-semibold text-mint-600 dark:text-mint-400">
@@ -166,12 +169,23 @@ export const SideBySidePreview: React.FC = () => {
               </>
             )}
           </p>
+
+          {preview?.data_url && (
+            <button
+              type="button"
+              onClick={() => setShowPdfDocDetails(false)}
+              className="mt-2 px-4 py-2 rounded-2xl bg-mint-500 hover:bg-mint-400 text-slate-950 font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] transition-all"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{t.viewVisualPreview} ({t.pdfPage1Preview})</span>
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
-  // Dynamic image preview rendering
+  // Dynamic preview rendering (Images and PDF Page 1)
   return (
     <div className="flex-1 flex flex-col bg-slate-100/50 dark:bg-slate-950/40 overflow-hidden relative select-none">
       {/* Streamlined, responsive toolbar */}
@@ -204,39 +218,57 @@ export const SideBySidePreview: React.FC = () => {
             )}
           </div>
 
-          {imageOptions.target_size_kb && imageOptions.compress !== false && (
-            <span
-              className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-mint-500/15 text-mint-600 dark:text-mint-400 font-bold text-[10px] shrink-0"
-              title={`${t.targetSizeTitle} : ≤ ${imageOptions.target_size_kb} Ko`}
-            >
-              <span>🎯 ≤</span>
-              <span>
-                {imageOptions.target_size_kb >= 1024
-                  ? `${(imageOptions.target_size_kb / 1024).toFixed(
-                      imageOptions.target_size_kb % 1024 === 0 ? 0 : 1
-                    )} ${language === 'en' ? 'MB' : 'Mo'}`
-                  : `${imageOptions.target_size_kb} ${language === 'en' ? 'KB' : 'Ko'}`}
+          {isPdf ? (
+            <>
+              <span
+                className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-mint-500/15 text-mint-600 dark:text-mint-400 font-semibold text-[10px] shrink-0"
+              >
+                <span>📄</span>
+                <span>{t.pdfPage1Preview}</span>
               </span>
-            </span>
-          )}
+              <span
+                className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[10px] shrink-0"
+              >
+                <span>{getPdfProfileLabel(pdfOptions.profile)}</span>
+              </span>
+            </>
+          ) : (
+            <>
+              {imageOptions.target_size_kb && imageOptions.compress !== false && (
+                <span
+                  className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-mint-500/15 text-mint-600 dark:text-mint-400 font-bold text-[10px] shrink-0"
+                  title={`${t.targetSizeTitle} : ≤ ${imageOptions.target_size_kb} Ko`}
+                >
+                  <span>🎯 ≤</span>
+                  <span>
+                    {imageOptions.target_size_kb >= 1024
+                      ? `${(imageOptions.target_size_kb / 1024).toFixed(
+                          imageOptions.target_size_kb % 1024 === 0 ? 0 : 1
+                        )} ${language === 'en' ? 'MB' : 'Mo'}`
+                      : `${imageOptions.target_size_kb} ${language === 'en' ? 'KB' : 'Ko'}`}
+                  </span>
+                </span>
+              )}
 
-          {activeFile.hasGps && (
-            <span
-              className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-semibold cursor-help shrink-0"
-              title={t.gpsDetectedNotice}
-            >
-              📍 GPS
-            </span>
-          )}
+              {activeFile.hasGps && (
+                <span
+                  className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-semibold cursor-help shrink-0"
+                  title={t.gpsDetectedNotice}
+                >
+                  📍 GPS
+                </span>
+              )}
 
-          {activeFile.hasGps && imageOptions.metadata_policy !== 'KeepAll' && (
-            <span
-              className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-mint-500/15 text-mint-600 dark:text-mint-400 text-[10px] font-semibold shrink-0"
-              title={t.metadataRemoveGpsDesc}
-            >
-              <Shield className="w-3 h-3 text-mint-500" />
-              <span>{t.gpsCleanBadge}</span>
-            </span>
+              {activeFile.hasGps && imageOptions.metadata_policy !== 'KeepAll' && (
+                <span
+                  className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-mint-500/15 text-mint-600 dark:text-mint-400 text-[10px] font-semibold shrink-0"
+                  title={t.metadataRemoveGpsDesc}
+                >
+                  <Shield className="w-3 h-3 text-mint-500" />
+                  <span>{t.gpsCleanBadge}</span>
+                </span>
+              )}
+            </>
           )}
         </div>
 
@@ -298,6 +330,16 @@ export const SideBySidePreview: React.FC = () => {
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
 
+          {isPdf && (
+            <button
+              onClick={() => setShowPdfDocDetails(true)}
+              className="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer transition-colors"
+              title={t.viewDocumentDetails}
+            >
+              <FileText className="w-3.5 h-3.5 text-mint-500" />
+            </button>
+          )}
+
           <div className="w-[1px] h-4 bg-slate-300 dark:bg-slate-700 mx-0.5" />
 
           {/* Enlarge */}
@@ -339,7 +381,7 @@ export const SideBySidePreview: React.FC = () => {
                 <div className="text-[10px] uppercase font-bold text-mint-500 tracking-wider mb-2 flex items-center justify-between w-full px-1.5 shrink-0">
                   <span className="flex items-center gap-1.5 font-semibold text-mint-600 dark:text-mint-400">
                     <Sparkles className="w-3.5 h-3.5 text-mint-500" />
-                    <span>{t.liveOptimizedPreview}</span>
+                    <span>{isPdf ? `${t.liveOptimizedPreview} (${t.pdfPage1Preview})` : t.liveOptimizedPreview}</span>
                   </span>
                   <span className="text-[10px] font-mono text-slate-400 font-normal">
                     {preview.new_width}×{preview.new_height} px
@@ -376,11 +418,13 @@ export const SideBySidePreview: React.FC = () => {
                 className="relative inline-block border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-2xl select-none cursor-ew-resize group max-h-full max-w-full touch-none"
               >
                 {/* Badges for split comparison */}
-                <div className="absolute top-3 left-3 z-20 px-2.5 py-1 rounded-full bg-slate-950/75 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none border border-white/10 shadow-lg">
-                  {t.initial}
+                <div className="absolute top-3 left-3 z-20 px-2.5 py-1 rounded-full bg-slate-950/75 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none border border-white/10 shadow-lg flex items-center gap-1">
+                  <span>{t.initial}</span>
+                  {isPdf && <span className="text-slate-400 text-[9px]">({t.pdfPage1Preview})</span>}
                 </div>
-                <div className="absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-mint-500/90 text-slate-950 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none shadow-lg">
-                  {t.result}
+                <div className="absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-mint-500/90 text-slate-950 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none shadow-lg flex items-center gap-1">
+                  <span>{t.result}</span>
+                  {isPdf && <span className="text-slate-800 text-[9px]">({t.pdfPage1Preview})</span>}
                 </div>
 
                 {/* Base Result Image */}

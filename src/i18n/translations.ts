@@ -206,6 +206,9 @@ export interface TranslationDictionary {
   shortcutReset: string;
   pdfProfileSelected: string;
   pdfExplanation: string;
+  pdfPage1Preview: string;
+  viewVisualPreview: string;
+  viewDocumentDetails: string;
   initialWeight: string;
   estimatedWeight: string;
   savings: string;
@@ -557,6 +560,9 @@ export const translations: Record<Language, TranslationDictionary> = {
     shortcutReset: 'Réinitialiser',
     pdfProfileSelected: 'Profil sélectionné :',
     pdfExplanation: 'Le texte, les polices et les tracés restent parfaitement nets et lisibles.',
+    pdfPage1Preview: 'Aperçu Page 1',
+    viewVisualPreview: 'Aperçu visuel',
+    viewDocumentDetails: 'Détails du document',
     initialWeight: 'Poids initial',
     estimatedWeight: 'Poids estimé',
     savings: 'Économie',
@@ -904,6 +910,9 @@ export const translations: Record<Language, TranslationDictionary> = {
     shortcutReset: 'Reset',
     pdfProfileSelected: 'Selected profile:',
     pdfExplanation: 'Text, typography, and vectors remain crisp and fully readable.',
+    pdfPage1Preview: 'Page 1 Preview',
+    viewVisualPreview: 'Visual preview',
+    viewDocumentDetails: 'Document details',
     initialWeight: 'Initial size',
     estimatedWeight: 'Estimated size',
     savings: 'Savings',

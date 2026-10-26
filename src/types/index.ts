@@ -61,6 +61,15 @@ export interface PdfCompressionOptions {
   target_size_kb?: number | null;
 }
 
+export interface PdfPreviewResponse {
+  original_page_pdf_base64: string;
+  compressed_page_pdf_base64: string;
+  original_bytes: number;
+  estimated_bytes: number;
+  saved_percentage: number;
+  total_pages: number;
+}
+
 export type DestinationMode =
   | 'FileMintSubfolder'
   | 'SameAsOriginal'

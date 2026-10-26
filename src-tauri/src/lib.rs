@@ -46,6 +46,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_files_metadata,
             commands::generate_image_preview,
+            commands::generate_pdf_preview,
             commands::start_batch_processing,
             commands::cancel_batch_processing,
             commands::open_path_in_explorer,

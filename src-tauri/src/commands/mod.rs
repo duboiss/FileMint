@@ -7,6 +7,7 @@ use tauri::{AppHandle, State};
 use crate::engine::batch_runner::{BatchRequest, BatchRunner, BatchSummary};
 use crate::engine::file_manager;
 use crate::engine::image_processor::{self, ImageTransformOptions, PreviewResult};
+use crate::engine::pdf_processor::{self, PdfCompressionOptions, PdfPreviewResponse};
 use crate::engine::update_checker::{self, UpdateInfo};
 use crate::engine::watch_folder::{WatchFolderConfig, WatchFolderManager, WatchFolderRule};
 use crate::shell::windows_registry;
@@ -102,6 +103,19 @@ pub async fn generate_image_preview(
     tokio::task::spawn_blocking(move || {
         let p = Path::new(&path);
         image_processor::generate_preview(p, &options).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn generate_pdf_preview(
+    path: String,
+    options: PdfCompressionOptions,
+) -> Result<PdfPreviewResponse, String> {
+    tokio::task::spawn_blocking(move || {
+        let p = Path::new(&path);
+        pdf_processor::generate_pdf_preview(p, &options).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?

@@ -35,6 +35,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
     imageOptions,
     setImageOptions,
     pdfOptions,
+    setPdfOptions,
     preview: storePreview,
     previewLoading,
   } = useFileMintStore();
@@ -184,7 +185,11 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                   <strong className="text-slate-200 font-mono">
                     {formatFileSize(activeFile.sizeBytes, language)}
                   </strong>{' '}
-                  ({activeFile.width}×{activeFile.height})
+                  {isImage && activeFile.width && activeFile.height ? (
+                    `(${activeFile.width}×${activeFile.height})`
+                  ) : !isImage ? (
+                    <span className="text-mint-400 text-[11px]">({t.pdfPage1Preview})</span>
+                  ) : null}
                 </span>
                 <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
                 {currentPreview ? (
@@ -193,7 +198,11 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                     <strong className="text-mint-400 font-mono">
                       {formatFileSize(currentPreview.estimated_bytes, language)}
                     </strong>{' '}
-                    ({currentPreview.new_width}×{currentPreview.new_height})
+                    {isImage ? (
+                      `(${currentPreview.new_width}×${currentPreview.new_height})`
+                    ) : (
+                      <span className="text-mint-400 text-[11px]">({t.pdfPage1Preview})</span>
+                    )}
                   </span>
                 ) : null}
                 {currentPreview && currentPreview.saved_percentage > 0 && (
@@ -438,13 +447,29 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
 
         <div className="px-6 py-2.5 border-t border-slate-800 bg-slate-900/95 backdrop-blur-md z-20 flex flex-wrap items-center justify-between gap-4 text-xs">
           {!isImage ? (
-            <div className="flex items-center gap-2 text-slate-300">
-              <FileText className="w-4 h-4 text-mint-400" />
-              <span>
-                {t.pdfProfileSelected}{' '}
-                <strong className="text-white font-semibold">
-                  {getPdfProfileLabel(pdfOptions.profile)}
-                </strong>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1.5 text-slate-300 font-semibold shrink-0">
+                <FileText className="w-3.5 h-3.5 text-mint-400" />
+                <span>{t.pdfProfileSelected}</span>
+              </div>
+              <div className="flex items-center bg-slate-800/90 p-0.5 rounded-xl border border-slate-700/60 shrink-0">
+                {(['Readable', 'Balanced', 'Compact'] as const).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPdfOptions({ profile: p, target_size_kb: null })}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                      pdfOptions.profile === p && !pdfOptions.target_size_kb
+                        ? 'bg-mint-500 text-slate-950 font-bold shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                    }`}
+                  >
+                    {getPdfProfileLabel(p)}
+                  </button>
+                ))}
+              </div>
+              <span className="hidden md:inline text-[11px] text-slate-400">
+                {t.pdfExplanation}
               </span>
             </div>
           ) : !isCompressionActive ? (

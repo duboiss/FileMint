@@ -1,4 +1,6 @@
 use anyhow::{anyhow, Result};
+use base64::engine::general_purpose::STANDARD as BASE64;
+use base64::Engine;
 use lopdf::{Document, Object};
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
@@ -230,4 +232,156 @@ pub fn compress_pdf(
         pages_count,
         image_count_optimized,
     })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PdfPreviewResponse {
+    pub original_page_pdf_base64: String,
+    pub compressed_page_pdf_base64: String,
+    pub original_bytes: u64,
+    pub estimated_bytes: u64,
+    pub saved_percentage: f32,
+    pub total_pages: u32,
+}
+
+fn extract_page_one_doc(mut doc: Document) -> Result<Document> {
+    let page_count = doc.get_pages().len() as u32;
+    if page_count > 1 {
+        let to_delete: Vec<u32> = (2..=page_count).collect();
+        doc.delete_pages(&to_delete);
+        doc.prune_objects();
+    }
+    Ok(doc)
+}
+
+pub fn generate_pdf_preview(
+    input_path: &Path,
+    options: &PdfCompressionOptions,
+) -> Result<PdfPreviewResponse> {
+    let original_bytes = std::fs::metadata(input_path)?.len();
+    let doc = Document::load(input_path)
+        .map_err(|e| anyhow!("Impossible de lire le document PDF : {}", e))?;
+
+    if doc.is_encrypted() {
+        return Err(anyhow!("Le document PDF est protégé par mot de passe."));
+    }
+
+    let total_pages = doc.get_pages().len() as u32;
+    if total_pages == 0 {
+        return Err(anyhow!("Le document PDF ne contient aucune page valide."));
+    }
+
+    // Extract Page 1 for original rendering
+    let mut orig_page_doc = extract_page_one_doc(doc)?;
+    let mut orig_page_bytes = Vec::new();
+    orig_page_doc.save_to(&mut orig_page_bytes)?;
+
+    let (target_jpeg_quality, target_max_dim, estimated_ratio) =
+        if let Some(target_kb) = options.target_size_kb {
+            let target_bytes = (target_kb as u64) * 1024;
+            let ratio = if original_bytes > 0 {
+                (target_bytes as f64) / (original_bytes as f64)
+            } else {
+                1.0
+            };
+            let (q, dim) = if ratio >= 0.8 {
+                (85u8, 2000u32)
+            } else if ratio >= 0.6 {
+                (70u8, 1500u32)
+            } else if ratio >= 0.45 {
+                (55u8, 1100u32)
+            } else if ratio >= 0.3 {
+                (40u8, 850u32)
+            } else {
+                (25u8, 650u32)
+            };
+            (q, dim, ratio.min(1.0))
+        } else {
+            match options.profile {
+                PdfCompressionProfile::Readable => (85u8, 2400u32, 0.75),
+                PdfCompressionProfile::Balanced => (70u8, 1600u32, 0.55),
+                PdfCompressionProfile::Compact => (50u8, 1000u32, 0.35),
+            }
+        };
+
+    let (compressed_page_bytes, _) = compress_doc_internal(
+        orig_page_doc,
+        target_jpeg_quality,
+        target_max_dim,
+        options.recompress_images,
+        options.optimize_structure,
+    )?;
+
+    let estimated_bytes = if let Some(target_kb) = options.target_size_kb {
+        std::cmp::min(original_bytes, (target_kb as u64) * 1024)
+    } else {
+        ((original_bytes as f64) * estimated_ratio).round() as u64
+    };
+
+    let saved_percentage = if original_bytes > 0 && original_bytes > estimated_bytes {
+        let diff = (original_bytes - estimated_bytes) as f64;
+        ((diff / (original_bytes as f64)) * 100.0).max(0.0) as f32
+    } else {
+        0.0
+    };
+
+    Ok(PdfPreviewResponse {
+        original_page_pdf_base64: BASE64.encode(&orig_page_bytes),
+        compressed_page_pdf_base64: BASE64.encode(&compressed_page_bytes),
+        original_bytes,
+        estimated_bytes,
+        saved_percentage,
+        total_pages,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_page_one() {
+        let path = r"C:\Users\Steven\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lopdf-0.35.0\assets\example.pdf";
+        let mut doc = Document::load(path).unwrap();
+        // Duplicate the page to make it a 2-page document
+        let pages = doc.get_pages();
+        let page1_id = *pages.get(&1).unwrap();
+        let catalog_id = doc.trailer.get(b"Root").unwrap().as_reference().unwrap();
+        let catalog = doc.get_object(catalog_id).unwrap().as_dict().unwrap();
+        let pages_id = catalog.get(b"Pages").unwrap().as_reference().unwrap();
+        
+        let page2_id = doc.add_object(doc.get_object(page1_id).unwrap().clone());
+        let pages_obj = doc.get_object_mut(pages_id).unwrap().as_dict_mut().unwrap();
+        let mut kids = pages_obj.get(b"Kids").unwrap().as_array().unwrap().clone();
+        kids.push(Object::Reference(page2_id));
+        pages_obj.set("Kids", Object::Array(kids));
+        pages_obj.set("Count", Object::Integer(2));
+
+        assert_eq!(doc.get_pages().len(), 2);
+
+        // Now test page extraction logic:
+        let page_count = doc.get_pages().len() as u32;
+        if page_count > 1 {
+            let to_delete: Vec<u32> = (2..=page_count).collect();
+            doc.delete_pages(&to_delete);
+            doc.prune_objects();
+        }
+        assert_eq!(doc.get_pages().len(), 1);
+
+        let mut out = Vec::new();
+        doc.save_to(&mut out).unwrap();
+        let doc2 = Document::load_mem(&out).unwrap();
+        assert_eq!(doc2.get_pages().len(), 1);
+    }
+
+    #[test]
+    fn test_generate_pdf_preview() {
+        let path = std::path::Path::new(r"C:\Users\Steven\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lopdf-0.35.0\assets\example.pdf");
+        let opts = PdfCompressionOptions::default();
+        let preview = generate_pdf_preview(path, &opts).unwrap();
+        assert_eq!(preview.total_pages, 1);
+        assert!(!preview.original_page_pdf_base64.is_empty());
+        assert!(!preview.compressed_page_pdf_base64.is_empty());
+        assert!(preview.estimated_bytes > 0);
+    }
 }

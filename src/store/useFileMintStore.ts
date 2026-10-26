@@ -6,6 +6,7 @@ import {
   ImageTransformOptions,
   CustomProfile,
   PdfCompressionOptions,
+  PdfPreviewResponse,
   DestinationConfig,
   PreviewResult,
   ProgressEventPayload,
@@ -26,6 +27,7 @@ import {
 } from '../i18n/translations';
 
 import packageJson from '../../package.json';
+import { renderPdfPage1, base64ToUint8Array } from '../utils/pdfPreviewRenderer';
 
 export const APP_VERSION = packageJson.version;
 
@@ -1413,6 +1415,14 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       set((state) => ({
         pdfOptions: { ...state.pdfOptions, ...options },
       }));
+
+      // Debounce preview update to keep slider and profile switches silky smooth
+      if (previewDebounceTimer) {
+        clearTimeout(previewDebounceTimer);
+      }
+      previewDebounceTimer = setTimeout(() => {
+        get().refreshPreview();
+      }, 100);
     },
 
     setDestinationConfig: (config) => {
@@ -1447,9 +1457,9 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         previewDebounceTimer = null;
       }
 
-      const { files, activePreviewIndex, imageOptions } = get();
+      const { files, activePreviewIndex, imageOptions, pdfOptions } = get();
       const activeFile = files[activePreviewIndex];
-      if (!activeFile || activeFile.fileType !== 'image') {
+      if (!activeFile || (activeFile.fileType !== 'image' && activeFile.fileType !== 'pdf')) {
         set({ preview: null, previewLoading: false });
         return;
       }
@@ -1457,6 +1467,81 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       const reqId = ++previewRequestId;
       set({ previewLoading: true });
 
+      // PDF Page 1 high-performance preview
+      if (activeFile.fileType === 'pdf') {
+        if (!isTauriEnv()) {
+          const isTargetSize = Boolean(pdfOptions.target_size_kb && pdfOptions.target_size_kb > 0);
+          const targetBytes = (pdfOptions.target_size_kb || 0) * 1024;
+          const estimatedPercent = isTargetSize
+            ? (activeFile.sizeBytes > 0 && activeFile.sizeBytes > targetBytes
+                ? Math.round(((activeFile.sizeBytes - targetBytes) / activeFile.sizeBytes) * 100)
+                : 0)
+            : (pdfOptions.profile === 'Compact' ? 65 : pdfOptions.profile === 'Balanced' ? 45 : 25);
+          const estimatedFinal = isTargetSize
+            ? Math.min(activeFile.sizeBytes, targetBytes)
+            : Math.round(activeFile.sizeBytes * (1 - estimatedPercent / 100));
+
+          if (reqId === previewRequestId) {
+            set({
+              preview: {
+                data_url: '',
+                original_data_url: '',
+                original_width: 800,
+                original_height: 1100,
+                new_width: 800,
+                new_height: 1100,
+                original_bytes: activeFile.sizeBytes,
+                estimated_bytes: estimatedFinal,
+                saved_percentage: estimatedPercent,
+                transparency_loss_warning: false,
+              },
+              previewLoading: false,
+            });
+          }
+          return;
+        }
+
+        try {
+          const res = await invoke<PdfPreviewResponse>('generate_pdf_preview', {
+            path: activeFile.path,
+            options: pdfOptions,
+          });
+
+          const origBytes = base64ToUint8Array(res.original_page_pdf_base64);
+          const compBytes = base64ToUint8Array(res.compressed_page_pdf_base64);
+
+          const [origPage, compPage] = await Promise.all([
+            renderPdfPage1(origBytes),
+            renderPdfPage1(compBytes),
+          ]);
+
+          if (reqId === previewRequestId) {
+            set({
+              preview: {
+                original_data_url: origPage.dataUrl,
+                data_url: compPage.dataUrl,
+                original_bytes: res.original_bytes,
+                estimated_bytes: res.estimated_bytes,
+                saved_percentage: res.saved_percentage,
+                original_width: origPage.width,
+                original_height: origPage.height,
+                new_width: compPage.width,
+                new_height: compPage.height,
+                transparency_loss_warning: false,
+              },
+              previewLoading: false,
+            });
+          }
+        } catch (err) {
+          console.error("Erreur lors de la génération de la prévisualisation PDF :", err);
+          if (reqId === previewRequestId) {
+            set({ preview: null, previewLoading: false });
+          }
+        }
+        return;
+      }
+
+      // Image preview
       if (!isTauriEnv()) {
         const localResult = generateLocalBrowserPreview(activeFile, imageOptions);
         if (reqId === previewRequestId) {

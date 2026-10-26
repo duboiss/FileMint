@@ -47,6 +47,19 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
   const isLossless = Boolean(imageOptions.lossless);
   const canAdjustQuality = isCompressionActive && !isTargetSizeMode && !isLossless;
 
+  const getPdfProfileLabel = (profile: string) => {
+    switch (profile) {
+      case 'Readable':
+        return t.profileReadable;
+      case 'Balanced':
+        return t.profileBalanced;
+      case 'Compact':
+        return t.profileCompact;
+      default:
+        return profile;
+    }
+  };
+
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'split' | 'sideBySide' | 'single'>('split');
   const [splitPos, setSplitPos] = useState<number>(50);
@@ -428,8 +441,10 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
             <div className="flex items-center gap-2 text-slate-300">
               <FileText className="w-4 h-4 text-mint-400" />
               <span>
-                {t.pdfProfileSelected} :{' '}
-                <strong className="text-white font-semibold">{pdfOptions.profile}</strong>
+                {t.pdfProfileSelected}{' '}
+                <strong className="text-white font-semibold">
+                  {getPdfProfileLabel(pdfOptions.profile)}
+                </strong>
               </span>
             </div>
           ) : !isCompressionActive ? (

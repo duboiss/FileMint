@@ -63,6 +63,19 @@ export const SideBySidePreview: React.FC = () => {
     }
   };
 
+  const getPdfProfileLabel = (profile: string) => {
+    switch (profile) {
+      case 'Readable':
+        return t.profileReadable;
+      case 'Balanced':
+        return t.profileBalanced;
+      case 'Compact':
+        return t.profileCompact;
+      default:
+        return profile;
+    }
+  };
+
   if (!activeFile) {
     return (
       <div className="flex-1 flex items-center justify-center text-slate-400 text-xs">
@@ -145,9 +158,9 @@ export const SideBySidePreview: React.FC = () => {
               </>
             ) : (
               <>
-                {t.pdfProfileSelected} :{' '}
+                {t.pdfProfileSelected}{' '}
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  {pdfOptions.profile}
+                  {getPdfProfileLabel(pdfOptions.profile)}
                 </span>
                 . {t.pdfExplanation}
               </>

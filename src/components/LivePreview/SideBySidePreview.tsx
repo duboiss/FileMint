@@ -32,6 +32,36 @@ export const SideBySidePreview: React.FC = () => {
   const [viewMode, setViewMode] = useState<'sideBySide' | 'split'>('sideBySide');
   const [splitPos, setSplitPos] = useState<number>(50);
   const [isLargeModalOpen, setIsLargeModalOpen] = useState(false);
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+
+  const updateSplitPosition = (clientX: number, target: HTMLElement) => {
+    const rect = target.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const x = clientX - rect.left;
+    const percent = Math.max(0, Math.min(100, (x / rect.width) * 100));
+    setSplitPos(Math.round(percent));
+  };
+
+  const handleSplitPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    setIsDraggingSplit(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    updateSplitPosition(e.clientX, e.currentTarget);
+  };
+
+  const handleSplitPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDraggingSplit) {
+      updateSplitPosition(e.clientX, e.currentTarget);
+    }
+  };
+
+  const handleSplitPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDraggingSplit) {
+      setIsDraggingSplit(false);
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {}
+    }
+  };
 
   if (!activeFile) {
     return (
@@ -318,52 +348,92 @@ export const SideBySidePreview: React.FC = () => {
           ) : (
             /* Split slider comparison mode */
             <div
-              className="relative border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center max-h-full max-w-full min-h-0 min-w-0"
+              className="relative max-h-full max-w-full flex items-center justify-center min-h-0 min-w-0"
               style={{
                 transform: zoomLevel !== 1 ? `scale(${zoomLevel})` : undefined,
                 transformOrigin: 'center',
                 transition: 'transform 0.15s ease-out',
               }}
             >
-              {/* Badges for split comparison */}
-              <div className="absolute top-3 left-3 z-10 px-2 py-0.5 rounded-full bg-slate-950/70 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none">
-                {t.initial}
-              </div>
-              <div className="absolute top-3 right-3 z-10 px-2 py-0.5 rounded-full bg-mint-500/80 text-slate-950 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none">
-                {t.result}
-              </div>
-
-              <img
-                src={preview.data_url}
-                alt={t.result}
-                className="max-h-full max-w-full w-auto h-auto object-contain block rounded-3xl"
-                style={{
-                  maxHeight: 'min(620px, calc(100vh - 290px))',
-                  maxWidth: 'min(1100px, calc(100vw - 420px))',
-                }}
-              />
               <div
-                className="absolute top-0 bottom-0 left-0 overflow-hidden border-r-2 border-mint-500 bg-white dark:bg-slate-900"
-                style={{ width: `${splitPos}%` }}
+                onPointerDown={handleSplitPointerDown}
+                onPointerMove={handleSplitPointerMove}
+                onPointerUp={handleSplitPointerUp}
+                onPointerCancel={() => setIsDraggingSplit(false)}
+                className="relative inline-block border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-2xl select-none cursor-ew-resize group max-h-full max-w-full touch-none"
               >
+                {/* Badges for split comparison */}
+                <div className="absolute top-3 left-3 z-20 px-2.5 py-1 rounded-full bg-slate-950/75 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none border border-white/10 shadow-lg">
+                  {t.initial}
+                </div>
+                <div className="absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-mint-500/90 text-slate-950 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none shadow-lg">
+                  {t.result}
+                </div>
+
+                {/* Base Result Image */}
                 <img
-                  src={preview.original_data_url || preview.data_url}
-                  alt={t.initial}
-                  className="max-h-full max-w-full w-auto h-auto object-contain block opacity-90"
+                  src={preview.data_url}
+                  alt={t.result}
+                  draggable={false}
+                  className="max-h-full max-w-full w-auto h-auto object-contain block rounded-3xl pointer-events-none select-none"
                   style={{
                     maxHeight: 'min(620px, calc(100vh - 290px))',
                     maxWidth: 'min(1100px, calc(100vw - 420px))',
                   }}
                 />
+
+                {/* Clipped Initial Image on top */}
+                <div
+                  className="absolute inset-0 pointer-events-none select-none overflow-hidden rounded-3xl"
+                  style={{
+                    clipPath: `inset(0 ${100 - splitPos}% 0 0)`,
+                  }}
+                >
+                  <img
+                    src={preview.original_data_url || preview.data_url}
+                    alt={t.initial}
+                    draggable={false}
+                    className="w-full h-full object-contain block pointer-events-none select-none"
+                    style={{
+                      maxHeight: 'min(620px, calc(100vh - 290px))',
+                      maxWidth: 'min(1100px, calc(100vw - 420px))',
+                    }}
+                  />
+                </div>
+
+                {/* Vertical Divider Line with Central Handle */}
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-mint-400 pointer-events-none z-10 shadow-[0_0_12px_rgba(45,212,191,0.85)]"
+                  style={{ left: `${splitPos}%` }}
+                >
+                  <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-slate-900/95 border-2 border-mint-400 text-mint-400 shadow-2xl flex items-center justify-center pointer-events-none group-hover:scale-110 transition-transform">
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="8 7 3 12 8 17" />
+                      <polyline points="16 7 21 12 16 17" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Interactive Slider Input for accessibility / fine-grained control */}
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={splitPos}
+                  onChange={(e) => setSplitPos(Number(e.target.value))}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="absolute inset-x-0 bottom-3 w-3/5 mx-auto opacity-70 hover:opacity-100 transition-opacity accent-mint-500 z-20 cursor-ew-resize"
+                  title="Curseur comparaison avant/après"
+                />
               </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={splitPos}
-                onChange={(e) => setSplitPos(Number(e.target.value))}
-                className="absolute inset-x-0 bottom-3 w-4/5 mx-auto opacity-70 hover:opacity-100 transition-opacity accent-mint-500 z-10 cursor-ew-resize"
-              />
             </div>
           )
         ) : (

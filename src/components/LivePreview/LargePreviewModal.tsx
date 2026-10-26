@@ -44,9 +44,42 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
   const [splitPos, setSplitPos] = useState<number>(50);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const qualityRef = useRef(imageOptions.quality);
   qualityRef.current = imageOptions.quality;
+
+  const updateSplitPosition = (clientX: number, target: HTMLElement) => {
+    const rect = target.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const x = clientX - rect.left;
+    const percent = Math.max(0, Math.min(100, (x / rect.width) * 100));
+    setSplitPos(Math.round(percent));
+  };
+
+  const handleSplitPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    setIsDraggingSplit(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    updateSplitPosition(e.clientX, e.currentTarget);
+  };
+
+  const handleSplitPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDraggingSplit) {
+      e.stopPropagation();
+      updateSplitPosition(e.clientX, e.currentTarget);
+    }
+  };
+
+  const handleSplitPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDraggingSplit) {
+      e.stopPropagation();
+      setIsDraggingSplit(false);
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {}
+    }
+  };
 
   // Reset zoom and pan offset when opening
   useEffect(() => {
@@ -263,29 +296,74 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
               }}
             >
               {viewMode === 'split' && (
-                <div className="relative border border-slate-800 rounded-2xl overflow-hidden shadow-2xl max-h-[75vh] max-w-[85vw] flex items-center justify-center bg-slate-950">
+                <div
+                  onPointerDown={handleSplitPointerDown}
+                  onPointerMove={handleSplitPointerMove}
+                  onPointerUp={handleSplitPointerUp}
+                  onPointerCancel={() => setIsDraggingSplit(false)}
+                  className="relative inline-block border border-slate-800 rounded-2xl overflow-hidden shadow-2xl max-h-[75vh] max-w-[85vw] select-none cursor-ew-resize group bg-slate-950 touch-none"
+                >
+                  {/* Badges for split comparison */}
+                  <div className="absolute top-3 left-3 z-20 px-2.5 py-1 rounded-full bg-slate-950/75 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none border border-white/10 shadow-lg">
+                    {t.initial}
+                  </div>
+                  <div className="absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-mint-500/90 text-slate-950 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none shadow-lg">
+                    {t.result}
+                  </div>
+
+                  {/* Result image underneath */}
                   <img
                     src={currentPreview.data_url}
                     alt={t.result}
-                    className="max-h-[75vh] max-w-[85vw] object-contain block pointer-events-none"
+                    draggable={false}
+                    className="max-h-[75vh] max-w-[85vw] object-contain block pointer-events-none select-none"
                   />
+
+                  {/* Clipped Initial image on top */}
                   <div
-                    className="absolute top-0 bottom-0 left-0 overflow-hidden border-r-2 border-mint-400 bg-slate-950/20"
-                    style={{ width: `${splitPos}%` }}
+                    className="absolute inset-0 pointer-events-none select-none overflow-hidden"
+                    style={{
+                      clipPath: `inset(0 ${100 - splitPos}% 0 0)`,
+                    }}
                   >
                     <img
                       src={currentPreview.original_data_url || currentPreview.data_url}
                       alt={t.initial}
-                      className="max-h-[75vh] max-w-[85vw] object-contain block opacity-95 pointer-events-none"
+                      draggable={false}
+                      className="w-full h-full object-contain block pointer-events-none select-none"
                     />
                   </div>
+
+                  {/* Vertical divider line and handle */}
+                  <div
+                    className="absolute top-0 bottom-0 w-0.5 bg-mint-400 pointer-events-none z-10 shadow-[0_0_12px_rgba(45,212,191,0.85)]"
+                    style={{ left: `${splitPos}%` }}
+                  >
+                    <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-slate-900/95 border-2 border-mint-400 text-mint-400 shadow-2xl flex items-center justify-center pointer-events-none group-hover:scale-110 transition-transform">
+                      <svg
+                        className="w-4 h-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="8 7 3 12 8 17" />
+                        <polyline points="16 7 21 12 16 17" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Optional accessibility slider at bottom */}
                   <input
                     type="range"
                     min="0"
                     max="100"
                     value={splitPos}
                     onChange={(e) => setSplitPos(Number(e.target.value))}
-                    className="absolute inset-x-0 bottom-6 w-3/5 mx-auto opacity-75 hover:opacity-100 transition-opacity accent-mint-500 z-10 cursor-ew-resize"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="absolute inset-x-0 bottom-6 w-3/5 mx-auto opacity-75 hover:opacity-100 transition-opacity accent-mint-500 z-20 cursor-ew-resize"
                   />
                 </div>
               )}

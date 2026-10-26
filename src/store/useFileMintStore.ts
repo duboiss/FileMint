@@ -408,13 +408,38 @@ const saveLifetimeStatsToStorage = (bytesSaved: number, filesCount: number) => {
 const WATCH_FOLDERS_STORAGE_KEY = 'filemint_watch_folders';
 const LEGACY_WATCH_FOLDER_KEY = 'filemint_watch_folder_config';
 
+export const validateAndSanitizeWatchFolders = (data: unknown): WatchFolderRule[] => {
+  if (!Array.isArray(data)) return [];
+  const sanitized: WatchFolderRule[] = [];
+  for (const item of data) {
+    if (!item || typeof item !== 'object') continue;
+    const obj = item as Record<string, unknown>;
+    if (typeof obj.id !== 'string' || !obj.id.trim()) continue;
+    if (typeof obj.watch_path !== 'string') continue;
+
+    sanitized.push({
+      id: obj.id.trim(),
+      name: typeof obj.name === 'string' ? obj.name.trim() : '',
+      enabled: Boolean(obj.enabled),
+      watch_path: obj.watch_path.trim(),
+      output_path: typeof obj.output_path === 'string' && obj.output_path.trim() ? obj.output_path.trim() : null,
+      delete_source: Boolean(obj.delete_source),
+      profile_id: typeof obj.profile_id === 'string' && obj.profile_id.trim() ? obj.profile_id.trim() : null,
+      image_options: obj.image_options && typeof obj.image_options === 'object' ? (obj.image_options as any) : null,
+      pdf_options: obj.pdf_options && typeof obj.pdf_options === 'object' ? (obj.pdf_options as any) : null,
+    });
+  }
+  return sanitized;
+};
+
 const getInitialWatchFolders = (): WatchFolderRule[] => {
   try {
     const raw = localStorage.getItem(WATCH_FOLDERS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+      const validated = validateAndSanitizeWatchFolders(parsed);
+      if (validated.length > 0) {
+        return validated;
       }
     }
     // Check legacy single watch folder configuration
@@ -771,6 +796,7 @@ interface FileMintState {
 
 let previewDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let previewRequestId = 0;
+let watchToastTimer: ReturnType<typeof setTimeout> | null = null;
 
 const syncWatchFoldersToBackend = async (
   rules: WatchFolderRule[],
@@ -827,7 +853,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
     defaultImagePreset: initialPresetId,
     selectedImagePreset: initialActiveProfile?.id || 'preset_none',
     imageOptions: initialActiveProfile
-      ? JSON.parse(JSON.stringify(initialActiveProfile.options))
+      ? structuredClone(initialActiveProfile.options)
       : getPresetOptions('none'),
     customProfiles: initialProfiles,
     activeCustomProfileId: initialActiveProfile?.id || null,
@@ -938,12 +964,21 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         lastWatchEvent: event,
         watchToastVisible: true,
       });
-      setTimeout(() => {
+
+      if (watchToastTimer) {
+        clearTimeout(watchToastTimer);
+      }
+      watchToastTimer = setTimeout(() => {
         set({ watchToastVisible: false });
+        watchToastTimer = null;
       }, 5000);
     },
 
     dismissWatchToast: () => {
+      if (watchToastTimer) {
+        clearTimeout(watchToastTimer);
+        watchToastTimer = null;
+      }
       set({ watchToastVisible: false });
     },
 
@@ -964,6 +999,9 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         localStorage.setItem('filemint_language', lang);
       } catch (err) {
         console.warn('Erreur sauvegarde langue :', err);
+      }
+      if (typeof document !== 'undefined') {
+        document.documentElement.lang = lang;
       }
       set({ language: lang, t: translations[lang] });
       // Only refresh classic context menu labels if classic mode is currently enabled
@@ -1071,7 +1109,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
             ? {
                 selectedImagePreset: defaultProfile.id,
                 activeCustomProfileId: defaultProfile.id,
-                imageOptions: JSON.parse(JSON.stringify(defaultProfile.options)),
+                imageOptions: structuredClone(defaultProfile.options),
               }
             : {}),
         });
@@ -1123,7 +1161,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         selectedImagePreset: defaultProfile?.id || 'preset_none',
         activeCustomProfileId: defaultProfile?.id || null,
         imageOptions: defaultProfile
-          ? JSON.parse(JSON.stringify(defaultProfile.options))
+          ? structuredClone(defaultProfile.options)
           : getPresetOptions('none'),
       });
       get().refreshPreview();
@@ -1211,7 +1249,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       const newProfile: CustomProfile = {
         id: `profile_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         name: trimmed,
-        options: JSON.parse(JSON.stringify(get().imageOptions)),
+        options: structuredClone(get().imageOptions),
         createdAt: Date.now(),
       };
 
@@ -1233,7 +1271,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         previewDebounceTimer = null;
       }
       set({
-        imageOptions: JSON.parse(JSON.stringify(profile.options)),
+        imageOptions: structuredClone(profile.options),
         selectedImagePreset: id,
         activeCustomProfileId: id,
       });
@@ -1274,7 +1312,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       const current = get().customProfiles;
       const target = current.find((p) => p.id === id);
       if (!target) return false;
-      const currentOptions = JSON.parse(JSON.stringify(get().imageOptions));
+      const currentOptions = structuredClone(get().imageOptions);
       const updated = current.map((p) =>
         p.id === id ? { ...p, options: currentOptions } : p
       );
@@ -1294,7 +1332,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         customProfiles: defaults,
         activeCustomProfileId: defaults[0].id,
         selectedImagePreset: defaults[0].id,
-        imageOptions: JSON.parse(JSON.stringify(defaults[0].options)),
+        imageOptions: structuredClone(defaults[0].options),
         defaultImagePreset: defaults[0].id,
       });
       try {
@@ -1318,7 +1356,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         selectedImagePreset: newDefaultId || 'preset_none',
         defaultImagePreset: newDefaultId,
         imageOptions: firstProfile
-          ? JSON.parse(JSON.stringify(firstProfile.options))
+          ? structuredClone(firstProfile.options)
           : getPresetOptions('none'),
       });
       get().refreshPreview();
@@ -1516,7 +1554,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         selectedImagePreset: defaultProfile?.id || 'preset_none',
         activeCustomProfileId: defaultProfile?.id || null,
         imageOptions: defaultProfile
-          ? JSON.parse(JSON.stringify(defaultProfile.options))
+          ? structuredClone(defaultProfile.options)
           : getPresetOptions('none'),
       });
     },

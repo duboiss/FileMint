@@ -86,7 +86,7 @@ export const FileList: React.FC = () => {
 
       <div className="flex items-center gap-2 shrink-0">
         <span className="text-xs font-medium text-slate-500">
-          {files.length} {files.length > 1 ? t.fileCountPlural : t.fileCountSingle}
+          {files.length} {files.length === 1 || (language === 'fr' && files.length === 0) ? t.fileCountSingle : t.fileCountPlural}
         </span>
         <button
           onClick={clearFiles}

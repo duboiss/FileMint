@@ -67,6 +67,7 @@ export const SettingsModal: React.FC = () => {
   } = useFileMintStore();
 
   const isDev = Boolean(import.meta.env.DEV);
+  const [confirmResetStats, setConfirmResetStats] = useState(false);
 
   const handleSelectDefaultCustomFolder = async () => {
     try {
@@ -93,7 +94,7 @@ export const SettingsModal: React.FC = () => {
           (r) => r.id !== ruleId && r.watch_path.toLowerCase() === selected.toLowerCase()
         );
         if (isDuplicate) {
-          alert(t.duplicateWatchFolderAlert);
+          setErrorMessage(t.duplicateWatchFolderAlert);
           return;
         }
         const folderName = selected.split(/[\\/]/).filter(Boolean).pop() || '';
@@ -437,61 +438,63 @@ export const SettingsModal: React.FC = () => {
               </div>
 
               {/* Menu contextuel Windows */}
-              <div className="pt-2.5 space-y-1.5">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-lg bg-mint-500/10 text-mint-500 flex items-center justify-center shrink-0">
-                      <MousePointer className="w-3.5 h-3.5" />
+              {isTauriEnv() && (
+                <div className="pt-2.5 space-y-1.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-7 h-7 rounded-lg bg-mint-500/10 text-mint-500 flex items-center justify-center shrink-0">
+                        <MousePointer className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs block">
+                          {t.contextMenuLabel}
+                        </span>
+                        {contextMenuLoading && (
+                          <Loader2 className="w-3 h-3 animate-spin text-mint-500 shrink-0" />
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs block">
-                        {t.contextMenuLabel}
+
+                    <div className="relative shrink-0">
+                      <select
+                        disabled={contextMenuLoading}
+                        value={!contextMenuEnabled || contextMenuMode === 'disabled' ? 'disabled' : contextMenuMode}
+                        onChange={(e) => setContextMenuMode(e.target.value as ContextMenuMode)}
+                        className="py-1.5 pl-3 pr-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-mint-500 transition-colors cursor-pointer appearance-none shadow-xs"
+                      >
+                        <option value="modern">
+                          {t.contextMenuModern}
+                        </option>
+                        <option value="classic">
+                          {t.contextMenuClassic}
+                        </option>
+                        <option value="disabled">
+                          {t.contextMenuDisabled}
+                        </option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
+                          <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pl-9 space-y-0.5 text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
+                    <p>
+                      {(!contextMenuEnabled || contextMenuMode === 'disabled') && t.contextMenuDisabledDesc}
+                      {contextMenuEnabled && contextMenuMode === 'modern' && t.contextMenuModernDesc}
+                      {contextMenuEnabled && contextMenuMode === 'classic' && t.contextMenuClassicDesc}
+                    </p>
+
+                    {contextMenuEnabled && contextMenuMode !== 'disabled' && (
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 italic block">
+                        {t.contextMenuRefreshNotice}
                       </span>
-                      {contextMenuLoading && (
-                        <Loader2 className="w-3 h-3 animate-spin text-mint-500 shrink-0" />
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="relative shrink-0">
-                    <select
-                      disabled={contextMenuLoading}
-                      value={!contextMenuEnabled || contextMenuMode === 'disabled' ? 'disabled' : contextMenuMode}
-                      onChange={(e) => setContextMenuMode(e.target.value as ContextMenuMode)}
-                      className="py-1.5 pl-3 pr-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-mint-500 transition-colors cursor-pointer appearance-none shadow-xs"
-                    >
-                      <option value="modern">
-                        {t.contextMenuModern}
-                      </option>
-                      <option value="classic">
-                        {t.contextMenuClassic}
-                      </option>
-                      <option value="disabled">
-                        {t.contextMenuDisabled}
-                      </option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
-                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
-                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                      </svg>
-                    </div>
+                    )}
                   </div>
                 </div>
-
-                <div className="pl-9 space-y-0.5 text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
-                  <p>
-                    {(!contextMenuEnabled || contextMenuMode === 'disabled') && t.contextMenuDisabledDesc}
-                    {contextMenuEnabled && contextMenuMode === 'modern' && t.contextMenuModernDesc}
-                    {contextMenuEnabled && contextMenuMode === 'classic' && t.contextMenuClassicDesc}
-                  </p>
-
-                  {contextMenuEnabled && contextMenuMode !== 'disabled' && (
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 italic block">
-                      {t.contextMenuRefreshNotice}
-                    </span>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -921,7 +924,7 @@ export const SettingsModal: React.FC = () => {
                           {rule.enabled && rule.watch_path && (
                             <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold shrink-0">
                               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                              <span className="hidden sm:inline">Actif</span>
+                              <span className="hidden sm:inline">{t.watchFolderStatusActive}</span>
                             </span>
                           )}
                         </div>
@@ -1129,19 +1132,38 @@ export const SettingsModal: React.FC = () => {
               </div>
 
               {lifetimeFilesCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (window.confirm(t.resetStatsConfirm)) {
-                      resetLifetimeStats();
-                    }
-                  }}
-                  className="text-[10px] text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors flex items-center gap-1 cursor-pointer shrink-0 ml-2"
-                  title={t.resetStats}
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>{t.resetStats}</span>
-                </button>
+                confirmResetStats ? (
+                  <div className="flex items-center gap-1.5 shrink-0 ml-2 animate-fadeIn">
+                    <span className="text-[10px] text-red-500 font-semibold">{t.confirm} ?</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetLifetimeStats();
+                        setConfirmResetStats(false);
+                      }}
+                      className="px-1.5 py-0.5 rounded bg-red-500 text-white text-[10px] font-bold cursor-pointer hover:bg-red-600 transition-colors"
+                    >
+                      {t.confirm}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmResetStats(false)}
+                      className="px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-[10px] text-slate-500 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      {t.cancel}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmResetStats(true)}
+                    className="text-[10px] text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors flex items-center gap-1 cursor-pointer shrink-0 ml-2"
+                    title={t.resetStats}
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>{t.resetStats}</span>
+                  </button>
+                )
               )}
             </div>
           </div>

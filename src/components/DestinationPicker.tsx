@@ -142,6 +142,19 @@ export const DestinationPicker: React.FC = () => {
     handlePatternChange(currentPattern + tag);
   };
 
+  const handleLaunch = () => {
+    if (
+      destinationConfig.mode === 'SameAsOriginal' &&
+      !destinationConfig.custom_suffix &&
+      !destinationConfig.naming_pattern &&
+      !destinationConfig.overwrite_existing
+    ) {
+      setConfirmOverwriteModal(true);
+      return;
+    }
+    startBatch();
+  };
+
   const sampleFile = files[activePreviewIndex] || files[0];
   const isAllPdf = files.length > 0 && files.every((f) => f.fileType === 'pdf');
   const isAllImages = files.length > 0 && files.every((f) => f.fileType === 'image');
@@ -265,7 +278,7 @@ export const DestinationPicker: React.FC = () => {
           </button>
 
           <button
-            onClick={startBatch}
+            onClick={handleLaunch}
             disabled={files.length === 0}
             className="px-6 py-2.5 rounded-xl bg-mint-500 hover:bg-mint-600 disabled:opacity-50 text-slate-950 font-bold text-xs shadow-lg shadow-mint-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 cursor-pointer"
           >
@@ -392,7 +405,7 @@ export const DestinationPicker: React.FC = () => {
 
             {/* Clickable tags to append */}
             <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-              <span className="text-[10px] text-slate-400 mr-1">Variables :</span>
+              <span className="text-[10px] text-slate-400 mr-1">{t.namingVariablesLabel}</span>
               {tagsToDisplay.map((item) => (
                 <button
                   key={item.tag}
@@ -451,6 +464,7 @@ export const DestinationPicker: React.FC = () => {
                 onClick={() => {
                   setDestinationConfig({ overwrite_existing: true });
                   setConfirmOverwriteModal(false);
+                  startBatch();
                 }}
                 className="flex-1 py-2 rounded-xl bg-red-500 text-white text-xs font-semibold cursor-pointer"
               >

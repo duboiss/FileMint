@@ -715,6 +715,7 @@ export const ImageConfigPanel: React.FC = () => {
                   <label className="text-[10px] font-semibold text-slate-400 block mb-1">{t.maxWidth}</label>
                   <input
                     type="number"
+                    min="1"
                     value={imageOptions.resize_mode.MaxBounds?.max_width || 1920}
                     onChange={(e) =>
                       setImageOptions({
@@ -733,6 +734,7 @@ export const ImageConfigPanel: React.FC = () => {
                   <label className="text-[10px] font-semibold text-slate-400 block mb-1">{t.maxHeight}</label>
                   <input
                     type="number"
+                    min="1"
                     value={imageOptions.resize_mode.MaxBounds?.max_height || 1080}
                     onChange={(e) =>
                       setImageOptions({
@@ -759,6 +761,7 @@ export const ImageConfigPanel: React.FC = () => {
                   <label className="text-[10px] font-semibold text-slate-400 block mb-1">{t.width}</label>
                   <input
                     type="number"
+                    min="1"
                     value={imageOptions.resize_mode.Exact?.width || 0}
                     onChange={(e) =>
                       setImageOptions({
@@ -777,6 +780,7 @@ export const ImageConfigPanel: React.FC = () => {
                   <label className="text-[10px] font-semibold text-slate-400 block mb-1">{t.height}</label>
                   <input
                     type="number"
+                    min="1"
                     value={imageOptions.resize_mode.Exact?.height || 0}
                     onChange={(e) =>
                       setImageOptions({
@@ -1189,7 +1193,7 @@ export const ImageConfigPanel: React.FC = () => {
                       {t.metadataRemoveGps}
                     </span>
                     <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-mint-500/20 text-mint-600 dark:text-mint-400">
-                      Recommandé
+                      {t.recommended}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-normal">

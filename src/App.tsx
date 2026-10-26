@@ -266,6 +266,7 @@ export const App: React.FC = () => {
           </div>
           <button
             onClick={() => dismissWatchToast()}
+            aria-label={t.close}
             className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer ml-1"
           >
             <X className="w-4 h-4" />

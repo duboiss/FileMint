@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useFileMintStore } from '../store/useFileMintStore';
-import { getSystemLanguage, Language, translations } from '../i18n/translations';
+import { getSystemLanguage, Language } from '../i18n/translations';
 import { ThemeMode, ContextMenuMode } from '../types';
 import {
   Languages,
@@ -16,6 +16,7 @@ export const WelcomeLanguageModal: React.FC = () => {
     showWelcomeModal,
     setWelcomeModalOpen,
     language,
+    setLanguage,
     theme,
     setTheme,
     contextMenuMode,
@@ -41,11 +42,7 @@ export const WelcomeLanguageModal: React.FC = () => {
     setIsSubmitting(true);
     try {
       setTheme(selectedTheme);
-      // Persist language directly into localStorage and update store
-      try {
-        localStorage.setItem('filemint_language', selectedLang);
-      } catch {}
-      useFileMintStore.setState({ language: selectedLang, t: translations[selectedLang] });
+      setLanguage(selectedLang);
 
       // Explicitly apply the chosen context menu mode and wait for completion
       await setContextMenuMode(selectedContextMenu);

@@ -347,9 +347,9 @@ export const SideBySidePreview: React.FC = () => {
                 style={{ width: `${splitPos}%` }}
               >
                 <img
-                  src={preview.data_url}
+                  src={preview.original_data_url || preview.data_url}
                   alt={t.initial}
-                  className="max-h-full max-w-full w-auto h-auto object-contain block opacity-90 contrast-125"
+                  className="max-h-full max-w-full w-auto h-auto object-contain block opacity-90"
                   style={{
                     maxHeight: 'min(620px, calc(100vh - 290px))',
                     maxWidth: 'min(1100px, calc(100vw - 420px))',

@@ -74,12 +74,22 @@ pub mod windows {
                             let mut buf = vec![0u8; len];
                             if server.read_exact(&mut buf).await.is_ok() {
                                 if let Ok(paths) = serde_json::from_slice::<Vec<String>>(&buf) {
+                                    // [SEC-07] Validate incoming paths: must exist and be regular files
+                                    let valid_paths: Vec<String> = paths
+                                        .into_iter()
+                                        .filter(|p| {
+                                            let path = std::path::Path::new(p);
+                                            path.exists() && path.is_file()
+                                        })
+                                        .collect();
+
                                     if let Some(window) = app_handle.get_webview_window("main") {
                                         let _ = window.show();
                                         let _ = window.unminimize();
                                         let _ = window.set_focus();
-                                        if !paths.is_empty() {
-                                            let _ = window.emit("filemint://cli-files", paths);
+                                        if !valid_paths.is_empty() {
+                                            let _ =
+                                                window.emit("filemint://cli-files", valid_paths);
                                         }
                                     }
                                 }

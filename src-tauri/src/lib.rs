@@ -29,8 +29,10 @@ pub fn run() {
     }
 
     // Primary instance: hold initial files for frontend mount
+    let cancel_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let app_state = AppState {
-        runner: Mutex::new(BatchRunner::new()),
+        runner: Mutex::new(BatchRunner::with_cancel_flag(cancel_flag.clone())),
+        cancel_flag,
         cli_files: Mutex::new(args),
         watch_manager: engine::watch_folder::WatchFolderManager::new(),
     };

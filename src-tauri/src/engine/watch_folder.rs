@@ -192,8 +192,24 @@ fn process_watched_file(path: &Path, rule: &WatchFolderRule) -> Result<(PathBuf,
 
     // Resolve destination folder
     let dest_dir = if let Some(ref custom_dest) = rule.output_path {
-        if !custom_dest.trim().is_empty() {
-            PathBuf::from(custom_dest)
+        let trimmed = custom_dest.trim();
+        if !trimmed.is_empty() {
+            // [SEC-04] Path traversal validation
+            if trimmed.contains('\0') || trimmed.contains("..") {
+                return Err(anyhow!(
+                    "Chemin de sortie invalide : composants '..' interdits"
+                ));
+            }
+            let p = PathBuf::from(trimmed);
+            let p_str = p.to_string_lossy().to_lowercase();
+            if p_str == "c:\\windows"
+                || p_str.starts_with("c:\\windows\\system32")
+                || p_str == "/etc"
+                || p_str == "/bin"
+            {
+                return Err(anyhow!("Chemin de sortie système interdit"));
+            }
+            p
         } else {
             PathBuf::from(&rule.watch_path).join("FileMint_Optimized")
         }
@@ -229,7 +245,15 @@ fn process_watched_file(path: &Path, rule: &WatchFolderRule) -> Result<(PathBuf,
             _ => "jpg",
         };
 
-        let out_file = dest_dir.join(format!("{}.{}", stem, target_ext));
+        let mut out_file = dest_dir.join(format!("{}.{}", stem, target_ext));
+        // [CORR-07] Prevent self-overwriting source file
+        if out_file == *path {
+            let mut counter = 1;
+            while out_file.exists() {
+                out_file = dest_dir.join(format!("{}_{}.{}", stem, counter, target_ext));
+                counter += 1;
+            }
+        }
         std::fs::write(&out_file, &bytes)?;
         let final_len = bytes.len() as u64;
         Ok((out_file, orig_len, final_len))
@@ -272,6 +296,11 @@ async fn run_watch_loop(app: AppHandle, rule: WatchFolderRule, stop_flag: Arc<At
             Ok(e) => e,
             Err(_) => continue,
         };
+
+        // [PERF-04] Prevent unbounded memory growth
+        if processed_signatures.len() > 2000 {
+            processed_signatures.clear();
+        }
 
         for entry in entries.flatten() {
             if stop_flag.load(Ordering::Relaxed) {
@@ -348,7 +377,13 @@ async fn run_watch_loop(app: AppHandle, rule: WatchFolderRule, stop_flag: Arc<At
                 continue;
             }
 
-            let result = process_watched_file(&path, &rule);
+            // [PERF-07] Run blocking image/PDF processing on a blocking thread
+            let path_clone = path.clone();
+            let rule_clone = rule.clone();
+            let result =
+                tokio::task::spawn_blocking(move || process_watched_file(&path_clone, &rule_clone))
+                    .await
+                    .unwrap_or_else(|e| Err(anyhow!("Task failed: {}", e)));
             match result {
                 Ok((out_path, orig_len, final_len)) => {
                     let saved = (orig_len as i64) - (final_len as i64);

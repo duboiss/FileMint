@@ -78,6 +78,10 @@ impl BatchRunner {
         }
     }
 
+    pub fn with_cancel_flag(cancel_flag: Arc<AtomicBool>) -> Self {
+        Self { cancel_flag }
+    }
+
     pub fn cancel(&self) {
         self.cancel_flag.store(true, Ordering::SeqCst);
     }
@@ -223,10 +227,15 @@ impl BatchRunner {
                 // keep original bytes intact (bit-exact) with zero re-encoding artifacts.
                 if !options.compress && is_format_same && !has_pixel_transformations {
                     let mut raw_bytes = std::fs::read(input_path)?;
-                    let (orig_w, orig_h) = {
-                        let (img, _) = image_processor::load_dynamic_image(input_path)?;
-                        img.dimensions()
-                    };
+                    let (orig_w, orig_h) = image::ImageReader::open(input_path)
+                        .ok()
+                        .and_then(|r| r.into_dimensions().ok())
+                        .or_else(|| {
+                            image_processor::load_dynamic_image(input_path)
+                                .ok()
+                                .map(|(img, _)| img.dimensions())
+                        })
+                        .unwrap_or((0, 0));
 
                     let naming_ctx = file_manager::NamingContext {
                         width: Some(orig_w),

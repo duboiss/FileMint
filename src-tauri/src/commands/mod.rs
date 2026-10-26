@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, State};
 
 use crate::engine::batch_runner::{BatchRequest, BatchRunner, BatchSummary};
@@ -12,6 +13,7 @@ use crate::shell::windows_registry;
 
 pub struct AppState {
     pub runner: Mutex<BatchRunner>,
+    pub cancel_flag: Arc<AtomicBool>,
     pub cli_files: Mutex<Vec<String>>,
     pub watch_manager: WatchFolderManager,
 }
@@ -111,14 +113,20 @@ pub async fn start_batch_processing(
     state: State<'_, AppState>,
     request: BatchRequest,
 ) -> Result<BatchSummary, String> {
-    let runner = state.runner.lock().map_err(|_| "State lock unavailable")?;
-    runner.run(app, request).map_err(|e| e.to_string())
+    let cancel_flag = state.cancel_flag.clone();
+    cancel_flag.store(false, Ordering::SeqCst);
+
+    tokio::task::spawn_blocking(move || {
+        let runner = BatchRunner::with_cancel_flag(cancel_flag);
+        runner.run(app, request).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 pub fn cancel_batch_processing(state: State<'_, AppState>) -> Result<(), String> {
-    let runner = state.runner.lock().map_err(|_| "State lock unavailable")?;
-    runner.cancel();
+    state.cancel_flag.store(true, Ordering::SeqCst);
     Ok(())
 }
 
@@ -196,7 +204,7 @@ pub fn get_windows_context_menu_status() -> ContextMenuStatus {
 
 #[tauri::command]
 pub fn get_cli_files(state: State<'_, AppState>) -> Vec<String> {
-    let mut files = state.cli_files.lock().unwrap();
+    let mut files = state.cli_files.lock().unwrap_or_else(|e| e.into_inner());
     std::mem::take(&mut *files)
 }
 

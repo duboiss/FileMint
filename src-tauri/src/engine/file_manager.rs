@@ -2,6 +2,9 @@ use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DestinationMode {
@@ -232,6 +235,13 @@ pub fn resolve_output_path(
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .unwrap_or("FileMint");
+
+            // [SEC-05] Prevent path traversal
+            if folder_name.contains('/') || folder_name.contains('\\') || folder_name.contains("..")
+            {
+                return Err(anyhow!("Nom de sous-dossier invalide : les séparateurs de chemin et '..' sont interdits"));
+            }
+
             let subfolder = parent_dir.join(folder_name);
             if !subfolder.exists() {
                 fs::create_dir_all(&subfolder)?;
@@ -240,7 +250,19 @@ pub fn resolve_output_path(
         }
         DestinationMode::SameAsOriginal => parent_dir.to_path_buf(),
         DestinationMode::Custom(path_str) => {
-            let p = PathBuf::from(path_str);
+            let trimmed = path_str.trim();
+            if trimmed.is_empty() || trimmed.contains('\0') {
+                return Err(anyhow!("Chemin de destination personnalisé invalide"));
+            }
+            let p = PathBuf::from(trimmed);
+            let p_str = p.to_string_lossy().to_lowercase();
+            if p_str == "c:\\windows"
+                || p_str.starts_with("c:\\windows\\system32")
+                || p_str == "/etc"
+                || p_str == "/bin"
+            {
+                return Err(anyhow!("Destination système interdite"));
+            }
             if !p.exists() {
                 fs::create_dir_all(&p)?;
             }
@@ -287,12 +309,13 @@ pub fn create_temp_target(final_path: &Path) -> Result<(PathBuf, TempFileGuard)>
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("mint");
-    let random_id = std::time::SystemTime::now()
+    let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis())
         .unwrap_or(0);
+    let counter = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
 
-    let temp_name = format!(".{}_{}.tmp", stem, random_id);
+    let temp_name = format!(".{}_{}_{}.tmp", stem, timestamp, counter);
     let temp_path = parent.join(temp_name);
 
     let guard = TempFileGuard::new(temp_path.clone());
@@ -300,10 +323,14 @@ pub fn create_temp_target(final_path: &Path) -> Result<(PathBuf, TempFileGuard)>
 }
 
 pub fn commit_temp_file(temp_path: &Path, final_path: &Path, guard: TempFileGuard) -> Result<()> {
-    if temp_path.exists() {
-        fs::rename(temp_path, final_path)?;
-        guard.commit();
+    if !temp_path.exists() {
+        return Err(anyhow!(
+            "Le fichier temporaire n'existe pas : {:?}",
+            temp_path
+        ));
     }
+    fs::rename(temp_path, final_path)?;
+    guard.commit();
     Ok(())
 }
 

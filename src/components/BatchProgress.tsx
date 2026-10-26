@@ -21,17 +21,24 @@ export const BatchProgress: React.FC = () => {
         </h3>
 
         <p className="text-xs text-slate-400 font-mono mb-6 max-w-sm truncate">
-          {batchProgress?.current_file || (language === 'en' ? 'Initializing...' : 'Initialisation...')}
+          {batchProgress?.current_file || t.initializing}
         </p>
 
         <div className="w-full space-y-2 mb-6">
           <div className="flex justify-between text-xs font-semibold">
-            <span className="text-slate-500">{language === 'en' ? 'Progress' : 'Progression'}</span>
+            <span className="text-slate-500">{t.progressLabel}</span>
             <span className="font-mono text-mint-500">
               {current} / {total} ({percentage}%)
             </span>
           </div>
-          <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700">
+          <div
+            role="progressbar"
+            aria-valuenow={percentage}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={t.progressLabel}
+            className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700"
+          >
             <div
               className="h-full bg-gradient-to-r from-mint-500 to-emerald-400 rounded-full transition-all duration-300"
               style={{ width: `${percentage}%` }}
@@ -43,9 +50,7 @@ export const BatchProgress: React.FC = () => {
           <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-mint-500/10 text-mint-600 dark:text-mint-400 text-xs font-bold mb-6">
             <HardDrive className="w-4 h-4" />
             <span>
-              {language === 'en'
-                ? `Already ${formatFileSize(batchProgress.saved_bytes, language)} saved!`
-                : `Déjà ${formatFileSize(batchProgress.saved_bytes, language)} économisés !`}
+              {t.alreadySavedCount.replace('{amount}', formatFileSize(batchProgress.saved_bytes, language))}
             </span>
           </div>
         )}

@@ -155,7 +155,11 @@ fn detect_webp_metadata(file: &mut File) -> (bool, bool) {
             }
         }
 
-        i = data_end + (length % 2); // WebP pad byte
+        let pad = length % 2;
+        match data_end.checked_add(pad) {
+            Some(next_i) => i = next_i,
+            None => break,
+        }
     }
 
     (has_exif, has_gps)
@@ -229,8 +233,10 @@ pub fn inspect_exif_has_gps(tiff: &[u8]) -> bool {
 /// Extracts the raw EXIF payload (with "Exif\0\0" prefix) from an input file.
 pub fn extract_exif_payload(path: &Path) -> Option<Vec<u8>> {
     let mut file = File::open(path).ok()?;
-    let mut buf = Vec::new();
-    file.read_to_end(&mut buf).ok()?;
+    // [PERF-02] Read up to first 512KB for headers instead of loading multi-GB file into RAM
+    let mut buf = vec![0u8; 1024 * 512];
+    let n = file.read(&mut buf).ok()?;
+    buf.truncate(n);
 
     if buf.len() < 4 {
         return None;

@@ -93,6 +93,8 @@ impl Default for ImageTransformOptions {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PreviewResult {
     pub data_url: String,
+    #[serde(default)]
+    pub original_data_url: Option<String>,
     pub original_width: u32,
     pub original_height: u32,
     pub new_width: u32,
@@ -112,7 +114,11 @@ pub fn decode_image_via_wic(path: &Path) -> Result<DynamicImage> {
     };
 
     unsafe {
-        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let hr = CoInitializeEx(None, COINIT_MULTITHREADED);
+        // Accept S_OK, S_FALSE, or RPC_E_CHANGED_MODE if COM was already initialized
+        if hr.is_err() && hr.0 != -2147417850 {
+            // Non-fatal: CoCreateInstance will return proper HRESULT if COM fails
+        }
 
         let factory: IWICImagingFactory =
             CoCreateInstance(&CLSID_WICImagingFactory, None, CLSCTX_INPROC_SERVER)?;
@@ -565,6 +571,7 @@ struct PreviewCacheEntry {
     original_bytes: u64,
     orig_format: ImageFormat,
     base_preview: DynamicImage,
+    original_data_url: String,
 }
 
 static PREVIEW_CACHE: Mutex<Option<PreviewCacheEntry>> = Mutex::new(None);
@@ -584,6 +591,7 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
                     c.original_bytes,
                     c.orig_format,
                     c.base_preview.clone(),
+                    c.original_data_url.clone(),
                 ))
             } else {
                 None
@@ -591,34 +599,48 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
         })
     };
 
-    let (orig_w, orig_h, original_bytes, orig_format, base_preview) = match cached {
-        Some(data) => data,
-        None => {
-            let (img, orig_format) = load_dynamic_image(path)?;
-            let (ow, oh) = img.dimensions();
+    let (orig_w, orig_h, original_bytes, orig_format, base_preview, original_data_url) =
+        match cached {
+            Some(data) => data,
+            None => {
+                let (img, orig_format) = load_dynamic_image(path)?;
+                let (ow, oh) = img.dimensions();
 
-            // Downscale to max 900px for instant responsive UI interactions
-            let max_dim = 900u32;
-            let base_preview = if ow > max_dim || oh > max_dim {
-                img.thumbnail(max_dim, max_dim)
-            } else {
-                img
-            };
+                // Downscale to max 900px for instant responsive UI interactions
+                let max_dim = 900u32;
+                let base_preview = if ow > max_dim || oh > max_dim {
+                    img.thumbnail(max_dim, max_dim)
+                } else {
+                    img
+                };
 
-            let mut guard = PREVIEW_CACHE.lock().unwrap_or_else(|e| e.into_inner());
-            *guard = Some(PreviewCacheEntry {
-                path: path.to_path_buf(),
-                modified,
-                orig_w: ow,
-                orig_h: oh,
-                original_bytes: file_bytes,
-                orig_format,
-                base_preview: base_preview.clone(),
-            });
+                let orig_data_url = {
+                    let mut cursor = std::io::Cursor::new(Vec::new());
+                    let (enc_format, mime) = if base_preview.color().has_alpha() {
+                        (ImageFormat::Png, "image/png")
+                    } else {
+                        (ImageFormat::Jpeg, "image/jpeg")
+                    };
+                    let _ = base_preview.write_to(&mut cursor, enc_format);
+                    let b64 = BASE64.encode(cursor.into_inner());
+                    format!("data:{};base64,{}", mime, b64)
+                };
 
-            (ow, oh, file_bytes, orig_format, base_preview)
-        }
-    };
+                let mut guard = PREVIEW_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+                *guard = Some(PreviewCacheEntry {
+                    path: path.to_path_buf(),
+                    modified,
+                    orig_w: ow,
+                    orig_h: oh,
+                    original_bytes: file_bytes,
+                    orig_format,
+                    base_preview: base_preview.clone(),
+                    original_data_url: orig_data_url.clone(),
+                });
+
+                (ow, oh, file_bytes, orig_format, base_preview, orig_data_url)
+            }
+        };
 
     let transformed_preview = apply_transformations(base_preview, options);
     let (eff_orig_w, eff_orig_h) = if !options.rotation.is_multiple_of(180) {
@@ -789,6 +811,7 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
 
     Ok(PreviewResult {
         data_url,
+        original_data_url: Some(original_data_url),
         original_width: eff_orig_w,
         original_height: eff_orig_h,
         new_width: target_w,

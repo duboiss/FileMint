@@ -343,6 +343,15 @@ export interface TranslationDictionary {
   privacyItem2: string;
   privacyItem3: string;
   madeWithLove: string;
+  namingVariablesLabel: string;
+  recommended: string;
+  mirrorSummary: string;
+  bwSummary: string;
+  noGpsSummary: string;
+  noExifSummary: string;
+  initializing: string;
+  progressLabel: string;
+  alreadySavedCount: string;
 }
 
 export const translations: Record<Language, TranslationDictionary> = {
@@ -678,6 +687,15 @@ export const translations: Record<Language, TranslationDictionary> = {
     privacyItem2: '100% Hors-Ligne : vos images, documents et données restent exclusivement sur votre machine.',
     privacyItem3: 'Seule une requête de lecture publique vers GitHub Releases est effectuée si la recherche de mises à jour est activée.',
     madeWithLove: 'FileMint v1.0 • Moteur natif Rust & Tauri • Conçu pour Windows 11 & macOS',
+    namingVariablesLabel: 'Variables :',
+    recommended: 'Recommandé',
+    mirrorSummary: 'Miroir',
+    bwSummary: 'N&B',
+    noGpsSummary: 'Sans GPS',
+    noExifSummary: 'Sans EXIF',
+    initializing: 'Initialisation...',
+    progressLabel: 'Progression',
+    alreadySavedCount: 'Déjà {amount} économisés !',
   },
 
   en: {
@@ -1012,6 +1030,15 @@ export const translations: Record<Language, TranslationDictionary> = {
     privacyItem2: '100% Offline: your images, documents, and data remain strictly on your device.',
     privacyItem3: 'Only a single read request to GitHub Releases is performed if update check is enabled.',
     madeWithLove: 'FileMint v1.0 • Native Rust & Tauri Engine • Built for Windows 11 & macOS',
+    namingVariablesLabel: 'Variables:',
+    recommended: 'Recommended',
+    mirrorSummary: 'Mirror',
+    bwSummary: 'B&W',
+    noGpsSummary: 'No GPS',
+    noExifSummary: 'No EXIF',
+    initializing: 'Initializing...',
+    progressLabel: 'Progress',
+    alreadySavedCount: 'Already {amount} saved!',
   },
 };
 

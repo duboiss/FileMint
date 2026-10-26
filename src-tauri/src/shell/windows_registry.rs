@@ -19,6 +19,11 @@ const SUPPORTED_EXTENSIONS: &[&str] = &[
 ];
 
 #[cfg(target_os = "windows")]
+const REGISTER_SCRIPT: &str = include_str!("../../sparse_package/register.ps1");
+#[cfg(target_os = "windows")]
+const UNREGISTER_SCRIPT: &str = include_str!("../../sparse_package/unregister.ps1");
+
+#[cfg(target_os = "windows")]
 fn find_sparse_package_dir() -> Option<PathBuf> {
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
@@ -97,7 +102,13 @@ pub fn register_context_menu(mode: &str, lang: Option<&str>) -> Result<()> {
         if let Some(sparse_dir) = find_sparse_package_dir() {
             let msix_path = sparse_dir.join("FileMint.msix");
             let cer_path = sparse_dir.join("filemint.cer");
-            let register_script = sparse_dir.join("register.ps1");
+            let script_invocation = format!(
+                "$AppDir = '{}'; $MsixPath = '{}'; $CerPath = '{}';\n{}",
+                app_dir.to_string_lossy().replace('\'', "''"),
+                msix_path.to_string_lossy().replace('\'', "''"),
+                cer_path.to_string_lossy().replace('\'', "''"),
+                REGISTER_SCRIPT
+            );
 
             let mut cmd = std::process::Command::new("powershell");
             cmd.creation_flags(CREATE_NO_WINDOW);
@@ -107,14 +118,8 @@ pub fn register_context_menu(mode: &str, lang: Option<&str>) -> Result<()> {
                 "Hidden",
                 "-ExecutionPolicy",
                 "Bypass",
-                "-File",
-                &register_script.to_string_lossy(),
-                "-AppDir",
-                &app_dir.to_string_lossy(),
-                "-MsixPath",
-                &msix_path.to_string_lossy(),
-                "-CerPath",
-                &cer_path.to_string_lossy(),
+                "-Command",
+                &script_invocation,
             ]);
             let _ = cmd.output();
         }
@@ -129,8 +134,7 @@ pub fn register_context_menu(mode: &str, lang: Option<&str>) -> Result<()> {
         }
     } else {
         // Classic mode: unregister modern sparse package if present
-        if let Some(sparse_dir) = find_sparse_package_dir() {
-            let unregister_script = sparse_dir.join("unregister.ps1");
+        if let Some(_sparse_dir) = find_sparse_package_dir() {
             let mut cmd = std::process::Command::new("powershell");
             cmd.creation_flags(CREATE_NO_WINDOW);
             cmd.args([
@@ -139,8 +143,8 @@ pub fn register_context_menu(mode: &str, lang: Option<&str>) -> Result<()> {
                 "Hidden",
                 "-ExecutionPolicy",
                 "Bypass",
-                "-File",
-                &unregister_script.to_string_lossy(),
+                "-Command",
+                UNREGISTER_SCRIPT,
             ]);
             let _ = cmd.output();
         }
@@ -213,8 +217,7 @@ fn unregister_classic_keys() -> Result<()> {
 #[cfg(target_os = "windows")]
 pub fn unregister_context_menu() -> Result<()> {
     // Unregister modern MSIX sparse package
-    if let Some(sparse_dir) = find_sparse_package_dir() {
-        let unregister_script = sparse_dir.join("unregister.ps1");
+    if let Some(_sparse_dir) = find_sparse_package_dir() {
         let mut cmd = std::process::Command::new("powershell");
         cmd.creation_flags(CREATE_NO_WINDOW);
         cmd.args([
@@ -223,8 +226,8 @@ pub fn unregister_context_menu() -> Result<()> {
             "Hidden",
             "-ExecutionPolicy",
             "Bypass",
-            "-File",
-            &unregister_script.to_string_lossy(),
+            "-Command",
+            UNREGISTER_SCRIPT,
         ]);
         let _ = cmd.output();
     }

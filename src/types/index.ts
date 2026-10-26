@@ -76,6 +76,7 @@ export interface DestinationConfig {
 
 export interface PreviewResult {
   data_url: string;
+  original_data_url?: string | null;
   original_width: number;
   original_height: number;
   new_width: number;

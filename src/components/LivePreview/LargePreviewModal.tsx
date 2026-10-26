@@ -272,9 +272,9 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                     style={{ width: `${splitPos}%` }}
                   >
                     <img
-                      src={currentPreview.data_url}
+                      src={currentPreview.original_data_url || currentPreview.data_url}
                       alt={t.initial}
-                      className="max-h-[75vh] max-w-[85vw] object-contain block opacity-95 filter contrast-125 pointer-events-none"
+                      className="max-h-[75vh] max-w-[85vw] object-contain block opacity-95 pointer-events-none"
                     />
                   </div>
                   <input
@@ -295,9 +295,9 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                       {t.initial} ({activeFile.width}×{activeFile.height})
                     </span>
                     <img
-                      src={currentPreview.data_url}
+                      src={currentPreview.original_data_url || currentPreview.data_url}
                       alt={t.initial}
-                      className="max-h-[68vh] max-w-[42vw] object-contain rounded-lg filter contrast-110 pointer-events-none"
+                      className="max-h-[68vh] max-w-[42vw] object-contain rounded-lg pointer-events-none"
                     />
                   </div>
                   <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-mint-500/30 shadow-xl shadow-mint-500/5">

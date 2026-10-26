@@ -45,7 +45,9 @@ pub struct UpdateProgressPayload {
 }
 
 pub fn get_update_dir() -> PathBuf {
-    let dir = std::env::temp_dir().join("FileMint-Updates");
+    let dir = dirs::data_local_dir()
+        .map(|d| d.join("FileMint").join("Updates"))
+        .unwrap_or_else(|| std::env::temp_dir().join("FileMint-Updates"));
     std::fs::create_dir_all(&dir).ok();
     dir
 }
@@ -150,6 +152,24 @@ pub async fn download_update(
     asset_name: &str,
     version: &str,
 ) -> Result<(), String> {
+    // [SEC-03] Validate download URL strictly
+    if !download_url.starts_with("https://github.com/duboiss/FileMint/releases/") {
+        return Err(
+            "URL de téléchargement non autorisée (doit provenir des releases officielles FileMint)"
+                .to_string(),
+        );
+    }
+
+    // [SEC-01] Path traversal sanitization
+    let file_name = Path::new(asset_name)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or_else(|| "Nom de fichier d'installation invalide".to_string())?;
+
+    if file_name.contains('/') || file_name.contains('\\') || file_name.contains("..") {
+        return Err("Nom de fichier d'installation suspect".to_string());
+    }
+
     let client = reqwest::Client::builder()
         .user_agent("FileMint-Update-Downloader/1.0")
         .build()
@@ -172,7 +192,11 @@ pub async fn download_update(
     let mut downloaded_bytes: u64 = 0;
 
     let update_dir = get_update_dir();
-    let installer_path = update_dir.join(asset_name);
+    let installer_path = update_dir.join(file_name);
+
+    if !installer_path.starts_with(&update_dir) {
+        return Err("Chemin d'installation hors du dossier de mises à jour".to_string());
+    }
 
     if installer_path.exists() {
         let _ = std::fs::remove_file(&installer_path);
@@ -233,6 +257,11 @@ pub async fn download_update(
 }
 
 pub fn launch_installer_detached(installer_path: &Path) -> Result<(), String> {
+    let update_dir = get_update_dir();
+    if !installer_path.starts_with(&update_dir) {
+        return Err("Chemin de l'installeur non sécurisé".to_string());
+    }
+
     if !installer_path.exists() {
         return Err("Le fichier d'installation n'existe pas sur le disque.".to_string());
     }
@@ -324,16 +353,27 @@ pub async fn download_and_install(
     download_url: &str,
     asset_name: &str,
 ) -> Result<(), String> {
-    download_update(app, download_url, asset_name, "").await?;
+    let version = asset_name
+        .split('_')
+        .nth(1)
+        .unwrap_or("")
+        .split('-')
+        .next()
+        .unwrap_or("");
+    download_update(app, download_url, asset_name, version).await?;
     install_update_and_restart(app)
 }
 
 pub fn is_newer_version(latest: &str, current: &str) -> bool {
-    let parse_parts =
-        |s: &str| -> Vec<u32> { s.split('.').filter_map(|p| p.parse::<u32>().ok()).collect() };
+    let clean = |s: &str| -> Vec<u32> {
+        let base = s.split('-').next().unwrap_or(s);
+        base.split('.')
+            .filter_map(|p| p.parse::<u32>().ok())
+            .collect()
+    };
 
-    let latest_parts = parse_parts(latest);
-    let current_parts = parse_parts(current);
+    let latest_parts = clean(latest);
+    let current_parts = clean(current);
 
     latest_parts > current_parts
 }
@@ -346,8 +386,10 @@ mod tests {
     fn test_is_newer_version() {
         assert!(is_newer_version("1.7.1", "1.7.0"));
         assert!(is_newer_version("1.8.0", "1.7.9"));
+        assert!(is_newer_version("1.8.0-beta.1", "1.7.9"));
         assert!(is_newer_version("2.0.0", "1.9.9"));
         assert!(!is_newer_version("1.7.0", "1.7.0"));
         assert!(!is_newer_version("1.6.9", "1.7.0"));
+        assert!(!is_newer_version("1.7.0-beta.1", "1.7.0"));
     }
 }

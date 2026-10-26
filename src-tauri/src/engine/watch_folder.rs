@@ -1,12 +1,13 @@
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use tauri::{AppHandle, Emitter};
 
+use crate::engine::file_manager::validate_and_sanitize_destination_dir;
 use crate::engine::image_processor::{self, ImageTransformOptions};
 use crate::engine::pdf_processor::{self, PdfCompressionOptions};
 
@@ -194,22 +195,7 @@ fn process_watched_file(path: &Path, rule: &WatchFolderRule) -> Result<(PathBuf,
     let dest_dir = if let Some(ref custom_dest) = rule.output_path {
         let trimmed = custom_dest.trim();
         if !trimmed.is_empty() {
-            // [SEC-04] Path traversal validation
-            if trimmed.contains('\0') || trimmed.contains("..") {
-                return Err(anyhow!(
-                    "Chemin de sortie invalide : composants '..' interdits"
-                ));
-            }
-            let p = PathBuf::from(trimmed);
-            let p_str = p.to_string_lossy().to_lowercase();
-            if p_str == "c:\\windows"
-                || p_str.starts_with("c:\\windows\\system32")
-                || p_str == "/etc"
-                || p_str == "/bin"
-            {
-                return Err(anyhow!("Chemin de sortie système interdit"));
-            }
-            p
+            validate_and_sanitize_destination_dir(trimmed)?
         } else {
             PathBuf::from(&rule.watch_path).join("FileMint_Optimized")
         }
@@ -228,7 +214,15 @@ fn process_watched_file(path: &Path, rule: &WatchFolderRule) -> Result<(PathBuf,
 
     if ext == "pdf" {
         let pdf_opts = rule.pdf_options.clone().unwrap_or_default();
-        let out_file = dest_dir.join(file_name);
+        let mut out_file = dest_dir.join(file_name);
+        // [CORR-07] Prevent overwriting source or existing output files silently
+        if out_file == *path || out_file.exists() {
+            let mut counter = 1;
+            while out_file.exists() {
+                out_file = dest_dir.join(format!("{}_{}.pdf", stem, counter));
+                counter += 1;
+            }
+        }
         let res = pdf_processor::compress_pdf(path, &out_file, &pdf_opts)?;
         Ok((out_file, res.original_bytes, res.compressed_bytes))
     } else {
@@ -246,8 +240,8 @@ fn process_watched_file(path: &Path, rule: &WatchFolderRule) -> Result<(PathBuf,
         };
 
         let mut out_file = dest_dir.join(format!("{}.{}", stem, target_ext));
-        // [CORR-07] Prevent self-overwriting source file
-        if out_file == *path {
+        // [CORR-07] Prevent self-overwriting source file and avoid silent overwrite if destination file already exists
+        if out_file == *path || out_file.exists() {
             let mut counter = 1;
             while out_file.exists() {
                 out_file = dest_dir.join(format!("{}_{}.{}", stem, counter, target_ext));
@@ -263,6 +257,20 @@ fn process_watched_file(path: &Path, rule: &WatchFolderRule) -> Result<(PathBuf,
 async fn run_watch_loop(app: AppHandle, rule: WatchFolderRule, stop_flag: Arc<AtomicBool>) {
     let watch_dir = PathBuf::from(&rule.watch_path);
     let mut processed_signatures: HashSet<(PathBuf, u64, Option<SystemTime>)> = HashSet::new();
+    let mut signature_order: VecDeque<(PathBuf, u64, Option<SystemTime>)> = VecDeque::new();
+
+    let record_sig = |set: &mut HashSet<(PathBuf, u64, Option<SystemTime>)>,
+                      order: &mut VecDeque<(PathBuf, u64, Option<SystemTime>)>,
+                      sig: (PathBuf, u64, Option<SystemTime>)| {
+        if set.insert(sig.clone()) {
+            order.push_back(sig);
+            if order.len() > 2000 {
+                if let Some(oldest) = order.pop_front() {
+                    set.remove(&oldest);
+                }
+            }
+        }
+    };
 
     // Populate initial existing files so they are not re-processed immediately unless delete_source is set
     if !rule.delete_source {
@@ -270,11 +278,11 @@ async fn run_watch_loop(app: AppHandle, rule: WatchFolderRule, stop_flag: Arc<At
             for entry in entries.flatten() {
                 if let Ok(meta) = entry.metadata() {
                     if meta.is_file() {
-                        processed_signatures.insert((
-                            entry.path(),
-                            meta.len(),
-                            meta.modified().ok(),
-                        ));
+                        record_sig(
+                            &mut processed_signatures,
+                            &mut signature_order,
+                            (entry.path(), meta.len(), meta.modified().ok()),
+                        );
                     }
                 }
             }
@@ -296,11 +304,6 @@ async fn run_watch_loop(app: AppHandle, rule: WatchFolderRule, stop_flag: Arc<At
             Ok(e) => e,
             Err(_) => continue,
         };
-
-        // [PERF-04] Prevent unbounded memory growth
-        if processed_signatures.len() > 2000 {
-            processed_signatures.clear();
-        }
 
         for entry in entries.flatten() {
             if stop_flag.load(Ordering::Relaxed) {
@@ -401,17 +404,17 @@ async fn run_watch_loop(app: AppHandle, rule: WatchFolderRule, stop_flag: Arc<At
                     let _ = app.emit("filemint://watch-file-processed", &event);
 
                     if let Ok(meta_out) = std::fs::metadata(&out_path) {
-                        processed_signatures.insert((
-                            out_path.clone(),
-                            meta_out.len(),
-                            meta_out.modified().ok(),
-                        ));
+                        record_sig(
+                            &mut processed_signatures,
+                            &mut signature_order,
+                            (out_path.clone(), meta_out.len(), meta_out.modified().ok()),
+                        );
                     }
 
                     if rule.delete_source {
                         let _ = std::fs::remove_file(&path);
                     } else {
-                        processed_signatures.insert(sig);
+                        record_sig(&mut processed_signatures, &mut signature_order, sig);
                     }
                 }
                 Err(err) => {
@@ -427,7 +430,7 @@ async fn run_watch_loop(app: AppHandle, rule: WatchFolderRule, stop_flag: Arc<At
                         error: Some(err.to_string()),
                     };
                     let _ = app.emit("filemint://watch-file-processed", &event);
-                    processed_signatures.insert(sig);
+                    record_sig(&mut processed_signatures, &mut signature_order, sig);
                 }
             }
         }

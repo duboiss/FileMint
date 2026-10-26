@@ -45,6 +45,8 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const qualityRef = useRef(imageOptions.quality);
+  qualityRef.current = imageOptions.quality;
 
   // Reset zoom and pan offset when opening
   useEffect(() => {
@@ -69,15 +71,15 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
         setZoomLevel(1);
         setPanOffset({ x: 0, y: 0 });
       } else if (e.key === '[') {
-        setImageOptions({ quality: Math.max(10, imageOptions.quality - 5), lossless: false });
+        setImageOptions({ quality: Math.max(10, qualityRef.current - 5), lossless: false });
       } else if (e.key === ']') {
-        setImageOptions({ quality: Math.min(100, imageOptions.quality + 5), lossless: false });
+        setImageOptions({ quality: Math.min(100, qualityRef.current + 5), lossless: false });
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, imageOptions.quality, setImageOptions]);
+  }, [isOpen, onClose, setImageOptions]);
 
   if (!isOpen || !activeFile) return null;
 

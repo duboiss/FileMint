@@ -4,7 +4,14 @@ pub mod windows {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::windows::named_pipe::{ClientOptions, ServerOptions};
 
-    const PIPE_NAME: &str = r"\\.\pipe\filemint_single_instance_pipe";
+    fn get_pipe_name() -> String {
+        let user = std::env::var("USERNAME").unwrap_or_else(|_| "default".to_string());
+        let sanitized: String = user
+            .chars()
+            .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-')
+            .collect();
+        format!(r"\\.\pipe\filemint_single_instance_pipe_{}", sanitized)
+    }
 
     /// Sends file paths to an already running instance via named pipe. Returns true if delivered.
     pub fn try_send_to_existing_instance(files: &[String]) -> bool {
@@ -27,8 +34,9 @@ pub mod windows {
         let Ok(rt) = rt else { return false };
 
         rt.block_on(async {
+            let pipe_name = get_pipe_name();
             // Connect to named pipe server
-            let client = ClientOptions::new().open(PIPE_NAME);
+            let client = ClientOptions::new().open(&pipe_name);
             if let Ok(mut client) = client {
                 let len = (payload.len() as u32).to_le_bytes();
                 if client.write_all(&len).await.is_err() {
@@ -49,15 +57,16 @@ pub mod windows {
     pub fn start_ipc_server(app_handle: AppHandle) {
         tauri::async_runtime::spawn(async move {
             let mut is_first = true;
+            let pipe_name = get_pipe_name();
 
             loop {
                 let server_result = if is_first {
                     is_first = false;
                     ServerOptions::new()
                         .first_pipe_instance(true)
-                        .create(PIPE_NAME)
+                        .create(&pipe_name)
                 } else {
-                    ServerOptions::new().create(PIPE_NAME)
+                    ServerOptions::new().create(&pipe_name)
                 };
 
                 let Ok(mut server) = server_result else {

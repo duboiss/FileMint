@@ -208,6 +208,70 @@ impl Drop for TempFileGuard {
     }
 }
 
+pub fn validate_and_sanitize_destination_dir(path_str: &str) -> Result<PathBuf> {
+    let trimmed = path_str.trim();
+    if trimmed.is_empty() || trimmed.contains('\0') || trimmed.contains("..") {
+        return Err(anyhow!(
+            "Chemin de destination invalide ou interdit ('..' et null bytes proscrits)"
+        ));
+    }
+
+    let p = PathBuf::from(trimmed);
+    if !p.exists() {
+        fs::create_dir_all(&p)?;
+    }
+
+    let canonical = p.canonicalize().unwrap_or(p);
+    let canonical_str = canonical.to_string_lossy().to_lowercase();
+
+    #[cfg(target_os = "windows")]
+    {
+        let system_root = std::env::var("SystemRoot")
+            .unwrap_or_else(|_| "c:\\windows".to_string())
+            .to_lowercase();
+        let program_files = std::env::var("ProgramFiles")
+            .unwrap_or_else(|_| "c:\\program files".to_string())
+            .to_lowercase();
+        let program_files_x86 = std::env::var("ProgramFiles(x86)")
+            .unwrap_or_else(|_| "c:\\program files (x86)".to_string())
+            .to_lowercase();
+
+        let clean_canonical = canonical_str.trim_start_matches(r"\\?\");
+
+        if clean_canonical == "c:\\"
+            || clean_canonical == "d:\\"
+            || clean_canonical == "e:\\"
+            || clean_canonical == system_root
+            || clean_canonical.starts_with(&(system_root.clone() + "\\"))
+            || clean_canonical == program_files
+            || clean_canonical.starts_with(&(program_files.clone() + "\\"))
+            || clean_canonical == program_files_x86
+            || clean_canonical.starts_with(&(program_files_x86 + "\\"))
+        {
+            return Err(anyhow!(
+                "Destination système interdite : les répertoires système et racines de disques ne sont pas autorisés"
+            ));
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let forbidden_roots = [
+            "/etc", "/bin", "/sbin", "/usr", "/root", "/sys", "/proc", "/dev", "/boot", "/System",
+            "/Library",
+        ];
+        if canonical_str == "/"
+            || forbidden_roots.iter().any(|&root| {
+                canonical_str == root || canonical_str.starts_with(&format!("{}/", root))
+            })
+        {
+            return Err(anyhow!("Destination système interdite"));
+        }
+    }
+
+    Ok(canonical)
+}
+
 pub fn resolve_output_path(
     input_path: &Path,
     target_extension: Option<&str>,
@@ -249,25 +313,7 @@ pub fn resolve_output_path(
             subfolder
         }
         DestinationMode::SameAsOriginal => parent_dir.to_path_buf(),
-        DestinationMode::Custom(path_str) => {
-            let trimmed = path_str.trim();
-            if trimmed.is_empty() || trimmed.contains('\0') {
-                return Err(anyhow!("Chemin de destination personnalisé invalide"));
-            }
-            let p = PathBuf::from(trimmed);
-            let p_str = p.to_string_lossy().to_lowercase();
-            if p_str == "c:\\windows"
-                || p_str.starts_with("c:\\windows\\system32")
-                || p_str == "/etc"
-                || p_str == "/bin"
-            {
-                return Err(anyhow!("Destination système interdite"));
-            }
-            if !p.exists() {
-                fs::create_dir_all(&p)?;
-            }
-            p
-        }
+        DestinationMode::Custom(path_str) => validate_and_sanitize_destination_dir(path_str)?,
     };
 
     let default_ctx = NamingContext::default();

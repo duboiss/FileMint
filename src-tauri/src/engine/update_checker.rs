@@ -332,7 +332,8 @@ pub fn apply_pending_update_on_startup() -> bool {
     if let Some(pending) = read_pending_update() {
         if is_newer_version(&pending.version, current_version) {
             let installer_path = PathBuf::from(&pending.installer_path);
-            if installer_path.exists() {
+            let update_dir = get_update_dir();
+            if installer_path.starts_with(&update_dir) && installer_path.exists() {
                 clear_pending_update();
                 if launch_installer_detached(&installer_path).is_ok() {
                     return true;
@@ -352,30 +353,50 @@ pub async fn download_and_install(
     app: &AppHandle,
     download_url: &str,
     asset_name: &str,
+    version: &str,
 ) -> Result<(), String> {
-    let version = asset_name
-        .split('_')
-        .nth(1)
-        .unwrap_or("")
-        .split('-')
-        .next()
-        .unwrap_or("");
-    download_update(app, download_url, asset_name, version).await?;
+    let ver = if !version.trim().is_empty() {
+        version.trim()
+    } else {
+        asset_name
+            .split('_')
+            .nth(1)
+            .unwrap_or("")
+            .split('-')
+            .next()
+            .unwrap_or("")
+    };
+    download_update(app, download_url, asset_name, ver).await?;
     install_update_and_restart(app)
 }
 
 pub fn is_newer_version(latest: &str, current: &str) -> bool {
-    let clean = |s: &str| -> Vec<u32> {
-        let base = s.split('-').next().unwrap_or(s);
-        base.split('.')
-            .filter_map(|p| p.parse::<u32>().ok())
-            .collect()
+    let parse_v = |s: &str| -> Option<semver::Version> {
+        let trimmed = s.trim().trim_start_matches('v');
+        semver::Version::parse(trimmed).ok()
     };
 
-    let latest_parts = clean(latest);
-    let current_parts = clean(current);
+    match (parse_v(latest), parse_v(current)) {
+        (Some(l), Some(c)) => l > c,
+        _ => {
+            let clean = |s: &str| -> Vec<u32> {
+                let base = s
+                    .trim()
+                    .trim_start_matches('v')
+                    .split('-')
+                    .next()
+                    .unwrap_or(s);
+                base.split('.')
+                    .filter_map(|p| p.parse::<u32>().ok())
+                    .collect()
+            };
 
-    latest_parts > current_parts
+            let latest_parts = clean(latest);
+            let current_parts = clean(current);
+
+            latest_parts > current_parts
+        }
+    }
 }
 
 #[cfg(test)]

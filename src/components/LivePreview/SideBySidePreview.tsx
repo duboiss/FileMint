@@ -296,7 +296,7 @@ export const SideBySidePreview: React.FC = () => {
                 <div className="text-[10px] uppercase font-bold text-mint-500 tracking-wider mb-2 flex items-center justify-between w-full px-1.5 shrink-0">
                   <span className="flex items-center gap-1.5 font-semibold text-mint-600 dark:text-mint-400">
                     <Sparkles className="w-3.5 h-3.5 text-mint-500" />
-                    <span>{language === 'en' ? 'Live Optimized Preview' : 'Aperçu du résultat en direct'}</span>
+                    <span>{t.liveOptimizedPreview}</span>
                   </span>
                   <span className="text-[10px] font-mono text-slate-400 font-normal">
                     {preview.new_width}×{preview.new_height} px

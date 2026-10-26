@@ -57,7 +57,7 @@ export const App: React.FC = () => {
           }
         })
         .catch((err) => console.warn('Error reading initial CLI files:', err));
-    } else if (typeof window !== 'undefined') {
+    } else if (typeof window !== 'undefined' && import.meta.env.DEV) {
       const params = new URLSearchParams(window.location.search);
       const demo = params.get('demo');
       const langParam = params.get('lang');
@@ -186,7 +186,9 @@ export const App: React.FC = () => {
           } else if (selected && typeof selected === 'string') {
             useFileMintStore.getState().addFiles([selected]);
           }
-        } catch {}
+        } catch (err) {
+          console.warn('Error opening file dialog via shortcut:', err);
+        }
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {

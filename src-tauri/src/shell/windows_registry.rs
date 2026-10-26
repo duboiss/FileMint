@@ -116,8 +116,6 @@ pub fn register_context_menu(mode: &str, lang: Option<&str>) -> Result<()> {
                 "-NoProfile",
                 "-WindowStyle",
                 "Hidden",
-                "-ExecutionPolicy",
-                "Bypass",
                 "-Command",
                 &script_invocation,
             ]);
@@ -141,8 +139,6 @@ pub fn register_context_menu(mode: &str, lang: Option<&str>) -> Result<()> {
                 "-NoProfile",
                 "-WindowStyle",
                 "Hidden",
-                "-ExecutionPolicy",
-                "Bypass",
                 "-Command",
                 UNREGISTER_SCRIPT,
             ]);
@@ -224,8 +220,6 @@ pub fn unregister_context_menu() -> Result<()> {
             "-NoProfile",
             "-WindowStyle",
             "Hidden",
-            "-ExecutionPolicy",
-            "Bypass",
             "-Command",
             UNREGISTER_SCRIPT,
         ]);
@@ -269,7 +263,10 @@ pub fn get_context_menu_mode() -> String {
             }
         }
         if let Ok(mode) = key.get_value::<String, _>("Mode") {
-            return mode;
+            return match mode.as_str() {
+                "modern" | "classic" | "disabled" => mode,
+                _ => "disabled".to_string(),
+            };
         }
     }
 
@@ -277,7 +274,10 @@ pub fn get_context_menu_mode() -> String {
         hkcu.open_subkey(r"Software\Classes\SystemFileAssociations\image\shell\FileMint")
     {
         if let Ok(mode) = key.get_value::<String, _>("IntegrationMode") {
-            return mode;
+            return match mode.as_str() {
+                "modern" | "classic" | "disabled" => mode,
+                _ => "disabled".to_string(),
+            };
         }
     }
 

@@ -206,12 +206,12 @@ export const ImageConfigPanel: React.FC = () => {
                 )}
                 {(imageOptions.flip_horizontal || imageOptions.flip_vertical) && (
                   <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 font-sans">
-                    Miroir
+                    {t.mirrorSummary}
                   </span>
                 )}
                 {imageOptions.grayscale && (
                   <span className="px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-400 font-sans">
-                    N&B
+                    {t.bwSummary}
                   </span>
                 )}
 
@@ -226,12 +226,12 @@ export const ImageConfigPanel: React.FC = () => {
                 </span>
                 {imageOptions.metadata_policy === 'RemoveGps' && (
                   <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 font-sans">
-                    Sans GPS
+                    {t.noGpsSummary}
                   </span>
                 )}
                 {imageOptions.metadata_policy === 'RemoveAll' && (
                   <span className="px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-400 font-sans">
-                    Sans EXIF
+                    {t.noExifSummary}
                   </span>
                 )}
 
@@ -355,12 +355,12 @@ export const ImageConfigPanel: React.FC = () => {
                             )}
                             {(profile.options.flip_horizontal || profile.options.flip_vertical) && (
                               <span className="px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-400 font-sans">
-                                Miroir
+                                {t.mirrorSummary}
                               </span>
                             )}
                             {profile.options.grayscale && (
                               <span className="px-1.5 py-0.2 rounded bg-slate-500/10 text-slate-400 font-sans">
-                                N&B
+                                {t.bwSummary}
                               </span>
                             )}
 
@@ -375,12 +375,12 @@ export const ImageConfigPanel: React.FC = () => {
                             </span>
                             {profile.options.metadata_policy === 'RemoveGps' && (
                               <span className="px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 font-semibold">
-                                Sans GPS
+                                {t.noGpsSummary}
                               </span>
                             )}
                             {profile.options.metadata_policy === 'RemoveAll' && (
                               <span className="px-1.5 py-0.2 rounded bg-slate-500/10 text-slate-500 font-semibold">
-                                Sans EXIF
+                                {t.noExifSummary}
                               </span>
                             )}
 

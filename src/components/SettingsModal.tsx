@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   useFileMintStore,
   APP_VERSION,
@@ -68,6 +68,10 @@ export const SettingsModal: React.FC = () => {
 
   const isDev = Boolean(import.meta.env.DEV);
   const [confirmResetStats, setConfirmResetStats] = useState(false);
+  const activeWatchCount = useMemo(
+    () => watchFolders.filter((f) => f.enabled && f.watch_path).length,
+    [watchFolders]
+  );
 
   const handleSelectDefaultCustomFolder = async () => {
     try {
@@ -158,7 +162,7 @@ export const SettingsModal: React.FC = () => {
       // Fallback for non-Tauri or scope restrictions
     }
 
-    if (!savedViaTauri) {
+    if (!savedViaTauri && !isTauriEnv()) {
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -261,14 +265,14 @@ export const SettingsModal: React.FC = () => {
                   {pendingImportProfiles.map((p, idx) => {
                     const retouche = [
                       (p.options.rotation || 0) % 360 !== 0 ? `${(p.options.rotation || 0) % 360}°` : null,
-                      p.options.flip_horizontal || p.options.flip_vertical ? 'Miroir' : null,
-                      p.options.grayscale ? 'N&B' : null,
+                      p.options.flip_horizontal || p.options.flip_vertical ? t.mirrorSummary : null,
+                      p.options.grayscale ? t.bwSummary : null,
                     ].filter(Boolean);
                     const desc = [
                       ...retouche,
                       formatResizeSummary(p.options),
                       p.options.compress === false ? t.noCompression : `Q${p.options.quality}`,
-                      p.options.metadata_policy === 'RemoveGps' ? 'Sans GPS' : p.options.metadata_policy === 'RemoveAll' ? 'Sans EXIF' : null,
+                      p.options.metadata_policy === 'RemoveGps' ? t.noGpsSummary : p.options.metadata_policy === 'RemoveAll' ? t.noExifSummary : null,
                       p.options.format === 'Original' ? t.keepOriginal : p.options.format,
                     ].filter(Boolean).join(' • ');
 
@@ -578,14 +582,14 @@ export const SettingsModal: React.FC = () => {
                       const opt = selectedProfile.options;
                       const retouche = [
                         (opt.rotation || 0) % 360 !== 0 ? `${(opt.rotation || 0) % 360}°` : null,
-                        opt.flip_horizontal || opt.flip_vertical ? 'Miroir' : null,
-                        opt.grayscale ? 'N&B' : null,
+                        opt.flip_horizontal || opt.flip_vertical ? t.mirrorSummary : null,
+                        opt.grayscale ? t.bwSummary : null,
                       ].filter(Boolean);
                       const summaryText = [
                         ...retouche,
                         formatResizeSummary(opt),
                         opt.compress === false ? t.noCompression : `Q${opt.quality}`,
-                        opt.metadata_policy === 'RemoveGps' ? 'Sans GPS' : opt.metadata_policy === 'RemoveAll' ? 'Sans EXIF' : null,
+                        opt.metadata_policy === 'RemoveGps' ? t.noGpsSummary : opt.metadata_policy === 'RemoveAll' ? t.noExifSummary : null,
                         opt.format === 'Original' ? t.keepOriginal : opt.format,
                       ].filter(Boolean).join(' • ');
 
@@ -846,12 +850,12 @@ export const SettingsModal: React.FC = () => {
                 <span>{t.watchFoldersSection}</span>
               </h4>
               <div className="flex items-center gap-2">
-                {watchFolders.filter((f) => f.enabled && f.watch_path).length > 0 && (
+                {activeWatchCount > 0 && (
                   <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     <span>
-                      {watchFolders.filter((f) => f.enabled && f.watch_path).length}{' '}
-                      {watchFolders.filter((f) => f.enabled && f.watch_path).length > 1
+                      {activeWatchCount}{' '}
+                      {activeWatchCount > 1
                         ? t.watchFoldersActivePlural
                         : t.watchFoldersActiveSingular}
                     </span>

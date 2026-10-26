@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::RwLock;
 
 use super::metadata_manager::{self, MetadataPolicy};
 
@@ -574,7 +574,7 @@ struct PreviewCacheEntry {
     original_data_url: String,
 }
 
-static PREVIEW_CACHE: Mutex<Option<PreviewCacheEntry>> = Mutex::new(None);
+static PREVIEW_CACHE: RwLock<Option<PreviewCacheEntry>> = RwLock::new(None);
 
 pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<PreviewResult> {
     let metadata = std::fs::metadata(path)?;
@@ -582,8 +582,8 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
     let modified = metadata.modified().ok();
 
     let cached = {
-        let guard = PREVIEW_CACHE.lock().unwrap_or_else(|e| e.into_inner());
-        guard.as_ref().and_then(|c| {
+        let guard = PREVIEW_CACHE.read().ok();
+        guard.as_ref().and_then(|g| g.as_ref()).and_then(|c| {
             if c.path == path && c.modified == modified {
                 Some((
                     c.orig_w,
@@ -626,7 +626,12 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
                     format!("data:{};base64,{}", mime, b64)
                 };
 
-                let mut guard = PREVIEW_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+                // [CORR-03] Reset state if lock was poisoned
+                let mut guard = PREVIEW_CACHE.write().unwrap_or_else(|e| {
+                    let mut g = e.into_inner();
+                    *g = None;
+                    g
+                });
                 *guard = Some(PreviewCacheEntry {
                     path: path.to_path_buf(),
                     modified,

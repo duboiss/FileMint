@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useFileMintStore, APP_VERSION } from '../store/useFileMintStore';
 import { Sparkles, Settings, RotateCcw, Loader2, AlertCircle, Download } from 'lucide-react';
 
@@ -17,7 +17,10 @@ export const Header: React.FC = () => {
   } = useFileMintStore();
   const isDev = Boolean(import.meta.env.DEV);
   const versionLabel = isDev ? `v${APP_VERSION} Local` : `v${APP_VERSION}`;
-  const activeWatchFolders = watchFolders.filter((f) => f.enabled && f.watch_path);
+  const activeWatchFolders = useMemo(
+    () => watchFolders.filter((f) => f.enabled && f.watch_path),
+    [watchFolders]
+  );
   const activeCount = activeWatchFolders.length;
 
   return (
@@ -43,7 +46,7 @@ export const Header: React.FC = () => {
           <button
             onClick={() => setSettingsOpen(true)}
             className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors cursor-pointer"
-            title={`${activeCount > 1 ? `${activeCount} ${t.watchFoldersActivePlural}` : t.watchFolderStatusActive} :\n${activeWatchFolders.map((f) => `• ${f.name ? `${f.name} (${f.watch_path})` : f.watch_path}`).join('\n')}`}
+            title={`${activeCount > 1 ? `${activeCount} ${t.watchFoldersActivePlural}` : t.watchFolderStatusActive} (${activeWatchFolders.map((f) => f.name || f.watch_path).join(', ')})`}
           >
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-[11px] hidden sm:inline">

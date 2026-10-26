@@ -150,7 +150,7 @@ pub fn compress_pdf(
         if (light_bytes.len() as u64) <= target_bytes {
             (light_bytes, 0)
         } else {
-            // Progressive tiers from high visual quality to aggressive compression
+            // Binary search across progressive tiers to minimize Document clones and re-encodings
             let tiers = [
                 (85u8, 2000u32),
                 (70u8, 1500u32),
@@ -161,9 +161,12 @@ pub fn compress_pdf(
 
             let mut best_buf = light_bytes;
             let mut best_opt_count = 0;
-            let mut satisfied = false;
+            let mut low = 0;
+            let mut high = tiers.len() - 1;
 
-            for &(q, dim) in &tiers {
+            while low <= high {
+                let mid = (low + high) / 2;
+                let (q, dim) = tiers[mid];
                 if let Ok((tier_buf, count)) = compress_doc_internal(
                     doc.clone(),
                     q,
@@ -171,18 +174,26 @@ pub fn compress_pdf(
                     options.recompress_images,
                     options.optimize_structure,
                 ) {
-                    if tier_buf.len() < best_buf.len() {
+                    let len = tier_buf.len() as u64;
+                    if len <= target_bytes {
                         best_buf = tier_buf;
                         best_opt_count = count;
+                        if mid == 0 {
+                            break;
+                        }
+                        high = mid - 1;
+                    } else {
+                        if tier_buf.len() < best_buf.len() {
+                            best_buf = tier_buf;
+                            best_opt_count = count;
+                        }
+                        low = mid + 1;
                     }
-                    if (best_buf.len() as u64) <= target_bytes {
-                        satisfied = true;
-                        break;
-                    }
+                } else {
+                    break;
                 }
             }
 
-            let _ = satisfied;
             (best_buf, best_opt_count)
         }
     } else {

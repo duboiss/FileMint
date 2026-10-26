@@ -161,8 +161,10 @@ pub async fn download_and_install_update(
     app: AppHandle,
     download_url: String,
     asset_name: String,
+    version: Option<String>,
 ) -> Result<(), String> {
-    update_checker::download_and_install(&app, &download_url, &asset_name).await
+    let ver = version.as_deref().unwrap_or("");
+    update_checker::download_and_install(&app, &download_url, &asset_name, ver).await
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

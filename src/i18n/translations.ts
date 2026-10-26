@@ -352,6 +352,10 @@ export interface TranslationDictionary {
   initializing: string;
   progressLabel: string;
   alreadySavedCount: string;
+  optimizedLocally: string;
+  failedCount: string;
+  processedFilesDetails: string;
+  liveOptimizedPreview: string;
 }
 
 export const translations: Record<Language, TranslationDictionary> = {
@@ -696,6 +700,10 @@ export const translations: Record<Language, TranslationDictionary> = {
     initializing: 'Initialisation...',
     progressLabel: 'Progression',
     alreadySavedCount: 'Déjà {amount} économisés !',
+    optimizedLocally: 'optimisé(s) localement',
+    failedCount: 'échec(s)',
+    processedFilesDetails: 'Détail des fichiers traités',
+    liveOptimizedPreview: 'Aperçu du résultat en direct',
   },
 
   en: {
@@ -1039,6 +1047,10 @@ export const translations: Record<Language, TranslationDictionary> = {
     initializing: 'Initializing...',
     progressLabel: 'Progress',
     alreadySavedCount: 'Already {amount} saved!',
+    optimizedLocally: 'optimized locally',
+    failedCount: 'failed',
+    processedFilesDetails: 'Processed files details',
+    liveOptimizedPreview: 'Live Optimized Preview',
   },
 };
 

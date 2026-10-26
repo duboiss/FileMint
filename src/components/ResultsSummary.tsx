@@ -27,7 +27,9 @@ export const ResultsSummary: React.FC = () => {
     if (!hasSuccessfulFiles) return;
     const firstSuccessful = batchSummary.items.find((item) => item.output_path);
     if (firstSuccessful?.output_path) {
-      invoke('open_path_in_explorer', { path: firstSuccessful.output_path });
+      invoke('open_path_in_explorer', { path: firstSuccessful.output_path }).catch((err) =>
+        console.warn('Could not open folder in explorer:', err)
+      );
     }
   };
 
@@ -43,8 +45,8 @@ export const ResultsSummary: React.FC = () => {
         </h2>
         <p className="text-xs text-slate-400 mb-6">
           {batchSummary.success_count} {batchSummary.success_count > 1 ? t.fileCountPlural : t.fileCountSingle}{' '}
-          {language === 'en' ? 'optimized locally' : 'optimisé(s) localement'}
-          {batchSummary.failure_count > 0 && ` • ${batchSummary.failure_count} ${language === 'en' ? 'failed' : 'échec(s)'}`}
+          {t.optimizedLocally}
+          {batchSummary.failure_count > 0 && ` • ${batchSummary.failure_count} ${t.failedCount}`}
         </p>
 
         <div className="flex items-center gap-6 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 mb-8">
@@ -127,7 +129,7 @@ export const ResultsSummary: React.FC = () => {
 
       <div className="space-y-2">
         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 px-2">
-          {language === 'en' ? 'Processed files details' : 'Détail des fichiers traités'} ({batchSummary.items.length})
+          {t.processedFilesDetails} ({batchSummary.items.length})
         </h4>
         <div className="space-y-1.5">
           {batchSummary.items.map((item, idx) => {
@@ -197,9 +199,13 @@ export const ResultsSummary: React.FC = () => {
                     </div>
                     {item.output_path && (
                       <button
-                        onClick={() => invoke('open_path_in_explorer', { path: item.output_path })}
+                        onClick={() =>
+                          invoke('open_path_in_explorer', { path: item.output_path }).catch((err) =>
+                            console.warn('Could not open file in explorer:', err)
+                          )
+                        }
                         className="p-1 rounded-lg text-slate-400 hover:text-mint-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                        title={language === 'en' ? 'Show in folder' : 'Afficher dans le dossier'}
+                        title={t.openDestination}
                       >
                         <FolderOpen className="w-3.5 h-3.5" />
                       </button>

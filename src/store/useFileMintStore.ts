@@ -500,9 +500,10 @@ const loadCustomProfilesFromStorage = (dict?: TranslationDictionary): CustomProf
     const raw = localStorage.getItem(CUSTOM_PROFILES_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      const validated = validateAndSanitizeProfiles(parsed);
+      if (validated && validated.length > 0) {
         // Ensure preset_none is available
-        const hasNone = parsed.some((p: CustomProfile) => p.id === 'preset_none');
+        const hasNone = validated.some((p: CustomProfile) => p.id === 'preset_none');
         if (!hasNone) {
           const noneProfile: CustomProfile = {
             id: 'preset_none',
@@ -510,11 +511,11 @@ const loadCustomProfilesFromStorage = (dict?: TranslationDictionary): CustomProf
             options: getPresetOptions('none'),
             createdAt: 0,
           };
-          const merged = [noneProfile, ...parsed].slice(0, MAX_CUSTOM_PROFILES);
+          const merged = [noneProfile, ...validated].slice(0, MAX_CUSTOM_PROFILES);
           saveCustomProfilesToStorage(merged);
           return merged;
         }
-        return parsed.slice(0, MAX_CUSTOM_PROFILES);
+        return validated.slice(0, MAX_CUSTOM_PROFILES);
       }
     }
   } catch (err) {
@@ -680,10 +681,56 @@ const generateLocalBrowserPreview = (
   }${imageOptions.grayscale ? ' • N&B' : ''}${imageOptions.rotation ? ` • ${imageOptions.rotation}°` : ''}</text>
   </svg>`;
 
+  const origSvgGraphic = isLogo
+    ? `<rect width="100%" height="100%" fill="#0f172a"/>
+      <pattern id="origCheckers" width="20" height="20" patternUnits="userSpaceOnUse">
+        <rect width="10" height="10" fill="#1e293b"/>
+        <rect x="10" width="10" height="10" fill="#0f172a"/>
+        <rect y="10" width="10" height="10" fill="#0f172a"/>
+        <rect x="10" y="10" width="10" height="10" fill="#1e293b"/>
+      </pattern>
+      <rect width="100%" height="100%" fill="url(#origCheckers)" opacity="0.6"/>
+      <g>
+        <g transform="translate(144, 40) scale(0.65)">
+          <rect x="32" y="32" width="448" height="448" rx="104" fill="#22c55e"/>
+          <path d="M168 112 H304 L376 184 V384 C376 397.25 365.25 408 352 408 H168 C154.75 408 144 397.25 144 384 V136 C144 122.75 154.75 112 168 112 Z" fill="#ffffff" opacity="0.95"/>
+          <path d="M304 112 V184 H376 Z" fill="#dcfce7"/>
+          <path d="M216 268 L248 300 L320 220" stroke="#16a34a" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </g>
+      </g>`
+    : `<defs>
+        <linearGradient id="origSkyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0284c7"/>
+          <stop offset="60%" stop-color="#38bdf8"/>
+          <stop offset="100%" stop-color="#bae6fd"/>
+        </linearGradient>
+        <linearGradient id="origMntGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#334155"/>
+          <stop offset="100%" stop-color="#0f172a"/>
+        </linearGradient>
+      </defs>
+      <g>
+        <rect width="100%" height="100%" fill="url(#origSkyGrad)"/>
+        <circle cx="620" cy="120" r="45" fill="#fef08a" opacity="0.9"/>
+        <polygon points="100,500 360,180 620,500" fill="url(#origMntGrad)"/>
+        <polygon points="360,180 430,270 380,260 360,275 340,260 290,270" fill="#ffffff" opacity="0.95"/>
+        <polygon points="400,500 580,250 760,500" fill="#1e293b"/>
+        <polygon points="580,250 630,320 595,310 580,325 565,310 530,320" fill="#ffffff" opacity="0.95"/>
+        <polygon points="0,500 200,310 400,500" fill="#475569"/>
+      </g>`;
+
+  const origSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+    ${origSvgGraphic}
+    <rect x="20" y="20" width="220" height="42" rx="12" fill="rgba(15,23,42,0.75)" stroke="rgba(255,255,255,0.1)"/>
+    <text x="35" y="47" fill="#ffffff" font-family="sans-serif" font-size="13" font-weight="600">${origW} × ${origH} px • Original</text>
+  </svg>`;
+
   const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  const originalDataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(origSvg)}`;
 
   return {
     data_url: dataUrl,
+    original_data_url: originalDataUrl,
     original_width: origW,
     original_height: origH,
     new_width: targetW,
@@ -789,7 +836,6 @@ interface FileMintState {
   checkUpdates: () => Promise<void>;
   downloadUpdate: () => Promise<void>;
   installAndRestart: () => Promise<void>;
-  installUpdate: () => Promise<void>;
   toggleContextMenu: (enable: boolean, mode?: ContextMenuMode) => Promise<void>;
   initSettings: () => Promise<void>;
 }
@@ -1618,10 +1664,6 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       }
     },
 
-    installUpdate: async () => {
-      await get().installAndRestart();
-    },
-
     setContextMenuMode: async (mode: ContextMenuMode) => {
       try {
         localStorage.setItem('filemint_context_menu_mode', mode);
@@ -1702,9 +1744,13 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       try {
         const watchFolders = get().watchFolders;
         if (watchFolders.some((f) => f.enabled && f.watch_path)) {
-          syncWatchFoldersToBackend(watchFolders, get());
+          syncWatchFoldersToBackend(watchFolders, get()).catch((err) =>
+            console.warn('Erreur synchronisation dossiers surveillés au démarrage :', err)
+          );
         }
-      } catch {}
+      } catch (err) {
+        console.warn('Erreur initialisation dossiers surveillés :', err);
+      }
     },
   };
 });
@@ -1718,10 +1764,15 @@ if (typeof window !== 'undefined' && window.matchMedia) {
         applyThemeToDom('system');
       }
     };
-    if (mediaQuery.addEventListener) {
+    if (typeof mediaQuery.addEventListener === 'function') {
       mediaQuery.addEventListener('change', handleSystemThemeChange);
-    } else if ((mediaQuery as any).addListener) {
-      (mediaQuery as any).addListener(handleSystemThemeChange);
+    } else if (
+      typeof (mediaQuery as unknown as { addListener?: (cb: () => void) => void }).addListener ===
+      'function'
+    ) {
+      (mediaQuery as unknown as { addListener: (cb: () => void) => void }).addListener(
+        handleSystemThemeChange
+      );
     }
   } catch (err) {
     console.warn('Erreur écoute prefers-color-scheme :', err);

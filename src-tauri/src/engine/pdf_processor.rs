@@ -339,10 +339,56 @@ pub fn generate_pdf_preview(
 mod tests {
     use super::*;
 
+    const SAMPLE_PDF_BYTES: &[u8] = b"%PDF-1.5
+1 0 obj<</Type/Pages/Kids[5 0 R]/Count 1/Resources 3 0 R/MediaBox[0 0 595 842]>>endobj
+2 0 obj<</Type/Font/Subtype/Type1/BaseFont/Courier>>endobj
+3 0 obj<</Font<</F1 2 0 R>>>>endobj
+4 0 obj<</Length 45>>stream
+BT
+/F1 48 Tf
+100 600 Td
+(Hello World!) Tj
+ET
+endstream endobj
+5 0 obj<</Type/Page/Parent 1 0 R/Contents[4 0 R]>>endobj
+6 0 obj<</Type/Catalog/Pages 1 0 R>>endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000096 00000 n 
+0000000155 00000 n 
+0000000191 00000 n 
+0000000281 00000 n 
+0000000338 00000 n 
+trailer
+<</Root 6 0 R/Size 7>>
+startxref
+381
+%%EOF
+";
+
+    struct TempFileCleaner(std::path::PathBuf);
+    impl Drop for TempFileCleaner {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(&self.0);
+        }
+    }
+
+    fn create_temp_sample_pdf() -> (std::path::PathBuf, TempFileCleaner) {
+        let unique_id = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let temp_path =
+            std::env::temp_dir().join(format!("filemint_test_sample_{}.pdf", unique_id));
+        std::fs::write(&temp_path, SAMPLE_PDF_BYTES).expect("Failed to write temp test PDF");
+        (temp_path.clone(), TempFileCleaner(temp_path))
+    }
+
     #[test]
     fn test_extract_page_one() {
-        let path = r"C:\Users\Steven\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lopdf-0.35.0\assets\example.pdf";
-        let mut doc = Document::load(path).unwrap();
+        let mut doc = Document::load_mem(SAMPLE_PDF_BYTES).expect("Failed to parse sample PDF");
         // Duplicate the page to make it a 2-page document
         let pages = doc.get_pages();
         let page1_id = *pages.get(&1).unwrap();
@@ -376,11 +422,9 @@ mod tests {
 
     #[test]
     fn test_generate_pdf_preview() {
-        let path = std::path::Path::new(
-            r"C:\Users\Steven\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lopdf-0.35.0\assets\example.pdf",
-        );
+        let (temp_path, _cleaner) = create_temp_sample_pdf();
         let opts = PdfCompressionOptions::default();
-        let preview = generate_pdf_preview(path, &opts).unwrap();
+        let preview = generate_pdf_preview(&temp_path, &opts).unwrap();
         assert_eq!(preview.total_pages, 1);
         assert!(!preview.original_page_pdf_base64.is_empty());
         assert!(!preview.compressed_page_pdf_base64.is_empty());

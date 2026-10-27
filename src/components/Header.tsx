@@ -8,6 +8,7 @@ export const Header: React.FC = () => {
     updateInfo,
     updateDownloading,
     updateDownloaded,
+    updateInstalling,
     updateProgress,
     updateError,
     downloadUpdate,
@@ -61,20 +62,31 @@ export const Header: React.FC = () => {
             {updateDownloaded ? (
               <button
                 type="button"
+                disabled={updateInstalling}
                 onClick={() => installAndRestart()}
-                className="flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl bg-mint-500 hover:bg-mint-600 text-slate-950 shadow-sm shadow-mint-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer animate-fadeIn"
+                className={`flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm transition-all animate-fadeIn ${
+                  updateInstalling
+                    ? 'bg-mint-500/60 text-slate-900 cursor-wait'
+                    : 'bg-mint-500 hover:bg-mint-600 text-slate-950 shadow-mint-500/25 hover:scale-[1.02] active:scale-[0.98] cursor-pointer'
+                }`}
                 title={`${t.updateRestartToApply} (v${updateInfo.latest_version})`}
               >
-                <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                {updateInstalling ? (
+                  <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin" />
+                ) : (
+                  <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                )}
                 <span className="hidden sm:inline">
-                  {t.updateRestartToApply}
+                  {updateInstalling ? t.updateInstalling : t.updateRestartToApply}
                 </span>
                 <span className="sm:hidden">
-                  {t.updateRestartShort}
+                  {updateInstalling ? t.updateInstalling : t.updateRestartShort}
                 </span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-slate-950/20 font-mono">
-                  v{updateInfo.latest_version}
-                </span>
+                {!updateInstalling && (
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-slate-950/20 font-mono">
+                    v{updateInfo.latest_version}
+                  </span>
+                )}
               </button>
             ) : updateDownloading ? (
               <div

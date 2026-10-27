@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, State};
 
 use crate::engine::batch_runner::{BatchRequest, BatchRunner, BatchSummary};
+use crate::engine::config_manager::{self, AppConfig};
 use crate::engine::file_manager;
 use crate::engine::image_processor::{self, ImageTransformOptions, PreviewResult};
 use crate::engine::pdf_processor::{self, PdfCompressionOptions, PdfPreviewResponse};
@@ -252,4 +253,14 @@ pub fn set_watch_folder_config(
 ) -> Result<(), String> {
     state.watch_manager.update_legacy_config(app, config);
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_app_config() -> AppConfig {
+    config_manager::load_config()
+}
+
+#[tauri::command]
+pub fn save_app_config(config: AppConfig) -> Result<(), String> {
+    config_manager::save_config(&config)
 }

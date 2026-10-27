@@ -18,6 +18,7 @@ import {
   WatchFolderConfig,
   WatchFolderRule,
   WatchProcessedEvent,
+  AppConfig,
 } from '../types';
 import {
   Language,
@@ -817,6 +818,7 @@ interface FileMintState {
   updateInfo: UpdateInfo | null;
   updateDownloading: boolean;
   updateDownloaded: boolean;
+  updateInstalling: boolean;
   updateProgress: number;
   updateError: string | null;
   contextMenuEnabled: boolean;
@@ -900,6 +902,53 @@ const syncWatchFoldersToBackend = async (
   }
 };
 
+let saveConfigTimer: ReturnType<typeof setTimeout> | null = null;
+export const persistConfigToDisk = () => {
+  if (!isTauriEnv()) return;
+  if (saveConfigTimer) clearTimeout(saveConfigTimer);
+  saveConfigTimer = setTimeout(() => {
+    try {
+      const state = useFileMintStore.getState();
+      let defaultDestModeStr = 'subfolder';
+      if (typeof state.destinationConfig.mode === 'string') {
+        if (state.destinationConfig.mode === 'SameAsOriginal') {
+          defaultDestModeStr = 'original';
+        } else {
+          defaultDestModeStr = 'subfolder';
+        }
+      } else if (
+        state.destinationConfig.mode &&
+        typeof state.destinationConfig.mode === 'object' &&
+        'Custom' in state.destinationConfig.mode
+      ) {
+        defaultDestModeStr = 'custom';
+      }
+
+      const config: AppConfig = {
+        language: state.language,
+        theme: state.theme,
+        context_menu_mode: state.contextMenuMode,
+        naming_pattern: state.destinationConfig.naming_pattern || '{nom}',
+        subfolder_name: state.destinationConfig.subfolder_name || 'FileMint',
+        default_dest_mode: defaultDestModeStr,
+        custom_folder: localStorage.getItem('filemint_custom_folder') || null,
+        default_tab: state.defaultImageTab,
+        default_preset: state.defaultImagePreset,
+        update_check: state.updateCheckEnabled,
+        lifetime_saved_bytes: state.lifetimeSavedBytes,
+        lifetime_files_count: state.lifetimeFilesCount,
+        custom_profiles: state.customProfiles,
+        watch_folders: state.watchFolders,
+      };
+      invoke('save_app_config', { config }).catch((err) => {
+        console.warn('Failed to persist config to disk:', err);
+      });
+    } catch (e) {
+      console.warn('Failed to prepare config for disk persistence:', e);
+    }
+  }, 300);
+};
+
 export const useFileMintStore = create<FileMintState>((set, get) => {
   const initialLangData = getInitialLanguageData();
   const initialProfiles = loadCustomProfilesFromStorage(translations[initialLangData.language]);
@@ -958,11 +1007,13 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       const nextFiles = get().lifetimeFilesCount + addFiles;
       saveLifetimeStatsToStorage(nextSaved, nextFiles);
       set({ lifetimeSavedBytes: nextSaved, lifetimeFilesCount: nextFiles });
+      persistConfigToDisk();
     },
 
     resetLifetimeStats: () => {
       saveLifetimeStatsToStorage(0, 0);
       set({ lifetimeSavedBytes: 0, lifetimeFilesCount: 0 });
+      persistConfigToDisk();
     },
 
     watchFolders: initialWatchFolders,
@@ -976,6 +1027,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         watchFolders: rules,
         watchFolderConfig: getInitialWatchFolderConfig(rules),
       });
+      persistConfigToDisk();
       await syncWatchFoldersToBackend(rules, get());
     },
 
@@ -1059,6 +1111,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
     updateInfo: null,
     updateDownloading: false,
     updateDownloaded: false,
+    updateInstalling: false,
     updateProgress: 0,
     updateError: null,
     contextMenuEnabled: false,
@@ -1076,6 +1129,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         document.documentElement.lang = lang;
       }
       set({ language: lang, t: translations[lang] });
+      persistConfigToDisk();
       // Only refresh classic context menu labels if classic mode is currently enabled
       if (get().contextMenuEnabled && get().contextMenuMode === 'classic' && isTauriEnv()) {
         get().toggleContextMenu(true, 'classic');
@@ -1093,6 +1147,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         localStorage.setItem('filemint_update_check', String(enabled));
       } catch {}
       set({ updateCheckEnabled: enabled });
+      persistConfigToDisk();
     },
     setTheme: (theme: ThemeMode) => {
       try {
@@ -1102,6 +1157,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       }
       set({ theme });
       applyThemeToDom(theme);
+      persistConfigToDisk();
     },
 
     setDefaultImageTab: (tab: ImageConfigTab) => {
@@ -1109,6 +1165,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       try {
         localStorage.setItem('filemint_default_tab', tab);
       } catch {}
+      persistConfigToDisk();
     },
 
     setDefaultImagePreset: (presetId: string) => {
@@ -1120,6 +1177,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       try {
         localStorage.setItem('filemint_default_preset', presetId);
       } catch {}
+      persistConfigToDisk();
 
       // Keep watch folders in sync
       const watchFolders = get().watchFolders;
@@ -1332,6 +1390,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         selectedImagePreset: newProfile.id,
         activeCustomProfileId: newProfile.id,
       });
+      persistConfigToDisk();
       return true;
     },
 
@@ -1367,6 +1426,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           defaultImagePreset: nextDefaultId,
         };
       });
+      persistConfigToDisk();
     },
 
     renameCustomProfile: (id: string, newName: string) => {
@@ -1377,6 +1437,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       );
       saveCustomProfilesToStorage(updated);
       set({ customProfiles: updated });
+      persistConfigToDisk();
       return true;
     },
 
@@ -1394,6 +1455,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         activeCustomProfileId: id,
         selectedImagePreset: id,
       });
+      persistConfigToDisk();
       return true;
     },
 
@@ -1410,6 +1472,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       try {
         localStorage.setItem('filemint_default_preset', defaults[0].id);
       } catch {}
+      persistConfigToDisk();
       get().refreshPreview();
     },
 
@@ -1431,6 +1494,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           ? structuredClone(firstProfile.options)
           : getPresetOptions('none'),
       });
+      persistConfigToDisk();
       get().refreshPreview();
       return true;
     },
@@ -1473,6 +1537,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       set((state) => ({
         destinationConfig: { ...state.destinationConfig, ...config },
       }));
+      persistConfigToDisk();
     },
 
     refreshPreview: async () => {
@@ -1776,11 +1841,13 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
     },
 
     installAndRestart: async () => {
+      set({ updateInstalling: true, updateError: null });
       try {
         await invoke('install_update');
       } catch (err: unknown) {
         console.error('Install update failed:', err);
         set({
+          updateInstalling: false,
           updateError: err instanceof Error ? err.message : String(err),
         });
       }
@@ -1791,6 +1858,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         localStorage.setItem('filemint_context_menu_mode', mode);
       } catch {}
       set({ contextMenuMode: mode });
+      persistConfigToDisk();
       if (mode === 'disabled') {
         await get().toggleContextMenu(false, 'disabled');
       } else {
@@ -1836,6 +1904,151 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
 
     initSettings: async () => {
       if (!isTauriEnv()) return;
+
+      // 1. Load persistent configuration from disk (%APPDATA%/FileMint/config.json)
+      try {
+        const diskConfig = await invoke<AppConfig>('get_app_config');
+        if (diskConfig) {
+          const updates: Partial<FileMintState> = {};
+
+          // Language & Welcome modal
+          if (diskConfig.language === 'fr' || diskConfig.language === 'en') {
+            const lang = diskConfig.language as Language;
+            updates.language = lang;
+            updates.showWelcomeModal = false;
+            updates.t = translations[lang];
+            try {
+              localStorage.setItem('filemint_language', lang);
+            } catch {}
+          }
+
+          // Theme
+          if (
+            diskConfig.theme === 'light' ||
+            diskConfig.theme === 'dark' ||
+            diskConfig.theme === 'system'
+          ) {
+            const theme = diskConfig.theme as ThemeMode;
+            updates.theme = theme;
+            applyThemeToDom(theme);
+            try {
+              localStorage.setItem('filemint_theme', theme);
+            } catch {}
+          }
+
+          // Context Menu Mode
+          if (diskConfig.context_menu_mode) {
+            updates.contextMenuMode = diskConfig.context_menu_mode as ContextMenuMode;
+            try {
+              localStorage.setItem('filemint_context_menu_mode', diskConfig.context_menu_mode);
+            } catch {}
+          }
+
+          // Destination settings
+          const nextDest = { ...get().destinationConfig };
+          let destChanged = false;
+          if (diskConfig.naming_pattern) {
+            nextDest.naming_pattern = diskConfig.naming_pattern;
+            destChanged = true;
+            try {
+              localStorage.setItem('filemint_naming_pattern', diskConfig.naming_pattern);
+            } catch {}
+          }
+          if (diskConfig.subfolder_name) {
+            nextDest.subfolder_name = diskConfig.subfolder_name;
+            destChanged = true;
+            try {
+              localStorage.setItem('filemint_subfolder_name', diskConfig.subfolder_name);
+            } catch {}
+          }
+          if (diskConfig.custom_folder) {
+            try {
+              localStorage.setItem('filemint_custom_folder', diskConfig.custom_folder);
+            } catch {}
+          }
+          if (diskConfig.default_dest_mode) {
+            if (diskConfig.default_dest_mode === 'original') {
+              nextDest.mode = 'SameAsOriginal';
+            } else if (diskConfig.default_dest_mode === 'custom' && diskConfig.custom_folder) {
+              nextDest.mode = { Custom: diskConfig.custom_folder };
+            } else {
+              nextDest.mode = 'FileMintSubfolder';
+            }
+            destChanged = true;
+          }
+          if (destChanged) {
+            updates.destinationConfig = nextDest;
+          }
+
+          // Tabs & Presets
+          if (diskConfig.default_tab) {
+            updates.defaultImageTab = diskConfig.default_tab as ImageConfigTab;
+            try {
+              localStorage.setItem('filemint_default_tab', diskConfig.default_tab);
+            } catch {}
+          }
+          if (diskConfig.default_preset) {
+            updates.defaultImagePreset = diskConfig.default_preset;
+            try {
+              localStorage.setItem('filemint_default_preset', diskConfig.default_preset);
+            } catch {}
+          }
+
+          // Update check toggle
+          if (typeof diskConfig.update_check === 'boolean') {
+            updates.updateCheckEnabled = diskConfig.update_check;
+            try {
+              localStorage.setItem('filemint_update_check', String(diskConfig.update_check));
+            } catch {}
+          }
+
+          // Lifetime stats (take max between disk and current)
+          const diskSaved = diskConfig.lifetime_saved_bytes || 0;
+          const diskFiles = diskConfig.lifetime_files_count || 0;
+          const currentSaved = get().lifetimeSavedBytes;
+          const currentFiles = get().lifetimeFilesCount;
+          if (diskSaved > currentSaved || diskFiles > currentFiles) {
+            const finalSaved = Math.max(diskSaved, currentSaved);
+            const finalFiles = Math.max(diskFiles, currentFiles);
+            updates.lifetimeSavedBytes = finalSaved;
+            updates.lifetimeFilesCount = finalFiles;
+            saveLifetimeStatsToStorage(finalSaved, finalFiles);
+          }
+
+          // Custom profiles
+          if (Array.isArray(diskConfig.custom_profiles) && diskConfig.custom_profiles.length > 0) {
+            const currentProfiles = get().customProfiles;
+            if (
+              currentProfiles.length <= 1 ||
+              diskConfig.custom_profiles.length > currentProfiles.length
+            ) {
+              updates.customProfiles = diskConfig.custom_profiles;
+              saveCustomProfilesToStorage(diskConfig.custom_profiles);
+            }
+          }
+
+          // Watch folders
+          if (Array.isArray(diskConfig.watch_folders) && diskConfig.watch_folders.length > 0) {
+            const currentWatch = get().watchFolders;
+            if (currentWatch.length === 0 && diskConfig.watch_folders.length > 0) {
+              updates.watchFolders = diskConfig.watch_folders;
+              updates.watchFolderConfig = getInitialWatchFolderConfig(diskConfig.watch_folders);
+              saveWatchFoldersToStorage(diskConfig.watch_folders);
+            }
+          }
+
+          if (Object.keys(updates).length > 0) {
+            set(updates);
+          } else if (!diskConfig.language) {
+            // First run on clean installation: save current settings to disk
+            persistConfigToDisk();
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load app config from disk:', err);
+      }
+
+      // 2. Windows Context Menu status check
       try {
         const savedMode = (localStorage.getItem('filemint_context_menu_mode') as ContextMenuMode) || null;
         const res = await invoke<ContextMenuStatus>('get_windows_context_menu_status');
@@ -1863,6 +2076,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         // Silently ignore if not running in Windows shell environment
       }
 
+      // 3. Watch folders backend synchronization
       try {
         const watchFolders = get().watchFolders;
         if (watchFolders.some((f) => f.enabled && f.watch_path)) {

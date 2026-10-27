@@ -184,3 +184,20 @@ export interface WatchProcessedEvent {
   success: boolean;
   error?: string | null;
 }
+
+export interface AppConfig {
+  language?: string | null;
+  theme?: string | null;
+  context_menu_mode?: string | null;
+  naming_pattern?: string | null;
+  subfolder_name?: string | null;
+  default_dest_mode?: string | null;
+  custom_folder?: string | null;
+  default_tab?: string | null;
+  default_preset?: string | null;
+  update_check?: boolean | null;
+  lifetime_saved_bytes?: number | null;
+  lifetime_files_count?: number | null;
+  custom_profiles?: CustomProfile[] | null;
+  watch_folders?: WatchFolderRule[] | null;
+}

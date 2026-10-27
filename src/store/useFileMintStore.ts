@@ -1709,7 +1709,20 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
 
     downloadUpdate: async () => {
       const info = get().updateInfo;
-      if (!info || !info.download_url || !info.asset_name) return;
+      if (!info) return;
+
+      // If direct installer is not available for this OS or download URL is missing, open the release page in browser
+      if (!info.download_url || !info.asset_name) {
+        const targetUrl = info.release_notes_url || 'https://github.com/duboiss/FileMint/releases/latest';
+        try {
+          const { open } = await import('@tauri-apps/plugin-shell');
+          await open(targetUrl);
+        } catch {
+          window.open(targetUrl, '_blank');
+        }
+        return;
+      }
+
       set({
         updateDownloading: true,
         updateDownloaded: false,

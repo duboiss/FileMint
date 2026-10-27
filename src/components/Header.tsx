@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useFileMintStore, APP_VERSION } from '../store/useFileMintStore';
-import { Sparkles, Settings, RotateCcw, Loader2, AlertCircle, Download } from 'lucide-react';
+import { Sparkles, Settings, RotateCcw, Loader2, AlertCircle, Download, ExternalLink } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const {
@@ -105,9 +105,17 @@ export const Header: React.FC = () => {
                 type="button"
                 onClick={() => downloadUpdate()}
                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-mint-500/15 text-mint-600 dark:text-mint-300 border border-mint-500/30 hover:bg-mint-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                title={t.updateAction.replace('{version}', updateInfo.latest_version)}
+                title={
+                  updateInfo.download_url
+                    ? t.updateAction.replace('{version}', updateInfo.latest_version)
+                    : `${t.updateAction.replace('{version}', updateInfo.latest_version)} (${t.openDownloadPage})`
+                }
               >
-                <Download className="w-3.5 h-3.5 shrink-0 text-mint-500" />
+                {updateInfo.download_url ? (
+                  <Download className="w-3.5 h-3.5 shrink-0 text-mint-500" />
+                ) : (
+                  <ExternalLink className="w-3.5 h-3.5 shrink-0 text-mint-500" />
+                )}
                 <span>{t.updateAction.replace('{version}', updateInfo.latest_version)}</span>
               </button>
             )}

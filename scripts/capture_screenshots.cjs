@@ -2,14 +2,14 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 const util = require('util');
 
-const execAsync = util.promisify(exec);
+const execFileAsync = util.promisify(execFile);
 
 const PORT = 4173;
-const DIST_DIR = path.join(__dirname, '..', 'dist');
-const OUT_DIR = path.join(__dirname, '..', 'docs', 'screenshots');
+const DIST_DIR = path.resolve(__dirname, '..', 'dist');
+const OUT_DIR = path.resolve(__dirname, '..', 'docs', 'screenshots');
 
 if (!fs.existsSync(OUT_DIR)) {
   fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -26,17 +26,36 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
-  const urlPath = req.url.split('?')[0];
-  let filePath = path.join(DIST_DIR, urlPath === '/' ? 'index.html' : urlPath);
-  if (!fs.existsSync(filePath)) {
-    filePath = path.join(DIST_DIR, 'index.html');
+  const parsedUrl = new URL(req.url, 'http://localhost');
+  const safeRelativePath = path.posix
+    .normalize(parsedUrl.pathname)
+    .replace(/^(\.\.[\/\\])+/, '')
+    .replace(/^\/+/, '');
+
+  const resolvedPath = path.resolve(DIST_DIR, safeRelativePath || 'index.html');
+
+  // Verify path containment within DIST_DIR to prevent path traversal
+  const relativeFromDist = path.relative(DIST_DIR, resolvedPath);
+  const isContained =
+    !relativeFromDist.startsWith('..') &&
+    !path.isAbsolute(relativeFromDist) &&
+    resolvedPath.startsWith(DIST_DIR);
+
+  let targetFile = path.join(DIST_DIR, 'index.html');
+  if (isContained && fs.existsSync(resolvedPath)) {
+    try {
+      const stat = fs.statSync(resolvedPath);
+      if (stat.isFile()) {
+        targetFile = resolvedPath;
+      }
+    } catch {}
   }
 
-  const ext = path.extname(filePath).toLowerCase();
+  const ext = path.extname(targetFile).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
   try {
-    const data = fs.readFileSync(filePath);
+    const data = fs.readFileSync(targetFile);
     res.writeHead(200, { 'Content-Type': contentType });
     res.end(data);
   } catch (err) {
@@ -78,8 +97,17 @@ server.listen(PORT, async () => {
     const outFile = path.join(OUT_DIR, t.name);
     console.log(`Capturing ${t.name}...`);
     try {
-      const cmd = `"${edgePath}" --headless --disable-gpu --hide-scrollbars --window-size=1280,820 --virtual-time-budget=1500 "--user-data-dir=${tempProfile}" "--screenshot=${outFile}" "${t.url}"`;
-      await execAsync(cmd);
+      const args = [
+        '--headless',
+        '--disable-gpu',
+        '--hide-scrollbars',
+        '--window-size=1280,820',
+        '--virtual-time-budget=1500',
+        `--user-data-dir=${tempProfile}`,
+        `--screenshot=${outFile}`,
+        t.url,
+      ];
+      await execFileAsync(edgePath, args);
       if (fs.existsSync(outFile)) {
         const stat = fs.statSync(outFile);
         console.log(`✓ Saved ${t.name} (${Math.round(stat.size / 1024)} KB)`);

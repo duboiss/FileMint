@@ -194,6 +194,8 @@ export interface TranslationDictionary {
   viewSideBySide: string;
   viewSplit: string;
   viewSingle: string;
+  noChangesToCompare: string;
+  originalFileNoChanges: string;
   enlarge: string;
   clickToEnlarge: string;
   zoomIn: string;
@@ -546,8 +548,10 @@ export const translations: Record<Language, TranslationDictionary> = {
     previewLoading: 'Génération de l\'aperçu local...',
     previewUnavailable: 'Aperçu indisponible',
     viewSideBySide: 'Vue côte à côte',
-    viewSplit: 'Curseur split',
+    viewSplit: 'Curseur',
     viewSingle: 'Résultat seul',
+    noChangesToCompare: 'Aucun changement à comparer',
+    originalFileNoChanges: "Fichier d'origine (aucun changement)",
     enlarge: 'Agrandir',
     clickToEnlarge: 'Cliquer pour afficher en grand',
     zoomIn: 'Zoom avant',
@@ -898,6 +902,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     viewSideBySide: 'Side by side',
     viewSplit: 'Split slider',
     viewSingle: 'Result only',
+    noChangesToCompare: 'No changes to compare',
+    originalFileNoChanges: 'Original file (no changes)',
     enlarge: 'Enlarge',
     clickToEnlarge: 'Click to view full screen',
     zoomIn: 'Zoom in',

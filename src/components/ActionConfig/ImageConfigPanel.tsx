@@ -103,6 +103,49 @@ export const ImageConfigPanel: React.FC = () => {
     }
   };
 
+  const renderProfileSummary = (options: typeof imageOptions) => {
+    const formatLabel = options.format === 'Original' ? t.keepOriginal : options.format;
+    const resizeLabel = formatResizeSummary(options);
+    const qualityLabel = options.compress === false ? t.noCompression : `Q${options.quality}`;
+
+    const exceptionParts: string[] = [];
+    if ((options.rotation || 0) % 360 !== 0) {
+      exceptionParts.push(`${(options.rotation || 0) % 360}°`);
+    }
+    if (options.flip_horizontal || options.flip_vertical) {
+      exceptionParts.push(t.mirrorSummary);
+    }
+    if (options.grayscale) {
+      exceptionParts.push(t.bwSummary);
+    }
+    if (options.metadata_policy === 'RemoveGps') {
+      exceptionParts.push(t.noGpsSummary);
+    } else if (options.metadata_policy === 'RemoveAll') {
+      exceptionParts.push(t.noExifSummary);
+    }
+
+    return (
+      <div className="flex items-center gap-1.5 mt-1 font-mono text-[10px] leading-tight min-w-0">
+        <span className="px-1.5 py-0.5 rounded bg-slate-200/90 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 font-bold tracking-wider uppercase shrink-0">
+          {formatLabel}
+        </span>
+
+        <span className="text-slate-500 dark:text-slate-400 truncate">
+          {resizeLabel} • {qualityLabel}
+        </span>
+
+        {exceptionParts.length > 0 && (
+          <span
+            className="px-1.5 py-0.5 rounded bg-mint-500/10 text-mint-600 dark:text-mint-400 font-sans font-medium shrink-0"
+            title={exceptionParts.join(', ')}
+          >
+            {exceptionParts.join(' · ')}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full bg-white/50 dark:bg-slate-900/40 px-4 pt-4 pb-5 overflow-y-auto select-none">
       <div className="flex items-center gap-1.5 p-1.5 bg-slate-200/50 dark:bg-slate-800/60 rounded-2xl mb-5 text-[11px] font-semibold border border-slate-300/40 dark:border-slate-700/50 shadow-inner">
@@ -197,48 +240,8 @@ export const ImageConfigPanel: React.FC = () => {
                 className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-mint-500 focus:ring-1 focus:ring-mint-500"
               />
 
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-slate-900/60 p-2 rounded-xl flex flex-wrap gap-1.5 items-center font-mono">
-                {/* 1. Retouche */}
-                {(imageOptions.rotation || 0) % 360 !== 0 && (
-                  <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 font-sans">
-                    {(imageOptions.rotation || 0) % 360}°
-                  </span>
-                )}
-                {(imageOptions.flip_horizontal || imageOptions.flip_vertical) && (
-                  <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 font-sans">
-                    {t.mirrorSummary}
-                  </span>
-                )}
-                {imageOptions.grayscale && (
-                  <span className="px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-400 font-sans">
-                    {t.bwSummary}
-                  </span>
-                )}
-
-                {/* 2. Dimensions */}
-                <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500">
-                  {formatResizeSummary(imageOptions)}
-                </span>
-
-                {/* 3. Compression & Confidentialité */}
-                <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500">
-                  {imageOptions.compress === false ? t.noCompression : `Q${imageOptions.quality}`}
-                </span>
-                {imageOptions.metadata_policy === 'RemoveGps' && (
-                  <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 font-sans">
-                    {t.noGpsSummary}
-                  </span>
-                )}
-                {imageOptions.metadata_policy === 'RemoveAll' && (
-                  <span className="px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-400 font-sans">
-                    {t.noExifSummary}
-                  </span>
-                )}
-
-                {/* 4. Format */}
-                <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500">
-                  {imageOptions.format === 'Original' ? t.keepOriginal : imageOptions.format}
-                </span>
+              <div className="bg-white/60 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
+                {renderProfileSummary(imageOptions)}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-1">
@@ -346,49 +349,7 @@ export const ImageConfigPanel: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          <div className="flex flex-wrap items-center gap-1 mt-1 font-mono text-[10px]">
-                            {/* 1. Retouche */}
-                            {(profile.options.rotation || 0) % 360 !== 0 && (
-                              <span className="px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-400 font-sans">
-                                {(profile.options.rotation || 0) % 360}°
-                              </span>
-                            )}
-                            {(profile.options.flip_horizontal || profile.options.flip_vertical) && (
-                              <span className="px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-400 font-sans">
-                                {t.mirrorSummary}
-                              </span>
-                            )}
-                            {profile.options.grayscale && (
-                              <span className="px-1.5 py-0.2 rounded bg-slate-500/10 text-slate-400 font-sans">
-                                {t.bwSummary}
-                              </span>
-                            )}
-
-                            {/* 2. Dimensions */}
-                            <span className="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-500 font-semibold">
-                              {formatResizeSummary(profile.options)}
-                            </span>
-
-                            {/* 3. Compression & Confidentialité */}
-                            <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-500 font-semibold">
-                              {profile.options.compress === false ? t.noCompression : `Q${profile.options.quality}`}
-                            </span>
-                            {profile.options.metadata_policy === 'RemoveGps' && (
-                              <span className="px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 font-semibold">
-                                {t.noGpsSummary}
-                              </span>
-                            )}
-                            {profile.options.metadata_policy === 'RemoveAll' && (
-                              <span className="px-1.5 py-0.2 rounded bg-slate-500/10 text-slate-500 font-semibold">
-                                {t.noExifSummary}
-                              </span>
-                            )}
-
-                            {/* 4. Format */}
-                            <span className="px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-500 font-semibold">
-                              {profile.options.format === 'Original' ? t.keepOriginal : profile.options.format}
-                            </span>
-                          </div>
+                          {renderProfileSummary(profile.options)}
                         </>
                       )}
                     </div>

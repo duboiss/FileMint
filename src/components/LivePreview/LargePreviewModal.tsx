@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PreviewResult, FileItem } from '../../types';
-import { useFileMintStore, formatFileSize } from '../../store/useFileMintStore';
+import { useFileMintStore, formatFileSize, hasActiveImageChanges } from '../../store/useFileMintStore';
 import {
   X,
   ZoomIn,
@@ -43,6 +43,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
   const currentPreview = storePreview || propPreview;
 
   const isImage = activeFile?.fileType !== 'pdf';
+  const hasChanges = !isImage || hasActiveImageChanges(imageOptions);
   const isCompressionActive = isImage && imageOptions.compress !== false;
   const isTargetSizeMode = Boolean(imageOptions.target_size_kb && imageOptions.target_size_kb > 0);
   const isLossless = Boolean(imageOptions.lossless);
@@ -63,6 +64,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
 
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'split' | 'sideBySide' | 'single'>('split');
+  const effectiveViewMode = hasChanges ? viewMode : 'single';
   const [splitPos, setSplitPos] = useState<number>(50);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -191,24 +193,26 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                     <span className="text-mint-400 text-[11px]">({t.pdfPage1Preview})</span>
                   ) : null}
                 </span>
-                <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
-                {currentPreview ? (
-                  <span className="text-slate-400">
-                    {t.projected}{' '}
-                    <strong className="text-mint-400 font-mono">
-                      {formatFileSize(currentPreview.estimated_bytes, language)}
-                    </strong>{' '}
-                    {isImage ? (
-                      `(${currentPreview.new_width}×${currentPreview.new_height})`
-                    ) : (
-                      <span className="text-mint-400 text-[11px]">({t.pdfPage1Preview})</span>
+                {Boolean(currentPreview?.estimated_bytes && currentPreview.estimated_bytes !== activeFile.sizeBytes) && (
+                  <>
+                    <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
+                    <span className="text-slate-400">
+                      {t.projected}{' '}
+                      <strong className="text-mint-400 font-mono">
+                        {formatFileSize(currentPreview!.estimated_bytes, language)}
+                      </strong>{' '}
+                      {isImage ? (
+                        `(${currentPreview!.new_width}×${currentPreview!.new_height})`
+                      ) : (
+                        <span className="text-mint-400 text-[11px]">({t.pdfPage1Preview})</span>
+                      )}
+                    </span>
+                    {currentPreview!.saved_percentage > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[11px]">
+                        -{currentPreview!.saved_percentage.toFixed(0)}%
+                      </span>
                     )}
-                  </span>
-                ) : null}
-                {currentPreview && currentPreview.saved_percentage > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[11px]">
-                    -{currentPreview.saved_percentage.toFixed(0)}%
-                  </span>
+                  </>
                 )}
               </div>
             </div>
@@ -217,25 +221,31 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
           <div className="flex items-center gap-2.5">
             <div className="flex items-center bg-slate-800/80 p-0.5 rounded-xl border border-slate-700/60">
               <button
+                disabled={!hasChanges}
                 onClick={() => setViewMode('split')}
                 className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
-                  viewMode === 'split'
-                    ? 'bg-mint-500 text-slate-950 font-semibold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                  !hasChanges
+                    ? 'opacity-40 cursor-not-allowed text-slate-500'
+                    : effectiveViewMode === 'split'
+                    ? 'bg-mint-500 text-slate-950 font-semibold shadow-sm cursor-pointer'
+                    : 'text-slate-400 hover:text-slate-200 cursor-pointer'
                 }`}
-                title={t.viewSplit}
+                title={hasChanges ? t.viewSplit : t.noChangesToCompare}
               >
                 <Sliders className="w-3.5 h-3.5" />
                 <span>{t.viewSplit}</span>
               </button>
               <button
+                disabled={!hasChanges}
                 onClick={() => setViewMode('sideBySide')}
                 className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
-                  viewMode === 'sideBySide'
-                    ? 'bg-mint-500 text-slate-950 font-semibold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                  !hasChanges
+                    ? 'opacity-40 cursor-not-allowed text-slate-500'
+                    : effectiveViewMode === 'sideBySide'
+                    ? 'bg-mint-500 text-slate-950 font-semibold shadow-sm cursor-pointer'
+                    : 'text-slate-400 hover:text-slate-200 cursor-pointer'
                 }`}
-                title={t.viewSideBySide}
+                title={hasChanges ? t.viewSideBySide : t.noChangesToCompare}
               >
                 <Columns className="w-3.5 h-3.5" />
                 <span>{t.viewSideBySide}</span>
@@ -243,9 +253,9 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
               <button
                 onClick={() => setViewMode('single')}
                 className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
-                  viewMode === 'single'
-                    ? 'bg-mint-500 text-slate-950 font-semibold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                  effectiveViewMode === 'single'
+                    ? 'bg-mint-500 text-slate-950 font-semibold shadow-sm cursor-pointer'
+                    : 'text-slate-400 hover:text-slate-200 cursor-pointer'
                 }`}
                 title={t.viewSingle}
               >
@@ -329,7 +339,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                 transformOrigin: 'center center',
               }}
             >
-              {viewMode === 'split' && (
+              {effectiveViewMode === 'split' && (
                 <div
                   onPointerDown={handleSplitPointerDown}
                   onPointerMove={handleSplitPointerMove}
@@ -402,7 +412,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                 </div>
               )}
 
-              {viewMode === 'sideBySide' && (
+              {effectiveViewMode === 'sideBySide' && (
                 <div className="flex items-center gap-8 max-h-[75vh] max-w-[90vw]">
                   <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
@@ -427,7 +437,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                 </div>
               )}
 
-              {viewMode === 'single' && (
+              {effectiveViewMode === 'single' && (
                 <div className="p-2 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-2xl flex items-center justify-center">
                   <img
                     src={currentPreview.data_url}

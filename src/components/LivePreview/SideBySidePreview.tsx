@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useFileMintStore, formatFileSize } from '../../store/useFileMintStore';
+import { useFileMintStore, formatFileSize, hasActiveImageChanges } from '../../store/useFileMintStore';
 import {
   Loader2,
   ArrowRight,
@@ -12,6 +12,7 @@ import {
   Sparkles,
   Columns,
   SplitSquareVertical,
+  Check,
 } from 'lucide-react';
 import { LargePreviewModal } from './LargePreviewModal';
 
@@ -86,6 +87,12 @@ export const SideBySidePreview: React.FC = () => {
   }
 
   const isPdf = activeFile.fileType === 'pdf';
+  const hasChanges = isPdf || hasActiveImageChanges(imageOptions);
+  const hasSizeChange = Boolean(
+    preview &&
+    preview.estimated_bytes &&
+    preview.estimated_bytes !== activeFile.sizeBytes
+  );
 
   // Specific rendering for PDF documents when user toggles details or when visual preview is unavailable
   if (isPdf && (showPdfDocDetails || (!preview?.data_url && !previewLoading))) {
@@ -203,18 +210,18 @@ export const SideBySidePreview: React.FC = () => {
             <span className="text-slate-600 dark:text-slate-400">
               {formatFileSize(activeFile.sizeBytes, language)}
             </span>
-            <ArrowRight className="w-3 h-3 text-slate-400" />
-            {preview ? (
-              <span className="font-bold text-mint-600 dark:text-mint-400">
-                {formatFileSize(preview.estimated_bytes, language)}
-              </span>
-            ) : (
-              <span className="text-slate-400 animate-pulse text-[10px]">...</span>
-            )}
-            {preview && preview.saved_percentage > 0 && (
-              <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
-                -{preview.saved_percentage.toFixed(0)}%
-              </span>
+            {hasSizeChange && preview && (
+              <>
+                <ArrowRight className="w-3 h-3 text-slate-400" />
+                <span className="font-bold text-mint-600 dark:text-mint-400">
+                  {formatFileSize(preview.estimated_bytes, language)}
+                </span>
+                {preview.saved_percentage > 0 && (
+                  <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                    -{preview.saved_percentage.toFixed(0)}%
+                  </span>
+                )}
+              </>
             )}
           </div>
 
@@ -278,25 +285,31 @@ export const SideBySidePreview: React.FC = () => {
           <div className="flex items-center rounded-lg p-0.5 bg-slate-200/60 dark:bg-slate-800/80 border border-slate-300/40 dark:border-slate-700/50">
             <button
               type="button"
+              disabled={!hasChanges}
               onClick={() => setViewMode('sideBySide')}
               className={`p-1 rounded-md text-[11px] font-medium transition-all ${
-                viewMode === 'sideBySide'
-                  ? 'bg-white dark:bg-slate-900 text-mint-500 shadow-sm font-semibold'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                !hasChanges
+                  ? 'opacity-40 cursor-not-allowed text-slate-400'
+                  : viewMode === 'sideBySide'
+                  ? 'bg-white dark:bg-slate-900 text-mint-500 shadow-sm font-semibold cursor-pointer'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer'
               }`}
-              title={t.viewSideBySide}
+              title={hasChanges ? t.viewSideBySide : t.noChangesToCompare}
             >
               <Columns className="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
+              disabled={!hasChanges}
               onClick={() => setViewMode('split')}
               className={`p-1 rounded-md text-[11px] font-medium transition-all ${
-                viewMode === 'split'
-                  ? 'bg-white dark:bg-slate-900 text-mint-500 shadow-sm font-semibold'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                !hasChanges
+                  ? 'opacity-40 cursor-not-allowed text-slate-400'
+                  : viewMode === 'split'
+                  ? 'bg-white dark:bg-slate-900 text-mint-500 shadow-sm font-semibold cursor-pointer'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer'
               }`}
-              title={t.viewSplit}
+              title={hasChanges ? t.viewSplit : t.noChangesToCompare}
             >
               <SplitSquareVertical className="w-3.5 h-3.5" />
             </button>
@@ -355,7 +368,7 @@ export const SideBySidePreview: React.FC = () => {
       </div>
 
       {/* Main image preview stage */}
-      <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center p-3 md:p-5 overflow-auto relative w-full h-full">
+      <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center p-4 sm:p-6 lg:p-8 overflow-auto relative w-full h-full">
         {previewLoading && (
           <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-[2px] flex items-center justify-center z-20">
             <div className="px-4 py-2.5 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 text-xs font-medium text-slate-700 dark:text-slate-200">
@@ -366,8 +379,8 @@ export const SideBySidePreview: React.FC = () => {
         )}
 
         {preview?.data_url ? (
-          viewMode === 'sideBySide' ? (
-            <div className="flex items-center justify-center max-h-full max-w-full min-h-0 min-w-0">
+          !hasChanges || viewMode === 'sideBySide' ? (
+            <div className="flex items-center justify-center max-h-full max-w-full min-h-0 min-w-0 my-auto py-2">
               <div
                 onClick={() => setIsLargeModalOpen(true)}
                 className="group relative flex flex-col items-center border border-slate-200 dark:border-slate-800 rounded-3xl p-3 bg-white/70 dark:bg-slate-900/60 shadow-2xl cursor-zoom-in hover:border-mint-500/60 transition-all max-h-full max-w-full min-h-0 min-w-0"
@@ -378,13 +391,22 @@ export const SideBySidePreview: React.FC = () => {
                 }}
                 title={t.clickToEnlarge}
               >
-                <div className="text-[10px] uppercase font-bold text-mint-500 tracking-wider mb-2 flex items-center justify-between w-full px-1.5 shrink-0">
+                <div className="text-[10px] uppercase font-bold tracking-wider mb-2 flex items-center justify-between w-full px-1.5 shrink-0">
                   <span className="flex items-center gap-1.5 font-semibold text-mint-600 dark:text-mint-400">
-                    <Sparkles className="w-3.5 h-3.5 text-mint-500" />
-                    <span>{isPdf ? `${t.liveOptimizedPreview} (${t.pdfPage1Preview})` : t.liveOptimizedPreview}</span>
+                    {hasChanges ? (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 text-mint-500" />
+                        <span>{isPdf ? `${t.liveOptimizedPreview} (${t.pdfPage1Preview})` : t.liveOptimizedPreview}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="text-slate-500 dark:text-slate-400 font-medium">{t.originalFileNoChanges}</span>
+                      </>
+                    )}
                   </span>
                   <span className="text-[10px] font-mono text-slate-400 font-normal">
-                    {preview.new_width}×{preview.new_height} px
+                    {preview.new_width || activeFile.width || 0}×{preview.new_height || activeFile.height || 0} px
                   </span>
                 </div>
                 <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-auto">
@@ -393,8 +415,8 @@ export const SideBySidePreview: React.FC = () => {
                     alt={t.result}
                     className="max-h-full max-w-full w-auto h-auto object-contain rounded-2xl shadow-sm block"
                     style={{
-                      maxHeight: 'min(620px, calc(100vh - 290px))',
-                      maxWidth: 'min(1100px, calc(100vw - 420px))',
+                      maxHeight: 'min(560px, calc(100vh - 380px))',
+                      maxWidth: 'min(1100px, calc(100vw - 440px))',
                     }}
                   />
                 </div>
@@ -403,7 +425,7 @@ export const SideBySidePreview: React.FC = () => {
           ) : (
             /* Split slider comparison mode */
             <div
-              className="relative max-h-full max-w-full flex items-center justify-center min-h-0 min-w-0"
+              className="relative max-h-full max-w-full flex items-center justify-center min-h-0 min-w-0 my-auto py-2"
               style={{
                 transform: zoomLevel !== 1 ? `scale(${zoomLevel})` : undefined,
                 transformOrigin: 'center',
@@ -434,8 +456,8 @@ export const SideBySidePreview: React.FC = () => {
                   draggable={false}
                   className="max-h-full max-w-full w-auto h-auto object-contain block rounded-3xl pointer-events-none select-none"
                   style={{
-                    maxHeight: 'min(620px, calc(100vh - 290px))',
-                    maxWidth: 'min(1100px, calc(100vw - 420px))',
+                    maxHeight: 'min(560px, calc(100vh - 380px))',
+                    maxWidth: 'min(1100px, calc(100vw - 440px))',
                   }}
                 />
 
@@ -452,8 +474,8 @@ export const SideBySidePreview: React.FC = () => {
                     draggable={false}
                     className="w-full h-full object-contain block pointer-events-none select-none"
                     style={{
-                      maxHeight: 'min(620px, calc(100vh - 290px))',
-                      maxWidth: 'min(1100px, calc(100vw - 420px))',
+                      maxHeight: 'min(560px, calc(100vh - 380px))',
+                      maxWidth: 'min(1100px, calc(100vw - 440px))',
                     }}
                   />
                 </div>

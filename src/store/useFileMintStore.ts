@@ -150,6 +150,30 @@ export const getDefaultProfiles = (dict?: TranslationDictionary): CustomProfile[
   },
 ];
 
+export const hasActiveImageChanges = (options: ImageTransformOptions): boolean => {
+  const isResizeActive = Object.keys(options.resize_mode)[0] !== 'None';
+  const isFormatActive = options.format !== 'Original';
+  const isCompressionActive = options.compress !== false;
+  const isManipulationsActive =
+    (options.rotation || 0) % 360 !== 0 ||
+    Boolean(options.flip_horizontal) ||
+    Boolean(options.flip_vertical) ||
+    Boolean(options.grayscale);
+  const isMetadataActive = options.metadata_policy !== 'KeepAll';
+  const isTargetSizeActive = Boolean(
+    options.target_size_kb && options.target_size_kb > 0 && options.compress !== false
+  );
+
+  return (
+    isResizeActive ||
+    isFormatActive ||
+    isCompressionActive ||
+    isManipulationsActive ||
+    isMetadataActive ||
+    isTargetSizeActive
+  );
+};
+
 export const formatResizeSummary = (options: ImageTransformOptions): string => {
   if (options.resize_mode.Percentage?.percent) {
     return `${options.resize_mode.Percentage.percent}%`;

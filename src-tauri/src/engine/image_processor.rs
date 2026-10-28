@@ -42,6 +42,17 @@ pub enum OutputFormat {
     Avif,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ColorFilter {
+    #[default]
+    None,
+    Grayscale,
+    Sepia,
+    Invert,
+    Binarize,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImageTransformOptions {
     pub resize_mode: ResizeMode,
@@ -58,6 +69,8 @@ pub struct ImageTransformOptions {
     pub flip_vertical: bool,
     #[serde(default)]
     pub grayscale: bool,
+    #[serde(default)]
+    pub color_filter: ColorFilter,
     #[serde(default)]
     pub metadata_policy: MetadataPolicy,
     #[serde(default = "default_compress")]
@@ -83,6 +96,7 @@ impl Default for ImageTransformOptions {
             flip_horizontal: false,
             flip_vertical: false,
             grayscale: false,
+            color_filter: ColorFilter::None,
             metadata_policy: MetadataPolicy::RemoveGps,
             compress: true,
             target_size_kb: None,
@@ -189,6 +203,64 @@ pub fn load_dynamic_image(path: &Path) -> Result<(DynamicImage, ImageFormat)> {
     Err(anyhow!("Format d'image non reconnu ou fichier illisible"))
 }
 
+fn apply_sepia(img: DynamicImage) -> DynamicImage {
+    if img.color().has_alpha() {
+        let mut rgba = img.into_rgba8();
+        for pixel in rgba.pixels_mut() {
+            let r = pixel[0] as f32;
+            let g = pixel[1] as f32;
+            let b = pixel[2] as f32;
+            // W3C Filter Effects sepia matrix (100% sepia)
+            pixel[0] = (0.393 * r + 0.769 * g + 0.189 * b).min(255.0).round() as u8;
+            pixel[1] = (0.349 * r + 0.686 * g + 0.168 * b).min(255.0).round() as u8;
+            pixel[2] = (0.272 * r + 0.534 * g + 0.131 * b).min(255.0).round() as u8;
+        }
+        DynamicImage::ImageRgba8(rgba)
+    } else {
+        let mut rgb = img.into_rgb8();
+        for pixel in rgb.pixels_mut() {
+            let r = pixel[0] as f32;
+            let g = pixel[1] as f32;
+            let b = pixel[2] as f32;
+            // W3C Filter Effects sepia matrix (100% sepia)
+            pixel[0] = (0.393 * r + 0.769 * g + 0.189 * b).min(255.0).round() as u8;
+            pixel[1] = (0.349 * r + 0.686 * g + 0.168 * b).min(255.0).round() as u8;
+            pixel[2] = (0.272 * r + 0.534 * g + 0.131 * b).min(255.0).round() as u8;
+        }
+        DynamicImage::ImageRgb8(rgb)
+    }
+}
+
+fn apply_binarize(img: DynamicImage) -> DynamicImage {
+    if img.color().has_alpha() {
+        let mut rgba = img.into_rgba8();
+        for pixel in rgba.pixels_mut() {
+            let r = pixel[0] as f32;
+            let g = pixel[1] as f32;
+            let b = pixel[2] as f32;
+            let luma = 0.299 * r + 0.587 * g + 0.114 * b;
+            let val = if luma >= 128.0 { 255 } else { 0 };
+            pixel[0] = val;
+            pixel[1] = val;
+            pixel[2] = val;
+        }
+        DynamicImage::ImageRgba8(rgba)
+    } else {
+        let mut rgb = img.into_rgb8();
+        for pixel in rgb.pixels_mut() {
+            let r = pixel[0] as f32;
+            let g = pixel[1] as f32;
+            let b = pixel[2] as f32;
+            let luma = 0.299 * r + 0.587 * g + 0.114 * b;
+            let val = if luma >= 128.0 { 255 } else { 0 };
+            pixel[0] = val;
+            pixel[1] = val;
+            pixel[2] = val;
+        }
+        DynamicImage::ImageRgb8(rgb)
+    }
+}
+
 pub fn apply_transformations(
     mut img: DynamicImage,
     options: &ImageTransformOptions,
@@ -207,8 +279,25 @@ pub fn apply_transformations(
         img = img.flipv();
     }
 
-    if options.grayscale {
-        img = img.grayscale();
+    let effective_filter = match options.color_filter {
+        ColorFilter::None if options.grayscale => ColorFilter::Grayscale,
+        filter => filter,
+    };
+
+    match effective_filter {
+        ColorFilter::None => {}
+        ColorFilter::Grayscale => {
+            img = img.grayscale();
+        }
+        ColorFilter::Sepia => {
+            img = apply_sepia(img);
+        }
+        ColorFilter::Invert => {
+            img.invert();
+        }
+        ColorFilter::Binarize => {
+            img = apply_binarize(img);
+        }
     }
 
     img
@@ -760,6 +849,7 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
             || options.flip_horizontal
             || options.flip_vertical
             || options.grayscale
+            || options.color_filter != ColorFilter::None
             || !matches!(options.resize_mode, ResizeMode::None);
 
         if is_format_same && !has_pixel_transformations {
@@ -927,6 +1017,58 @@ mod tests {
         let p = res_gray.as_luma8().unwrap().get_pixel(0, 0);
         // Red 255 converted to luma is ~54
         assert!(p[0] > 0);
+    }
+
+    #[test]
+    fn test_transformations_sepia() {
+        let mut img = DynamicImage::new_rgb8(1, 1);
+        img.as_mut_rgb8().unwrap().put_pixel(0, 0, Rgb([255, 0, 0]));
+
+        let opts_sepia = ImageTransformOptions {
+            color_filter: ColorFilter::Sepia,
+            ..Default::default()
+        };
+        let res_sepia = apply_transformations(img, &opts_sepia);
+        let p = res_sepia.as_rgb8().unwrap().get_pixel(0, 0);
+        // W3C matrix on red (255, 0, 0) -> R=100, G=89, B=69
+        assert_eq!(p[0], 100);
+        assert_eq!(p[1], 89);
+        assert_eq!(p[2], 69);
+    }
+
+    #[test]
+    fn test_transformations_invert() {
+        let mut img = DynamicImage::new_rgb8(1, 1);
+        img.as_mut_rgb8().unwrap().put_pixel(0, 0, Rgb([255, 100, 0]));
+
+        let opts_invert = ImageTransformOptions {
+            color_filter: ColorFilter::Invert,
+            ..Default::default()
+        };
+        let res_invert = apply_transformations(img, &opts_invert);
+        let p = res_invert.as_rgb8().unwrap().get_pixel(0, 0);
+        assert_eq!(p[0], 0);
+        assert_eq!(p[1], 155);
+        assert_eq!(p[2], 255);
+    }
+
+    #[test]
+    fn test_transformations_binarize() {
+        let mut img = DynamicImage::new_rgb8(2, 1);
+        // High luminance pixel (>= 128)
+        img.as_mut_rgb8().unwrap().put_pixel(0, 0, Rgb([200, 200, 200]));
+        // Low luminance pixel (< 128)
+        img.as_mut_rgb8().unwrap().put_pixel(1, 0, Rgb([50, 50, 50]));
+
+        let opts_bin = ImageTransformOptions {
+            color_filter: ColorFilter::Binarize,
+            ..Default::default()
+        };
+        let res_bin = apply_transformations(img, &opts_bin);
+        let p_bright = res_bin.as_rgb8().unwrap().get_pixel(0, 0);
+        let p_dark = res_bin.as_rgb8().unwrap().get_pixel(1, 0);
+        assert_eq!(*p_bright, Rgb([255, 255, 255]));
+        assert_eq!(*p_dark, Rgb([0, 0, 0]));
     }
 
     #[test]

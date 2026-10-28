@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useFileMintStore, formatResizeSummary } from '../../store/useFileMintStore';
-import { OutputFormat, ImageConfigTab } from '../../types';
+import { OutputFormat, ImageConfigTab, ColorFilter } from '../../types';
 import {
   Sliders,
   Maximize2,
@@ -35,7 +35,7 @@ export const ImageConfigPanel: React.FC = () => {
     setRotation,
     toggleFlipHorizontal,
     toggleFlipVertical,
-    toggleGrayscale,
+    setColorFilter,
     resetManipulations,
     customProfiles,
     activeCustomProfileId,
@@ -71,11 +71,14 @@ export const ImageConfigPanel: React.FC = () => {
   const resizeType = Object.keys(imageOptions.resize_mode)[0] || 'None';
   const activeProfilesCount = customProfiles.filter((p) => p.id !== 'preset_none').length;
 
+  const activeColorFilter =
+    imageOptions.color_filter || (imageOptions.grayscale ? 'grayscale' : 'none');
+
   const hasActiveManipulations =
     (imageOptions.rotation || 0) !== 0 ||
     imageOptions.flip_horizontal ||
     imageOptions.flip_vertical ||
-    imageOptions.grayscale;
+    activeColorFilter !== 'none';
 
   const handleSaveNewProfile = () => {
     const success = saveCustomProfile(newProfileName);
@@ -116,8 +119,15 @@ export const ImageConfigPanel: React.FC = () => {
     if (options.flip_horizontal || options.flip_vertical) {
       parts.push(t.mirrorSummary);
     }
-    if (options.grayscale) {
+    const filter = options.color_filter || (options.grayscale ? 'grayscale' : 'none');
+    if (filter === 'grayscale') {
       parts.push(t.bwSummary);
+    } else if (filter === 'sepia') {
+      parts.push(t.sepiaSummary);
+    } else if (filter === 'invert') {
+      parts.push(t.invertSummary);
+    } else if (filter === 'binarize') {
+      parts.push(t.binarizeSummary);
     }
     if (options.metadata_policy === 'RemoveGps') {
       parts.push(t.noGpsSummary);
@@ -524,33 +534,92 @@ export const ImageConfigPanel: React.FC = () => {
             {/* Separator */}
             <div className="border-t border-slate-200/70 dark:border-slate-700/50" />
 
-            {/* 3. Effets de couleur (Noir & Blanc) */}
+            {/* 3. Effets de couleur */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
                 <Palette className="w-3.5 h-3.5 text-slate-500" />
                 <span>{t.colorEffectsTitle}</span>
               </div>
 
-              <button
-                type="button"
-                onClick={toggleGrayscale}
-                className={`p-2.5 rounded-xl border w-full text-left flex items-center justify-between transition-all cursor-pointer ${
-                  imageOptions.grayscale
-                    ? 'border-mint-500 bg-mint-500/10 text-mint-600 dark:text-mint-400 font-bold shadow-sm'
-                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className={`p-1.5 rounded-lg ${imageOptions.grayscale ? 'bg-mint-500/20 text-mint-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-                    <Palette className="w-4 h-4 shrink-0" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-semibold block">{t.grayscale}</span>
-                    <span className="text-[10px] text-slate-400 font-normal leading-tight block mt-0.5">{t.grayscaleDesc}</span>
-                  </div>
+              <div className="grid grid-cols-5 gap-1.5">
+                {[
+                  {
+                    id: 'none' as ColorFilter,
+                    label: t.filterNone,
+                    desc: t.filterNoneDesc,
+                    swatch: (
+                      <span className="w-4 h-4 rounded-full bg-gradient-to-tr from-rose-400 via-amber-300 to-sky-400 border border-slate-300 dark:border-slate-600 shadow-xs" />
+                    ),
+                  },
+                  {
+                    id: 'grayscale' as ColorFilter,
+                    label: t.filterGrayscale,
+                    desc: t.filterGrayscaleDesc,
+                    swatch: (
+                      <span className="w-4 h-4 rounded-full bg-gradient-to-br from-slate-200 via-slate-400 to-slate-700 border border-slate-400/40 shadow-xs" />
+                    ),
+                  },
+                  {
+                    id: 'sepia' as ColorFilter,
+                    label: t.filterSepia,
+                    desc: t.filterSepiaDesc,
+                    swatch: (
+                      <span className="w-4 h-4 rounded-full bg-gradient-to-br from-[#edd6b3] via-[#b8860b] to-[#5c3a21] border border-amber-800/30 shadow-xs" />
+                    ),
+                  },
+                  {
+                    id: 'invert' as ColorFilter,
+                    label: t.filterInvert,
+                    desc: t.filterInvertDesc,
+                    swatch: (
+                      <span className="w-4 h-4 rounded-full bg-gradient-to-br from-indigo-500 via-fuchsia-500 to-amber-300 border border-indigo-400/30 shadow-xs" />
+                    ),
+                  },
+                  {
+                    id: 'binarize' as ColorFilter,
+                    label: t.filterBinarize,
+                    desc: t.filterBinarizeDesc,
+                    swatch: (
+                      <span className="w-4 h-4 rounded-full bg-[linear-gradient(90deg,#0f172a_50%,#ffffff_50%)] border border-slate-400 dark:border-slate-600 shadow-xs" />
+                    ),
+                  },
+                ].map(({ id, label, desc, swatch }) => {
+                  const isActive = activeColorFilter === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setColorFilter(id)}
+                      title={`${label} : ${desc}`}
+                      className={`py-2 px-1 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
+                        isActive
+                          ? 'border-mint-500 bg-mint-500/10 text-mint-600 dark:text-mint-400 font-bold shadow-sm'
+                          : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {swatch}
+                      <span className="text-[10px] sm:text-[11px] font-medium leading-tight truncate w-full text-center">
+                        {label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {activeColorFilter !== 'none' && (
+                <div className="pt-0.5 text-[10px] text-slate-400 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-mint-500 shrink-0" />
+                  <span className="truncate">
+                    {activeColorFilter === 'grayscale'
+                      ? t.filterGrayscaleDesc
+                      : activeColorFilter === 'sepia'
+                      ? t.filterSepiaDesc
+                      : activeColorFilter === 'invert'
+                      ? t.filterInvertDesc
+                      : t.filterBinarizeDesc}
+                  </span>
                 </div>
-                {imageOptions.grayscale && <Check className="w-4 h-4 text-mint-500 shrink-0 ml-2" />}
-              </button>
+              )}
             </div>
           </div>
 

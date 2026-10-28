@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
 import {
   FileItem,
+  ColorFilter,
   ImageConfigTab,
   ImageTransformOptions,
   CustomProfile,
@@ -81,6 +82,7 @@ export const getPresetOptions = (
       flip_horizontal: false,
       flip_vertical: false,
       grayscale: false,
+      color_filter: 'none',
       metadata_policy: 'KeepAll',
       compress: false,
     };
@@ -96,6 +98,7 @@ export const getPresetOptions = (
       flip_horizontal: false,
       flip_vertical: false,
       grayscale: false,
+      color_filter: 'none',
       metadata_policy: 'RemoveGps',
       compress: true,
     };
@@ -111,6 +114,7 @@ export const getPresetOptions = (
       flip_horizontal: false,
       flip_vertical: false,
       grayscale: false,
+      color_filter: 'none',
       metadata_policy: 'RemoveAll',
       compress: true,
     };
@@ -126,6 +130,7 @@ export const getPresetOptions = (
       flip_horizontal: false,
       flip_vertical: false,
       grayscale: false,
+      color_filter: 'none',
       metadata_policy: 'RemoveAll',
       compress: true,
     };
@@ -167,7 +172,8 @@ export const hasActiveImageChanges = (options: ImageTransformOptions): boolean =
     (options.rotation || 0) % 360 !== 0 ||
     Boolean(options.flip_horizontal) ||
     Boolean(options.flip_vertical) ||
-    Boolean(options.grayscale);
+    Boolean(options.grayscale) ||
+    Boolean(options.color_filter && options.color_filter !== 'none');
   const isMetadataActive = options.metadata_policy !== 'KeepAll';
   const isTargetSizeActive = Boolean(
     options.target_size_kb && options.target_size_kb > 0 && options.compress !== false
@@ -253,6 +259,12 @@ export const validateAndSanitizeProfiles = (data: unknown): CustomProfile[] | nu
       flip_horizontal: Boolean(rawOpt.flip_horizontal),
       flip_vertical: Boolean(rawOpt.flip_vertical),
       grayscale: Boolean(rawOpt.grayscale),
+      color_filter:
+        rawOpt.color_filter && ['none', 'grayscale', 'sepia', 'invert', 'binarize'].includes(rawOpt.color_filter as string)
+          ? (rawOpt.color_filter as ColorFilter)
+          : rawOpt.grayscale
+          ? 'grayscale'
+          : 'none',
       metadata_policy: ['KeepAll', 'RemoveGps', 'RemoveAll'].includes(
         rawOpt.metadata_policy as string
       )
@@ -608,6 +620,10 @@ const generateLocalBrowserPreview = (
     targetH = Math.max(1, imageOptions.resize_mode.Exact.height || origH);
   }
 
+  const activeColorFilter =
+    imageOptions.color_filter || (imageOptions.grayscale ? 'grayscale' : 'none');
+  const hasFilter = activeColorFilter !== 'none';
+
   const areaRatio = (targetW * targetH) / (origW * origH);
   const isCompressionDisabled = imageOptions.compress === false;
   const isNoTransform =
@@ -616,7 +632,7 @@ const generateLocalBrowserPreview = (
     (imageOptions.rotation || 0) === 0 &&
     !imageOptions.flip_horizontal &&
     !imageOptions.flip_vertical &&
-    !imageOptions.grayscale;
+    !hasFilter;
 
   let estimatedBytes: number;
   let savedPercentage: number;
@@ -657,7 +673,17 @@ const generateLocalBrowserPreview = (
   const isLogo = activeFile.name.toLowerCase().includes('logo');
   const bgFill = isJpegWithAlpha ? '#ffffff' : '#0f172a';
 
-  const filterStyle = imageOptions.grayscale ? 'filter: grayscale(100%);' : '';
+  let filterStyle = '';
+  if (activeColorFilter === 'grayscale') {
+    filterStyle = 'filter: grayscale(100%);';
+  } else if (activeColorFilter === 'sepia') {
+    filterStyle = 'filter: sepia(100%);';
+  } else if (activeColorFilter === 'invert') {
+    filterStyle = 'filter: invert(100%);';
+  } else if (activeColorFilter === 'binarize') {
+    filterStyle = 'filter: grayscale(100%) contrast(5000%);';
+  }
+
   const transformStyle = `transform-origin: center; ${
     imageOptions.flip_horizontal ? 'scaleX(-1) ' : ''
   }${imageOptions.flip_vertical ? 'scaleY(-1) ' : ''}${
@@ -715,12 +741,23 @@ const generateLocalBrowserPreview = (
     `;
   }
 
+  const filterBadge =
+    activeColorFilter === 'grayscale'
+      ? ' • N&B'
+      : activeColorFilter === 'sepia'
+      ? ' • Sépia'
+      : activeColorFilter === 'invert'
+      ? ' • Négatif'
+      : activeColorFilter === 'binarize'
+      ? ' • N&B Pur'
+      : '';
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
     ${graphicContent}
     <rect x="20" y="20" width="300" height="42" rx="12" fill="rgba(15,23,42,0.75)" stroke="rgba(255,255,255,0.1)"/>
     <text x="35" y="47" fill="#ffffff" font-family="sans-serif" font-size="13" font-weight="600">${targetW} × ${targetH} px • ${
     imageOptions.format === 'Original' ? activeFile.format : imageOptions.format
-  }${imageOptions.grayscale ? ' • N&B' : ''}${imageOptions.rotation ? ` • ${imageOptions.rotation}°` : ''}</text>
+  }${filterBadge}${imageOptions.rotation ? ` • ${imageOptions.rotation}°` : ''}</text>
   </svg>`;
 
   const origSvgGraphic = isLogo
@@ -865,6 +902,7 @@ interface FileMintState {
   toggleFlipHorizontal: () => void;
   toggleFlipVertical: () => void;
   toggleGrayscale: () => void;
+  setColorFilter: (filter: ColorFilter) => void;
   resetManipulations: () => void;
   applyImagePreset: (presetId: string) => void;
   saveCustomProfile: (name: string) => boolean;
@@ -1537,8 +1575,19 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
     },
 
     toggleGrayscale: () => {
-      const current = get().imageOptions.grayscale || false;
-      get().setImageOptions({ grayscale: !current });
+      const isGray =
+        get().imageOptions.color_filter === 'grayscale' || Boolean(get().imageOptions.grayscale);
+      get().setImageOptions({
+        color_filter: isGray ? 'none' : 'grayscale',
+        grayscale: !isGray,
+      });
+    },
+
+    setColorFilter: (filter: ColorFilter) => {
+      get().setImageOptions({
+        color_filter: filter,
+        grayscale: filter === 'grayscale',
+      });
     },
 
     resetManipulations: () => {
@@ -1547,6 +1596,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         flip_horizontal: false,
         flip_vertical: false,
         grayscale: false,
+        color_filter: 'none',
       });
     },
 

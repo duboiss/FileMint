@@ -221,6 +221,7 @@ impl BatchRunner {
                     || options.flip_horizontal
                     || options.flip_vertical
                     || options.grayscale
+                    || options.color_filter != image_processor::ColorFilter::None
                     || !matches!(options.resize_mode, image_processor::ResizeMode::None);
 
                 // Fast path: when compression is disabled and no pixel transforms or format conversions are needed,

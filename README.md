@@ -54,7 +54,7 @@
 ## 🚀 Key Features
 
 ### 🖼️ Image Optimization & Conversion
-- **Smart Sizing & Effects:** Pixel dimensions, percentages, max bounds, rotation (90°/180°/270°), flips, and grayscale.
+- **Smart Sizing & Effects:** Pixel dimensions, percentages, max bounds, rotation (90°/180°/270°), flips, and color effects (Grayscale, Sepia, Invert, Pure B&W thresholding).
 - **Target Size Mode (Max KB/MB):** Set a strict file ceiling (200 KB, 500 KB, 1 MB, 2 MB, 5 MB, or custom). FileMint automatically determines optimal quality and Lanczos downscaling via binary search.
 - **Quality & Lossless:** Continuous slider (10–100), quick presets (Light, Balanced, Max), lossless PNG/WebP, or bypass compression toggle for bit-exact conversions.
 - **Privacy Sanitization:** Selective GPS stripping (keeps camera settings) or complete EXIF scrub.

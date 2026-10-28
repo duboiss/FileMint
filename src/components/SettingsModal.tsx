@@ -263,10 +263,21 @@ export const SettingsModal: React.FC = () => {
                 </span>
                 <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
                   {pendingImportProfiles.map((p, idx) => {
+                    const filterType = p.options.color_filter || (p.options.grayscale ? 'grayscale' : 'none');
+                    const filterLabel =
+                      filterType === 'sepia'
+                        ? t.sepiaSummary
+                        : filterType === 'invert'
+                        ? t.invertSummary
+                        : filterType === 'binarize'
+                        ? t.binarizeSummary
+                        : filterType === 'grayscale'
+                        ? t.bwSummary
+                        : null;
                     const retouche = [
                       (p.options.rotation || 0) % 360 !== 0 ? `${(p.options.rotation || 0) % 360}°` : null,
                       p.options.flip_horizontal || p.options.flip_vertical ? t.mirrorSummary : null,
-                      p.options.grayscale ? t.bwSummary : null,
+                      filterLabel,
                     ].filter(Boolean);
                     const desc = [
                       ...retouche,
@@ -575,10 +586,21 @@ export const SettingsModal: React.FC = () => {
                         customProfiles[0];
                       if (!selectedProfile) return null;
                       const opt = selectedProfile.options;
+                      const filterType = opt.color_filter || (opt.grayscale ? 'grayscale' : 'none');
+                      const filterLabel =
+                        filterType === 'sepia'
+                          ? t.sepiaSummary
+                          : filterType === 'invert'
+                          ? t.invertSummary
+                          : filterType === 'binarize'
+                          ? t.binarizeSummary
+                          : filterType === 'grayscale'
+                          ? t.bwSummary
+                          : null;
                       const retouche = [
                         (opt.rotation || 0) % 360 !== 0 ? `${(opt.rotation || 0) % 360}°` : null,
                         opt.flip_horizontal || opt.flip_vertical ? t.mirrorSummary : null,
-                        opt.grayscale ? t.bwSummary : null,
+                        filterLabel,
                       ].filter(Boolean);
                       const summaryText = [
                         ...retouche,

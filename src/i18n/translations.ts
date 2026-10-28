@@ -73,6 +73,16 @@ export interface TranslationDictionary {
   colorEffectsTitle: string;
   grayscale: string;
   grayscaleDesc: string;
+  filterNone: string;
+  filterNoneDesc: string;
+  filterGrayscale: string;
+  filterGrayscaleDesc: string;
+  filterSepia: string;
+  filterSepiaDesc: string;
+  filterInvert: string;
+  filterInvertDesc: string;
+  filterBinarize: string;
+  filterBinarizeDesc: string;
   resetManipulations: string;
   retouchWeightNoteTitle: string;
   retouchWeightNoteDesc: string;
@@ -397,6 +407,9 @@ export interface TranslationDictionary {
   recommended: string;
   mirrorSummary: string;
   bwSummary: string;
+  sepiaSummary: string;
+  invertSummary: string;
+  binarizeSummary: string;
   noGpsSummary: string;
   noExifSummary: string;
   initializing: string;
@@ -476,9 +489,19 @@ export const translations: Record<Language, TranslationDictionary> = {
     colorEffectsTitle: 'Effets de couleur',
     grayscale: 'Niveaux de gris (Noir & Blanc)',
     grayscaleDesc: 'Convertit l\'image en monochrome pur sans altérer la netteté.',
+    filterNone: 'Aucun',
+    filterNoneDesc: 'Conserve les couleurs naturelles d\'origine.',
+    filterGrayscale: 'N&B',
+    filterGrayscaleDesc: 'Niveaux de gris doux et équilibrés.',
+    filterSepia: 'Sépia',
+    filterSepiaDesc: 'Teinte chaude et rétro façon tirage argentique.',
+    filterInvert: 'Négatif',
+    filterInvertDesc: 'Inverse les couleurs (effet négatif photo).',
+    filterBinarize: 'N&B Pur',
+    filterBinarizeDesc: 'Seuillage 1-bit à fort contraste (noir et blanc stricts).',
     resetManipulations: 'Réinitialiser les retouches',
     retouchWeightNoteTitle: 'Pourquoi le poids augmente ?',
-    retouchWeightNoteDesc: 'Toute retouche (rotation, miroir, noir & blanc) impose de ré-encoder la matrice de pixels. Sans compression (ou à 100%), ré-encoder des pixels bruts génère un fichier plus volumineux que l\'original déjà compressé. Le nombre de pixels restant le même, le poids estimé est identique pour chaque angle ou miroir.',
+    retouchWeightNoteDesc: 'Toute retouche (rotation, miroir, effet de couleur) impose de ré-encoder la matrice de pixels. Sans compression (ou à 100%), ré-encoder des pixels bruts génère un fichier plus volumineux que l\'original déjà compressé. Le nombre de pixels restant le même, le poids estimé est identique pour chaque angle, miroir ou filtre.',
     presetNone: 'Aucun',
     presetNoneDesc: 'Conserve le fichier d\'origine sans modification, redimensionnement ni compression.',
     presetWeb: 'Web',
@@ -794,6 +817,9 @@ export const translations: Record<Language, TranslationDictionary> = {
     recommended: 'Recommandé',
     mirrorSummary: 'Miroir',
     bwSummary: 'N&B',
+    sepiaSummary: 'Sépia',
+    invertSummary: 'Négatif',
+    binarizeSummary: 'N&B Pur',
     noGpsSummary: 'Sans GPS',
     noExifSummary: 'Sans EXIF',
     initializing: 'Initialisation...',
@@ -872,9 +898,19 @@ export const translations: Record<Language, TranslationDictionary> = {
     colorEffectsTitle: 'Color effects',
     grayscale: 'Grayscale (Black & White)',
     grayscaleDesc: 'Converts image to pure monochrome while retaining crisp details.',
+    filterNone: 'None',
+    filterNoneDesc: 'Preserves original natural colors.',
+    filterGrayscale: 'B&W',
+    filterGrayscaleDesc: 'Smooth and balanced grayscale levels.',
+    filterSepia: 'Sepia',
+    filterSepiaDesc: 'Warm vintage photographic tone.',
+    filterInvert: 'Invert',
+    filterInvertDesc: 'Inverts colors (photo negative effect).',
+    filterBinarize: 'Pure B&W',
+    filterBinarizeDesc: 'High-contrast 1-bit thresholding (strict black & white).',
     resetManipulations: 'Reset adjustments',
     retouchWeightNoteTitle: 'Why does file size increase?',
-    retouchWeightNoteDesc: 'Any adjustment (rotation, mirror, grayscale) requires re-encoding the pixel stream. Without compression (or at 100%), re-encoding raw pixels produces a larger file than the compressed original. Because total pixel count is unchanged, the estimated size remains identical for any angle or flip.',
+    retouchWeightNoteDesc: 'Any adjustment (rotation, mirror, color effect) requires re-encoding the pixel stream. Without compression (or at 100%), re-encoding raw pixels produces a larger file than the compressed original. Because total pixel count is unchanged, the estimated size remains identical for any angle, flip, or filter.',
     presetNone: 'None',
     presetNoneDesc: 'Preserves the original file without modification, resizing, or compression.',
     presetWeb: 'Web',
@@ -1190,6 +1226,9 @@ export const translations: Record<Language, TranslationDictionary> = {
     recommended: 'Recommended',
     mirrorSummary: 'Mirror',
     bwSummary: 'B&W',
+    sepiaSummary: 'Sepia',
+    invertSummary: 'Invert',
+    binarizeSummary: 'Pure B&W',
     noGpsSummary: 'No GPS',
     noExifSummary: 'No EXIF',
     initializing: 'Initializing...',

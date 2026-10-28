@@ -31,6 +31,8 @@ export type ResizeMode =
 
 export type OutputFormat = 'Original' | 'Jpeg' | 'Png' | 'Webp' | 'Avif';
 
+export type ColorFilter = 'none' | 'grayscale' | 'sepia' | 'invert' | 'binarize';
+
 export interface ImageTransformOptions {
   resize_mode: {
     None?: null;
@@ -47,6 +49,7 @@ export interface ImageTransformOptions {
   flip_horizontal: boolean;
   flip_vertical: boolean;
   grayscale: boolean;
+  color_filter?: ColorFilter;
   metadata_policy: MetadataPolicy;
   compress?: boolean;
   target_size_kb?: number | null;

@@ -65,7 +65,7 @@ export const Header: React.FC = () => {
                 className={`flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm transition-all animate-fadeIn ${
                   updateInstalling
                     ? 'bg-mint-500/60 text-slate-900 cursor-wait'
-                    : 'bg-mint-500 hover:bg-mint-600 text-slate-950 shadow-mint-500/25 hover:scale-[1.02] active:scale-[0.98] cursor-pointer'
+                    : 'bg-mint-500 hover:bg-mint-600 text-slate-950 shadow-mint-500/25 cursor-pointer'
                 }`}
                 title={`${t.updateRestartToApply} (v${updateInfo.latest_version})`}
               >
@@ -100,7 +100,7 @@ export const Header: React.FC = () => {
               <button
                 type="button"
                 onClick={() => downloadUpdate()}
-                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-mint-500/15 text-mint-600 dark:text-mint-300 border border-mint-500/30 hover:bg-mint-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-mint-500/15 text-mint-600 dark:text-mint-300 border border-mint-500/30 hover:bg-mint-500/25 transition-all cursor-pointer"
                 title={`${t.updateAction.replace('{version}', updateInfo.latest_version)} (${t.openDownloadPage})`}
               >
                 <ExternalLink className="w-3.5 h-3.5 shrink-0 text-mint-500" />

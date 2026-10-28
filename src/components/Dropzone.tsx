@@ -81,7 +81,7 @@ export const Dropzone: React.FC = () => {
 
         <button
           onClick={() => handlePickFiles()}
-          className="px-6 py-3 rounded-xl bg-mint-500 hover:bg-mint-600 text-slate-950 font-semibold text-sm shadow-lg shadow-mint-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
+          className="px-6 py-3 rounded-xl bg-mint-500 hover:bg-mint-600 text-slate-950 font-semibold text-sm shadow-lg shadow-mint-500/25 transition-colors flex items-center gap-2 cursor-pointer"
         >
           <Zap className="w-4 h-4 fill-slate-950" />
           {t.selectFiles}

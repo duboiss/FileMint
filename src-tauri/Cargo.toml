@@ -1,6 +1,6 @@
 [package]
 name = "filemint"
-version = "1.7.19"
+version = "1.7.20"
 description = "FileMint - Local file optimizer and converter"
 authors = ["FileMint Team"]
 license = "MIT"

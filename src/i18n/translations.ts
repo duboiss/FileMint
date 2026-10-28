@@ -273,7 +273,9 @@ export interface TranslationDictionary {
   lifetimeLocalNotice: string;
   lifetimeMilestone: string;
   lifetimePill: string;
+  lifetimePillSavedSingle: string;
   lifetimePillFiles: string;
+  lifetimePillFilesSingle: string;
   resetStats: string;
   resetStatsConfirm: string;
   generalSection: string;
@@ -629,7 +631,9 @@ export const translations: Record<Language, TranslationDictionary> = {
     lifetimeLocalNotice: '100% calculé et stocké localement sur cet ordinateur.',
     lifetimeMilestone: 'Impact cumulé depuis l\'installation',
     lifetimePill: 'économisés au total',
+    lifetimePillSavedSingle: 'économisé au total',
     lifetimePillFiles: 'fichiers optimisés',
+    lifetimePillFilesSingle: 'fichier optimisé',
     resetStats: 'Réinitialiser les compteurs',
     resetStatsConfirm: 'Voulez-vous vraiment remettre à zéro les compteurs d\'espace économisé et de fichiers ?',
     generalSection: 'Préférences générales',
@@ -984,7 +988,9 @@ export const translations: Record<Language, TranslationDictionary> = {
     lifetimeLocalNotice: '100% computed and stored locally on this machine.',
     lifetimeMilestone: 'Lifetime impact since installation',
     lifetimePill: 'saved in total',
+    lifetimePillSavedSingle: 'saved in total',
     lifetimePillFiles: 'files optimized',
+    lifetimePillFilesSingle: 'file optimized',
     resetStats: 'Reset counters',
     resetStatsConfirm: 'Are you sure you want to reset all lifetime storage and file counters?',
     generalSection: 'General Preferences',

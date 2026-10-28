@@ -431,14 +431,9 @@ export const ImageConfigPanel: React.FC = () => {
           <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-800/40 space-y-4">
             {/* 1. Rotation */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                  <RotateCw className="w-3.5 h-3.5 text-slate-500" />
-                  <span>{t.rotationTitle}</span>
-                </div>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700/60 font-mono text-slate-500 dark:text-slate-300">
-                  {(imageOptions.rotation || 0) % 360}°
-                </span>
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                <RotateCw className="w-3.5 h-3.5 text-slate-500" />
+                <span>{t.rotationTitle}</span>
               </div>
 
               <div className="grid grid-cols-4 gap-1.5">

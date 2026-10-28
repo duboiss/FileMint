@@ -276,25 +276,32 @@ export const DestinationPicker: React.FC = () => {
       ];
 
   return (
-    <div className="border-t border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-4 px-6 flex flex-col gap-3 select-none backdrop-blur-md">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500">
+    <div className="border-t border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-3.5 sm:p-4 px-4 sm:px-6 flex flex-col gap-3 select-none backdrop-blur-md">
+      <div className="flex items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 overflow-hidden">
+          <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 shrink-0">
             <Folder className="w-4 h-4 text-mint-500" />
           </div>
-          <div>
-            <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-              <span>{t.destinationFolder} :</span>
-              <span className="font-mono text-mint-600 dark:text-mint-400">
-                {destinationConfig.mode === 'FileMintSubfolder' && `./${subfolderName}/ (${t.modeSubfolder})`}
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 min-w-0">
+              <span className="shrink-0">{t.destinationFolder}&nbsp;:</span>
+              <span className="font-mono text-mint-600 dark:text-mint-400 font-bold truncate">
+                {destinationConfig.mode === 'FileMintSubfolder' && `./${subfolderName}/`}
                 {destinationConfig.mode === 'SameAsOriginal' && t.modeSame}
-                {typeof destinationConfig.mode === 'object' && `${t.modeCustom} : ${destinationConfig.mode.Custom}`}
+                {typeof destinationConfig.mode === 'object' && destinationConfig.mode.Custom}
               </span>
+              {destinationConfig.mode === 'FileMintSubfolder' && (
+                <span className="hidden xl:inline text-slate-400 font-normal text-[11px] truncate">
+                  ({t.modeSubfolder})
+                </span>
+              )}
             </div>
-            <p className="text-[11px] text-slate-400 flex items-center gap-2">
-              <span>{destinationConfig.mode === 'FileMintSubfolder' ? t.modeSubfolderDesc : t.modeSameDesc}</span>
+            <p className="text-[11px] text-slate-400 flex items-center gap-2 truncate max-w-full mt-0.5">
+              <span className="truncate">
+                {destinationConfig.mode === 'FileMintSubfolder' ? t.modeSubfolderDesc : t.modeSameDesc}
+              </span>
               {currentPattern !== '{nom}' && (
-                <span className="font-mono text-[10px] text-mint-600 dark:text-mint-400 bg-mint-500/10 px-1.5 py-0.2 rounded">
+                <span className="font-mono text-[10px] text-mint-600 dark:text-mint-400 bg-mint-500/10 px-1.5 py-0.2 rounded shrink-0">
                   {currentPattern}
                 </span>
               )}
@@ -302,19 +309,20 @@ export const DestinationPicker: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/40 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2.5 sm:px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/40 transition-colors cursor-pointer shrink-0"
           >
-            <span>{t.destinationAndNaming}</span>
+            <span className="hidden sm:inline">{t.destinationAndNaming}</span>
+            <span className="sm:hidden">{language === 'en' ? 'Destination' : 'Dossier'}</span>
             {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
 
           <button
             onClick={handleLaunch}
             disabled={!canLaunch}
-            className={`px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg transition-all flex items-center gap-2 ${
+            className={`px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg transition-all flex items-center gap-2 shrink-0 whitespace-nowrap ${
               !canLaunch
                 ? 'bg-slate-200/80 dark:bg-slate-800 text-slate-400 dark:text-slate-500 opacity-60 cursor-not-allowed shadow-none'
                 : 'bg-mint-500 hover:bg-mint-600 text-slate-950 shadow-mint-500/20 hover:scale-[1.02] active:scale-[0.98] cursor-pointer'

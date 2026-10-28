@@ -815,11 +815,6 @@ export const ImageConfigPanel: React.FC = () => {
               <div className="min-w-0">
                 <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                   <span>{t.enableCompression}</span>
-                  {imageOptions.compress === false && (
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium">
-                      {t.noCompressionBadge}
-                    </span>
-                  )}
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
                   {imageOptions.compress !== false ? t.enableCompressionDesc : t.noCompressionDesc}

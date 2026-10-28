@@ -453,6 +453,7 @@ export const ImageConfigPanel: React.FC = () => {
                     key={angle}
                     type="button"
                     onClick={() => setRotation(angle)}
+                    title={label}
                     className={`py-2 px-1 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5 cursor-pointer ${
                       isActive
                         ? 'border-mint-500 bg-mint-500/10 text-mint-600 dark:text-mint-400 font-bold shadow-sm'
@@ -463,7 +464,7 @@ export const ImageConfigPanel: React.FC = () => {
                       className="w-4 h-4 transition-transform duration-300"
                       style={{ transform: `rotate(${angle}deg)` }}
                     />
-                    <span className="text-[10px] truncate max-w-full">{label}</span>
+                    <span className="text-[11px] font-mono font-medium">{angle}°</span>
                   </button>
                 );
               })}

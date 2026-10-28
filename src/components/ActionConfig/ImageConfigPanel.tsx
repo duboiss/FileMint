@@ -26,6 +26,7 @@ import {
   Camera,
   Target,
   Info,
+  ArrowRight,
 } from 'lucide-react';
 
 export const ImageConfigPanel: React.FC = () => {
@@ -79,6 +80,41 @@ export const ImageConfigPanel: React.FC = () => {
     imageOptions.flip_horizontal ||
     imageOptions.flip_vertical ||
     activeColorFilter !== 'none';
+
+  // Live target dimensions calculation for the resize panel
+  const isRotated = ((imageOptions.rotation || 0) % 180) !== 0;
+  const rawW = activeFile?.width || preview?.original_width || 0;
+  const rawH = activeFile?.height || preview?.original_height || 0;
+  const baseW = isRotated ? rawH : rawW;
+  const baseH = isRotated ? rawW : rawH;
+
+  let calculatedW = baseW;
+  let calculatedH = baseH;
+
+  if (imageOptions.resize_mode.Percentage?.percent) {
+    const p = (imageOptions.resize_mode.Percentage.percent || 100) / 100;
+    calculatedW = Math.max(1, Math.round(baseW * p));
+    calculatedH = Math.max(1, Math.round(baseH * p));
+  } else if (imageOptions.resize_mode.MaxBounds) {
+    const maxW = imageOptions.resize_mode.MaxBounds.max_width || 1920;
+    const maxH = imageOptions.resize_mode.MaxBounds.max_height || 1080;
+    if (baseW > 0 && baseH > 0) {
+      const factorW = maxW / baseW;
+      const factorH = maxH / baseH;
+      const factor = Math.min(factorW, factorH);
+      if (!imageOptions.do_not_upscale || factor < 1.0) {
+        calculatedW = Math.max(1, Math.round(baseW * factor));
+        calculatedH = Math.max(1, Math.round(baseH * factor));
+      }
+    }
+  } else if (imageOptions.resize_mode.Exact) {
+    calculatedW = Math.max(1, imageOptions.resize_mode.Exact.width || baseW);
+    calculatedH = Math.max(1, imageOptions.resize_mode.Exact.height || baseH);
+  }
+
+  const liveW = preview?.new_width || calculatedW;
+  const liveH = preview?.new_height || calculatedH;
+  const hasDimensionChange = (liveW !== baseW || liveH !== baseH) && baseW > 0 && baseH > 0;
 
   const handleSaveNewProfile = () => {
     const success = saveCustomProfile(newProfileName);
@@ -653,6 +689,14 @@ export const ImageConfigPanel: React.FC = () => {
               <Maximize2 className="w-3.5 h-3.5 text-mint-500 shrink-0" />
               <span>{t.resizeMode}</span>
             </div>
+            {liveW > 0 && liveH > 0 && (
+              <span
+                className="font-mono text-[11px] font-bold text-mint-600 dark:text-mint-400 bg-mint-500/10 border border-mint-500/20 px-2 py-0.5 rounded-lg shrink-0"
+                title={`${t.previewDimensions} : ${liveW} × ${liveH} px`}
+              >
+                {liveW} × {liveH} px
+              </span>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-xs">
@@ -699,8 +743,8 @@ export const ImageConfigPanel: React.FC = () => {
                 setImageOptions({
                   resize_mode: {
                     Exact: {
-                      width: activeFile?.width || 1200,
-                      height: activeFile?.height || 800,
+                      width: liveW || activeFile?.width || 1200,
+                      height: liveH || activeFile?.height || 800,
                     },
                   },
                 })
@@ -715,13 +759,49 @@ export const ImageConfigPanel: React.FC = () => {
             </button>
           </div>
 
+          {/* Dimensions en cours dans l'aperçu */}
+          {liveW > 0 && liveH > 0 && (
+            <div className="p-3 rounded-2xl bg-white/70 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+              <div className="min-w-0">
+                <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
+                  {t.previewDimensions}
+                </span>
+                <div className="flex items-center gap-1.5 font-mono mt-0.5 truncate">
+                  {hasDimensionChange && baseW > 0 && (
+                    <>
+                      <span className="text-slate-400 line-through text-[11px] shrink-0">
+                        {baseW} × {baseH}
+                      </span>
+                      <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
+                    </>
+                  )}
+                  <span className="font-bold text-mint-600 dark:text-mint-400 text-xs shrink-0">
+                    {liveW} × {liveH} px
+                  </span>
+                </div>
+              </div>
+              {hasDimensionChange && baseW > 0 && (
+                <span className="px-2 py-0.5 rounded-md bg-mint-500/15 text-mint-600 dark:text-mint-400 font-mono font-bold text-[11px] shrink-0 ml-2">
+                  {Math.round((liveW / baseW) * 100)}%
+                </span>
+              )}
+            </div>
+          )}
+
           {resizeType === 'Percentage' && (
             <div className="p-4 rounded-2xl bg-white/70 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2">
               <div className="flex justify-between text-xs font-medium">
                 <span className="text-slate-500">{t.targetPercentage}</span>
-                <span className="font-mono font-bold text-mint-500">
-                  {imageOptions.resize_mode.Percentage?.percent || 50}%
-                </span>
+                <div className="flex items-center gap-1.5 font-mono">
+                  <span className="font-bold text-mint-500">
+                    {imageOptions.resize_mode.Percentage?.percent || 50}%
+                  </span>
+                  {liveW > 0 && (
+                    <span className="text-[11px] text-slate-400 font-normal">
+                      ({liveW} × {liveH} px)
+                    </span>
+                  )}
+                </div>
               </div>
               <input
                 type="range"

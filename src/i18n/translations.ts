@@ -419,6 +419,7 @@ export interface TranslationDictionary {
   failedCount: string;
   processedFilesDetails: string;
   liveOptimizedPreview: string;
+  previewDimensions: string;
 }
 
 export const translations: Record<Language, TranslationDictionary> = {
@@ -829,6 +830,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     failedCount: 'échec(s)',
     processedFilesDetails: 'Détail des fichiers traités',
     liveOptimizedPreview: 'Aperçu du résultat en direct',
+    previewDimensions: 'Dimensions dans l\'aperçu',
   },
 
   en: {
@@ -1238,6 +1240,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     failedCount: 'failed',
     processedFilesDetails: 'Processed files details',
     liveOptimizedPreview: 'Live Optimized Preview',
+    previewDimensions: 'Live preview dimensions',
   },
 };
 

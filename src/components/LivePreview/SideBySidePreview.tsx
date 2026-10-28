@@ -12,7 +12,6 @@ import {
   Sparkles,
   Columns,
   SplitSquareVertical,
-  Check,
 } from 'lucide-react';
 import { LargePreviewModal } from './LargePreviewModal';
 import { PdfPageGrid } from './PdfPageGrid';
@@ -231,6 +230,11 @@ export const SideBySidePreview: React.FC = () => {
                   )}
                 </>
               )}
+              {preview && (preview.new_width || activeFile.width) ? (
+                <span className="shrink-0 text-slate-400">
+                  • {preview.new_width || activeFile.width}×{preview.new_height || activeFile.height} px
+                </span>
+              ) : null}
             </div>
           </div>
 
@@ -405,26 +409,6 @@ export const SideBySidePreview: React.FC = () => {
                 }}
                 title={t.clickToEnlarge}
               >
-                {/* Floating badge */}
-                <div className="absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-slate-950/75 dark:bg-slate-900/90 text-slate-100 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none shadow-lg border border-white/10 flex items-center gap-1.5">
-                  {hasChanges ? (
-                    <>
-                      <Sparkles className="w-3.5 h-3.5 text-mint-400" />
-                      <span className="text-mint-400 font-semibold">
-                        {isPdf ? `${t.liveOptimizedPreview} (${t.pdfPage1Preview})` : t.liveOptimizedPreview}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="text-slate-400 font-medium">{t.originalFileNoChanges}</span>
-                    </>
-                  )}
-                  <span className="font-mono text-slate-400 font-normal">
-                    ({preview.new_width || activeFile.width || 0}×{preview.new_height || activeFile.height || 0})
-                  </span>
-                </div>
-
                 <img
                   src={preview.data_url}
                   alt={t.result}

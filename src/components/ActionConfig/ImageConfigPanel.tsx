@@ -29,6 +29,14 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
+const MIN_DIMENSION = 1;
+const MAX_DIMENSION = 16384;
+
+const clampDimension = (val: number): number => {
+  if (isNaN(val)) return MIN_DIMENSION;
+  return Math.min(MAX_DIMENSION, Math.max(MIN_DIMENSION, val));
+};
+
 export const ImageConfigPanel: React.FC = () => {
   const {
     imageOptions,
@@ -93,28 +101,184 @@ export const ImageConfigPanel: React.FC = () => {
 
   if (imageOptions.resize_mode.Percentage?.percent) {
     const p = (imageOptions.resize_mode.Percentage.percent || 100) / 100;
-    calculatedW = Math.max(1, Math.round(baseW * p));
-    calculatedH = Math.max(1, Math.round(baseH * p));
+    calculatedW = clampDimension(Math.round(baseW * p));
+    calculatedH = clampDimension(Math.round(baseH * p));
   } else if (imageOptions.resize_mode.MaxBounds) {
-    const maxW = imageOptions.resize_mode.MaxBounds.max_width || 1920;
-    const maxH = imageOptions.resize_mode.MaxBounds.max_height || 1080;
+    const maxW = clampDimension(imageOptions.resize_mode.MaxBounds.max_width || 1920);
+    const maxH = clampDimension(imageOptions.resize_mode.MaxBounds.max_height || 1080);
     if (baseW > 0 && baseH > 0) {
       const factorW = maxW / baseW;
       const factorH = maxH / baseH;
       const factor = Math.min(factorW, factorH);
       if (!imageOptions.do_not_upscale || factor < 1.0) {
-        calculatedW = Math.max(1, Math.round(baseW * factor));
-        calculatedH = Math.max(1, Math.round(baseH * factor));
+        calculatedW = clampDimension(Math.round(baseW * factor));
+        calculatedH = clampDimension(Math.round(baseH * factor));
       }
     }
   } else if (imageOptions.resize_mode.Exact) {
-    calculatedW = Math.max(1, imageOptions.resize_mode.Exact.width || baseW);
-    calculatedH = Math.max(1, imageOptions.resize_mode.Exact.height || baseH);
+    calculatedW = clampDimension(imageOptions.resize_mode.Exact.width || baseW);
+    calculatedH = clampDimension(imageOptions.resize_mode.Exact.height || baseH);
   }
 
-  const liveW = preview?.new_width || calculatedW;
-  const liveH = preview?.new_height || calculatedH;
+  const liveW = preview?.new_width ? clampDimension(preview.new_width) : calculatedW;
+  const liveH = preview?.new_height ? clampDimension(preview.new_height) : calculatedH;
   const hasDimensionChange = (liveW !== baseW || liveH !== baseH) && baseW > 0 && baseH > 0;
+
+  const handleMaxBoundWidthChange = (valStr: string) => {
+    if (valStr === '') {
+      setImageOptions({
+        resize_mode: {
+          MaxBounds: {
+            max_width: 0,
+            max_height: imageOptions.resize_mode.MaxBounds?.max_height || 1080,
+          },
+        },
+      });
+      return;
+    }
+    let w = parseInt(valStr, 10);
+    if (isNaN(w)) return;
+    if (w > MAX_DIMENSION) w = MAX_DIMENSION;
+    if (w < 0) w = 0;
+
+    let newH = imageOptions.resize_mode.MaxBounds?.max_height || 1080;
+    if (imageOptions.maintain_aspect_ratio && w > 0) {
+      if (baseW > 0 && baseH > 0) {
+        newH = clampDimension(Math.round(w * (baseH / baseW)));
+      } else if (newH > 0) {
+        const curW = imageOptions.resize_mode.MaxBounds?.max_width || 1920;
+        if (curW > 0) {
+          newH = clampDimension(Math.round(w * (newH / curW)));
+        }
+      }
+    }
+
+    setImageOptions({
+      resize_mode: {
+        MaxBounds: {
+          max_width: w,
+          max_height: newH,
+        },
+      },
+    });
+  };
+
+  const handleMaxBoundHeightChange = (valStr: string) => {
+    if (valStr === '') {
+      setImageOptions({
+        resize_mode: {
+          MaxBounds: {
+            max_width: imageOptions.resize_mode.MaxBounds?.max_width || 1920,
+            max_height: 0,
+          },
+        },
+      });
+      return;
+    }
+    let h = parseInt(valStr, 10);
+    if (isNaN(h)) return;
+    if (h > MAX_DIMENSION) h = MAX_DIMENSION;
+    if (h < 0) h = 0;
+
+    let newW = imageOptions.resize_mode.MaxBounds?.max_width || 1920;
+    if (imageOptions.maintain_aspect_ratio && h > 0) {
+      if (baseW > 0 && baseH > 0) {
+        newW = clampDimension(Math.round(h * (baseW / baseH)));
+      } else if (newW > 0) {
+        const curH = imageOptions.resize_mode.MaxBounds?.max_height || 1080;
+        if (curH > 0) {
+          newW = clampDimension(Math.round(h * (newW / curH)));
+        }
+      }
+    }
+
+    setImageOptions({
+      resize_mode: {
+        MaxBounds: {
+          max_width: newW,
+          max_height: h,
+        },
+      },
+    });
+  };
+
+  const handleExactWidthChange = (valStr: string) => {
+    if (valStr === '') {
+      setImageOptions({
+        resize_mode: {
+          Exact: {
+            width: 0,
+            height: imageOptions.resize_mode.Exact?.height || 0,
+          },
+        },
+      });
+      return;
+    }
+    let w = parseInt(valStr, 10);
+    if (isNaN(w)) return;
+    if (w > MAX_DIMENSION) w = MAX_DIMENSION;
+    if (w < 0) w = 0;
+
+    let newH = imageOptions.resize_mode.Exact?.height || 0;
+    if (imageOptions.maintain_aspect_ratio && w > 0) {
+      if (baseW > 0 && baseH > 0) {
+        newH = clampDimension(Math.round(w * (baseH / baseW)));
+      } else if (newH > 0) {
+        const curW = imageOptions.resize_mode.Exact?.width || 0;
+        if (curW > 0) {
+          newH = clampDimension(Math.round(w * (newH / curW)));
+        }
+      }
+    }
+
+    setImageOptions({
+      resize_mode: {
+        Exact: {
+          width: w,
+          height: newH,
+        },
+      },
+    });
+  };
+
+  const handleExactHeightChange = (valStr: string) => {
+    if (valStr === '') {
+      setImageOptions({
+        resize_mode: {
+          Exact: {
+            width: imageOptions.resize_mode.Exact?.width || 0,
+            height: 0,
+          },
+        },
+      });
+      return;
+    }
+    let h = parseInt(valStr, 10);
+    if (isNaN(h)) return;
+    if (h > MAX_DIMENSION) h = MAX_DIMENSION;
+    if (h < 0) h = 0;
+
+    let newW = imageOptions.resize_mode.Exact?.width || 0;
+    if (imageOptions.maintain_aspect_ratio && h > 0) {
+      if (baseW > 0 && baseH > 0) {
+        newW = clampDimension(Math.round(h * (baseW / baseH)));
+      } else if (newW > 0) {
+        const curH = imageOptions.resize_mode.Exact?.height || 0;
+        if (curH > 0) {
+          newW = clampDimension(Math.round(h * (newW / curH)));
+        }
+      }
+    }
+
+    setImageOptions({
+      resize_mode: {
+        Exact: {
+          width: newW,
+          height: h,
+        },
+      },
+    });
+  };
 
   const handleSaveNewProfile = () => {
     const success = saveCustomProfile(newProfileName);
@@ -717,11 +881,22 @@ export const ImageConfigPanel: React.FC = () => {
               {t.resizePercentage}
             </button>
             <button
-              onClick={() =>
+              onClick={() => {
+                let initW = 1920;
+                let initH = 1080;
+                if (baseW > 0 && baseH > 0) {
+                  if (baseW >= baseH) {
+                    initW = Math.min(1920, baseW);
+                    initH = clampDimension(Math.round(initW * (baseH / baseW)));
+                  } else {
+                    initH = Math.min(1920, baseH);
+                    initW = clampDimension(Math.round(initH * (baseW / baseH)));
+                  }
+                }
                 setImageOptions({
-                  resize_mode: { MaxBounds: { max_width: 1920, max_height: 1080 } },
-                })
-              }
+                  resize_mode: { MaxBounds: { max_width: initW, max_height: initH } },
+                });
+              }}
               className={`p-2.5 rounded-xl border text-center transition-all ${
                 resizeType === 'MaxBounds'
                   ? 'border-mint-500 bg-mint-500/10 font-bold text-mint-600 dark:text-mint-400'
@@ -731,16 +906,18 @@ export const ImageConfigPanel: React.FC = () => {
               {t.resizeMaxBounds}
             </button>
             <button
-              onClick={() =>
+              onClick={() => {
+                const targetW = clampDimension(liveW || activeFile?.width || 1200);
+                const targetH = clampDimension(liveH || activeFile?.height || 800);
                 setImageOptions({
                   resize_mode: {
                     Exact: {
-                      width: liveW || activeFile?.width || 1200,
-                      height: liveH || activeFile?.height || 800,
+                      width: targetW,
+                      height: targetH,
                     },
                   },
-                })
-              }
+                });
+              }}
               className={`p-2.5 rounded-xl border text-center transition-all ${
                 resizeType === 'Exact'
                   ? 'border-mint-500 bg-mint-500/10 font-bold text-mint-600 dark:text-mint-400'
@@ -833,40 +1010,54 @@ export const ImageConfigPanel: React.FC = () => {
               <span className="text-xs text-slate-500 block">{t.maxDimensions}</span>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
-                  <label className="text-[10px] font-semibold text-slate-400 block mb-1">{t.maxWidth}</label>
+                  <label className="text-[10px] font-semibold text-slate-400 block mb-1">
+                    {t.maxWidth}{' '}
+                    <span className="text-[9px] font-normal text-slate-400">
+                      ({t.pixelLimitHint})
+                    </span>
+                  </label>
                   <input
                     type="number"
-                    min="1"
-                    value={imageOptions.resize_mode.MaxBounds?.max_width || 1920}
-                    onChange={(e) =>
-                      setImageOptions({
-                        resize_mode: {
-                          MaxBounds: {
-                            max_width: Number(e.target.value),
-                            max_height: imageOptions.resize_mode.MaxBounds?.max_height || 1080,
-                          },
-                        },
-                      })
+                    min={MIN_DIMENSION}
+                    max={MAX_DIMENSION}
+                    value={
+                      imageOptions.resize_mode.MaxBounds?.max_width === 0
+                        ? ''
+                        : (imageOptions.resize_mode.MaxBounds?.max_width ?? 1920)
                     }
+                    onChange={(e) => handleMaxBoundWidthChange(e.target.value)}
+                    onBlur={() => {
+                      const cur = imageOptions.resize_mode.MaxBounds?.max_width;
+                      if (!cur || cur < MIN_DIMENSION) {
+                        handleMaxBoundWidthChange(String(baseW > 0 ? Math.min(1920, baseW) : 1920));
+                      }
+                    }}
                     className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-semibold text-slate-400 block mb-1">{t.maxHeight}</label>
+                  <label className="text-[10px] font-semibold text-slate-400 block mb-1">
+                    {t.maxHeight}{' '}
+                    <span className="text-[9px] font-normal text-slate-400">
+                      ({t.pixelLimitHint})
+                    </span>
+                  </label>
                   <input
                     type="number"
-                    min="1"
-                    value={imageOptions.resize_mode.MaxBounds?.max_height || 1080}
-                    onChange={(e) =>
-                      setImageOptions({
-                        resize_mode: {
-                          MaxBounds: {
-                            max_width: imageOptions.resize_mode.MaxBounds?.max_width || 1920,
-                            max_height: Number(e.target.value),
-                          },
-                        },
-                      })
+                    min={MIN_DIMENSION}
+                    max={MAX_DIMENSION}
+                    value={
+                      imageOptions.resize_mode.MaxBounds?.max_height === 0
+                        ? ''
+                        : (imageOptions.resize_mode.MaxBounds?.max_height ?? 1080)
                     }
+                    onChange={(e) => handleMaxBoundHeightChange(e.target.value)}
+                    onBlur={() => {
+                      const cur = imageOptions.resize_mode.MaxBounds?.max_height;
+                      if (!cur || cur < MIN_DIMENSION) {
+                        handleMaxBoundHeightChange(String(baseH > 0 ? Math.min(1080, baseH) : 1080));
+                      }
+                    }}
                     className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono"
                   />
                 </div>
@@ -879,40 +1070,54 @@ export const ImageConfigPanel: React.FC = () => {
               <span className="text-xs text-slate-500 block">{t.exactDimensions}</span>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
-                  <label className="text-[10px] font-semibold text-slate-400 block mb-1">{t.width}</label>
+                  <label className="text-[10px] font-semibold text-slate-400 block mb-1">
+                    {t.width}{' '}
+                    <span className="text-[9px] font-normal text-slate-400">
+                      ({t.pixelLimitHint})
+                    </span>
+                  </label>
                   <input
                     type="number"
-                    min="1"
-                    value={imageOptions.resize_mode.Exact?.width || 0}
-                    onChange={(e) =>
-                      setImageOptions({
-                        resize_mode: {
-                          Exact: {
-                            width: Number(e.target.value),
-                            height: imageOptions.resize_mode.Exact?.height || 0,
-                          },
-                        },
-                      })
+                    min={MIN_DIMENSION}
+                    max={MAX_DIMENSION}
+                    value={
+                      imageOptions.resize_mode.Exact?.width === 0
+                        ? ''
+                        : (imageOptions.resize_mode.Exact?.width ?? (baseW || 1200))
                     }
+                    onChange={(e) => handleExactWidthChange(e.target.value)}
+                    onBlur={() => {
+                      const cur = imageOptions.resize_mode.Exact?.width;
+                      if (!cur || cur < MIN_DIMENSION) {
+                        handleExactWidthChange(String(baseW > 0 ? baseW : 1200));
+                      }
+                    }}
                     className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-semibold text-slate-400 block mb-1">{t.height}</label>
+                  <label className="text-[10px] font-semibold text-slate-400 block mb-1">
+                    {t.height}{' '}
+                    <span className="text-[9px] font-normal text-slate-400">
+                      ({t.pixelLimitHint})
+                    </span>
+                  </label>
                   <input
                     type="number"
-                    min="1"
-                    value={imageOptions.resize_mode.Exact?.height || 0}
-                    onChange={(e) =>
-                      setImageOptions({
-                        resize_mode: {
-                          Exact: {
-                            width: imageOptions.resize_mode.Exact?.width || 0,
-                            height: Number(e.target.value),
-                          },
-                        },
-                      })
+                    min={MIN_DIMENSION}
+                    max={MAX_DIMENSION}
+                    value={
+                      imageOptions.resize_mode.Exact?.height === 0
+                        ? ''
+                        : (imageOptions.resize_mode.Exact?.height ?? (baseH || 800))
                     }
+                    onChange={(e) => handleExactHeightChange(e.target.value)}
+                    onBlur={() => {
+                      const cur = imageOptions.resize_mode.Exact?.height;
+                      if (!cur || cur < MIN_DIMENSION) {
+                        handleExactHeightChange(String(baseH > 0 ? baseH : 800));
+                      }
+                    }}
                     className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono"
                   />
                 </div>
@@ -925,7 +1130,39 @@ export const ImageConfigPanel: React.FC = () => {
               <input
                 type="checkbox"
                 checked={imageOptions.maintain_aspect_ratio}
-                onChange={(e) => setImageOptions({ maintain_aspect_ratio: e.target.checked })}
+                onChange={(e) => {
+                  const maintain = e.target.checked;
+                  if (maintain && baseW > 0 && baseH > 0) {
+                    if (resizeType === 'MaxBounds' && imageOptions.resize_mode.MaxBounds) {
+                      const curW = imageOptions.resize_mode.MaxBounds.max_width || baseW;
+                      const syncedH = clampDimension(Math.round(curW * (baseH / baseW)));
+                      setImageOptions({
+                        maintain_aspect_ratio: maintain,
+                        resize_mode: {
+                          MaxBounds: {
+                            max_width: curW,
+                            max_height: syncedH,
+                          },
+                        },
+                      });
+                      return;
+                    } else if (resizeType === 'Exact' && imageOptions.resize_mode.Exact) {
+                      const curW = imageOptions.resize_mode.Exact.width || baseW;
+                      const syncedH = clampDimension(Math.round(curW * (baseH / baseW)));
+                      setImageOptions({
+                        maintain_aspect_ratio: maintain,
+                        resize_mode: {
+                          Exact: {
+                            width: curW,
+                            height: syncedH,
+                          },
+                        },
+                      });
+                      return;
+                    }
+                  }
+                  setImageOptions({ maintain_aspect_ratio: maintain });
+                }}
                 className="rounded text-mint-500 accent-mint-500"
               />
               <span>{t.maintainAspect}</span>

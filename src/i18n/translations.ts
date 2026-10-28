@@ -420,6 +420,7 @@ export interface TranslationDictionary {
   processedFilesDetails: string;
   liveOptimizedPreview: string;
   previewDimensions: string;
+  pixelLimitHint: string;
 }
 
 export const translations: Record<Language, TranslationDictionary> = {
@@ -831,6 +832,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     processedFilesDetails: 'Détail des fichiers traités',
     liveOptimizedPreview: 'Aperçu du résultat en direct',
     previewDimensions: 'Dimensions dans l\'aperçu',
+    pixelLimitHint: '1 à 16 384 px',
   },
 
   en: {
@@ -1241,6 +1243,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     processedFilesDetails: 'Processed files details',
     liveOptimizedPreview: 'Live Optimized Preview',
     previewDimensions: 'Live preview dimensions',
+    pixelLimitHint: '1 to 16,384 px',
   },
 };
 

@@ -606,18 +606,18 @@ const generateLocalBrowserPreview = (
     targetW = Math.max(1, Math.round(origW * p));
     targetH = Math.max(1, Math.round(origH * p));
   } else if (imageOptions.resize_mode.MaxBounds) {
-    const maxW = imageOptions.resize_mode.MaxBounds.max_width;
-    const maxH = imageOptions.resize_mode.MaxBounds.max_height;
+    const maxW = Math.min(16384, Math.max(1, imageOptions.resize_mode.MaxBounds.max_width || 1920));
+    const maxH = Math.min(16384, Math.max(1, imageOptions.resize_mode.MaxBounds.max_height || 1080));
     const factorW = maxW / origW;
     const factorH = maxH / origH;
     const factor = Math.min(factorW, factorH);
     if (!imageOptions.do_not_upscale || factor < 1.0) {
-      targetW = Math.max(1, Math.round(origW * factor));
-      targetH = Math.max(1, Math.round(origH * factor));
+      targetW = Math.min(16384, Math.max(1, Math.round(origW * factor)));
+      targetH = Math.min(16384, Math.max(1, Math.round(origH * factor)));
     }
   } else if (imageOptions.resize_mode.Exact) {
-    targetW = Math.max(1, imageOptions.resize_mode.Exact.width || origW);
-    targetH = Math.max(1, imageOptions.resize_mode.Exact.height || origH);
+    targetW = Math.min(16384, Math.max(1, imageOptions.resize_mode.Exact.width || origW));
+    targetH = Math.min(16384, Math.max(1, imageOptions.resize_mode.Exact.height || origH));
   }
 
   const activeColorFilter =

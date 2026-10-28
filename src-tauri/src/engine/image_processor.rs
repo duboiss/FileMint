@@ -375,34 +375,37 @@ pub fn calculate_target_dimensions(
     orig_h: u32,
     options: &ImageTransformOptions,
 ) -> (u32, u32) {
+    const MAX_DIMENSION: u32 = 16384;
     match &options.resize_mode {
-        ResizeMode::None => (orig_w, orig_h),
+        ResizeMode::None => (orig_w.min(MAX_DIMENSION), orig_h.min(MAX_DIMENSION)),
         ResizeMode::Percentage { percent } => {
             let factor = (*percent as f64) / 100.0;
-            let w = ((orig_w as f64) * factor).round().max(1.0) as u32;
-            let h = ((orig_h as f64) * factor).round().max(1.0) as u32;
+            let w = ((orig_w as f64) * factor).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
+            let h = ((orig_h as f64) * factor).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
             (w, h)
         }
         ResizeMode::Exact { width, height } => {
+            let bounded_w = (*width).min(MAX_DIMENSION);
+            let bounded_h = (*height).min(MAX_DIMENSION);
             if options.maintain_aspect_ratio {
                 let ratio = (orig_w as f64) / (orig_h as f64);
-                if *width > 0 && *height == 0 {
-                    let h = ((*width as f64) / ratio).round().max(1.0) as u32;
-                    (*width, h)
-                } else if *height > 0 && *width == 0 {
-                    let w = ((*height as f64) * ratio).round().max(1.0) as u32;
-                    (w, *height)
+                if bounded_w > 0 && bounded_h == 0 {
+                    let h = ((bounded_w as f64) / ratio).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
+                    (bounded_w, h)
+                } else if bounded_h > 0 && bounded_w == 0 {
+                    let w = ((bounded_h as f64) * ratio).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
+                    (w, bounded_h)
                 } else {
-                    let factor_w = (*width as f64) / (orig_w as f64);
-                    let factor_h = (*height as f64) / (orig_h as f64);
+                    let factor_w = (bounded_w as f64) / (orig_w as f64);
+                    let factor_h = (bounded_h as f64) / (orig_h as f64);
                     let factor = factor_w.min(factor_h);
-                    let target_w = ((orig_w as f64) * factor).round().max(1.0) as u32;
-                    let target_h = ((orig_h as f64) * factor).round().max(1.0) as u32;
+                    let target_w = ((orig_w as f64) * factor).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
+                    let target_h = ((orig_h as f64) * factor).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
                     (target_w, target_h)
                 }
             } else {
-                let w = if *width > 0 { *width } else { orig_w };
-                let h = if *height > 0 { *height } else { orig_h };
+                let w = if bounded_w > 0 { bounded_w } else { orig_w.min(MAX_DIMENSION) };
+                let h = if bounded_h > 0 { bounded_h } else { orig_h.min(MAX_DIMENSION) };
                 (w, h)
             }
         }
@@ -410,17 +413,19 @@ pub fn calculate_target_dimensions(
             max_width,
             max_height,
         } => {
-            if options.do_not_upscale && orig_w <= *max_width && orig_h <= *max_height {
-                return (orig_w, orig_h);
+            let bounded_max_w = (*max_width).clamp(1, MAX_DIMENSION);
+            let bounded_max_h = (*max_height).clamp(1, MAX_DIMENSION);
+            if options.do_not_upscale && orig_w <= bounded_max_w && orig_h <= bounded_max_h {
+                return (orig_w.min(MAX_DIMENSION), orig_h.min(MAX_DIMENSION));
             }
-            let factor_w = (*max_width as f64) / (orig_w as f64);
-            let factor_h = (*max_height as f64) / (orig_h as f64);
+            let factor_w = (bounded_max_w as f64) / (orig_w as f64);
+            let factor_h = (bounded_max_h as f64) / (orig_h as f64);
             let factor = factor_w.min(factor_h);
             if options.do_not_upscale && factor >= 1.0 {
-                return (orig_w, orig_h);
+                return (orig_w.min(MAX_DIMENSION), orig_h.min(MAX_DIMENSION));
             }
-            let w = ((orig_w as f64) * factor).round().max(1.0) as u32;
-            let h = ((orig_h as f64) * factor).round().max(1.0) as u32;
+            let w = ((orig_w as f64) * factor).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
+            let h = ((orig_h as f64) * factor).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
             (w, h)
         }
     }
@@ -964,6 +969,22 @@ mod tests {
         };
         let (w, h) = calculate_target_dimensions(800, 600, &opts);
         assert_eq!((w, h), (800, 600));
+    }
+
+    #[test]
+    fn test_calculate_dimensions_clamps_huge_values() {
+        let opts = ImageTransformOptions {
+            resize_mode: ResizeMode::MaxBounds {
+                max_width: 999999999,
+                max_height: 999999999,
+            },
+            maintain_aspect_ratio: false,
+            do_not_upscale: false,
+            ..Default::default()
+        };
+        let (w, h) = calculate_target_dimensions(100, 100, &opts);
+        assert!(w <= 16384);
+        assert!(h <= 16384);
     }
 
     #[test]

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useFileMintStore, formatFileSize } from '../store/useFileMintStore';
 import { invoke } from '@tauri-apps/api/core';
 import { CheckCircle2, AlertCircle, FolderOpen, RotateCcw, ArrowDownRight, FileText, Image as ImageIcon, Sparkles } from 'lucide-react';
@@ -22,6 +22,16 @@ export const ResultsSummary: React.FC = () => {
 
   const hasSuccessfulFiles =
     batchSummary.success_count > 0 && batchSummary.items.some((item) => item.output_path);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        resetToHome();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [resetToHome]);
 
   const handleOpenFolder = () => {
     if (!hasSuccessfulFiles) return;
@@ -119,7 +129,8 @@ export const ResultsSummary: React.FC = () => {
 
           <button
             onClick={resetToHome}
-            className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center gap-2"
+            title={`${t.newBatch} (Esc)`}
+            className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center gap-2 cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" />
             <span>{t.newBatch}</span>

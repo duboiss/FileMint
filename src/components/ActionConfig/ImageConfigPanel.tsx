@@ -427,7 +427,7 @@ export const ImageConfigPanel: React.FC = () => {
               <span className="whitespace-nowrap">{t.manipulationTitle}</span>
               <span
                 className="cursor-help text-slate-400 hover:text-blue-500 transition-colors"
-                title={t.retouchWeightNoteDesc}
+                title={`${t.retouchWeightNoteTitle} : ${t.retouchWeightNoteDesc}`}
               >
                 <Info className="w-3.5 h-3.5" />
               </span>
@@ -625,12 +625,10 @@ export const ImageConfigPanel: React.FC = () => {
 
           {hasActiveManipulations && (
             <div className="space-y-3 animate-fadeIn">
-              <div className="p-3 rounded-2xl bg-blue-500/10 dark:bg-blue-500/10 border border-blue-500/25 space-y-1">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
-                  <Info className="w-3.5 h-3.5 shrink-0" />
-                  <span>{t.retouchWeightNoteTitle}</span>
-                </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+              <div className="p-2.5 rounded-xl bg-slate-100/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/50 flex items-start gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                <Info className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                <p className="leading-snug">
+                  <strong className="text-slate-700 dark:text-slate-200 font-semibold">{t.retouchWeightNoteTitle} : </strong>
                   {t.retouchWeightNoteDesc}
                 </p>
               </div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useFileMintStore, hasActiveImageChanges } from '../store/useFileMintStore';
 import { open } from '@tauri-apps/plugin-dialog';
-import { Folder, Play, AlertCircle, ChevronDown, ChevronUp, Tag, Sparkles } from 'lucide-react';
+import { Folder, Play, AlertCircle, ChevronDown, ChevronUp, Tag, Sparkles, Layers, Scissors } from 'lucide-react';
 import { FileItem, ImageTransformOptions, PdfCompressionOptions, PreviewResult } from '../types';
 
 export const formatPreviewName = (
@@ -124,6 +124,10 @@ export const DestinationPicker: React.FC = () => {
     activePreviewIndex,
     imageOptions,
     pdfOptions,
+    pdfToolMode,
+    selectedPdfPages,
+    pdfSplitAction,
+    activePdfTotalPages,
     preview,
     language,
     t,
@@ -142,17 +146,43 @@ export const DestinationPicker: React.FC = () => {
     handlePatternChange(currentPattern + tag);
   };
 
-  const hasActiveChanges =
-    files.length > 0 &&
-    (files.some((f) => f.fileType === 'pdf') || hasActiveImageChanges(imageOptions));
+  const sampleFile = files[activePreviewIndex] || files[0];
+  const isPdfActive = sampleFile ? sampleFile.fileType === 'pdf' : false;
+  const pdfFiles = files.filter((f) => f.fileType === 'pdf');
+
+  let canLaunch = false;
+  let launchButtonLabel = `${t.launchBatch} (${files.length})`;
+  let launchButtonIcon = Play;
+
+  if (isPdfActive && pdfToolMode === 'merge') {
+    canLaunch = pdfFiles.length >= 2;
+    launchButtonLabel = `${t.pdfMergeButton} (${pdfFiles.length})`;
+    launchButtonIcon = Layers;
+  } else if (isPdfActive && pdfToolMode === 'split') {
+    launchButtonIcon = Scissors;
+    if (pdfSplitAction === 'single_pdf') {
+      canLaunch = selectedPdfPages.length > 0;
+      launchButtonLabel = `${t.pdfExtractButton} (${selectedPdfPages.length} ${language === 'en' ? 'pages' : 'pages'})`;
+    } else {
+      canLaunch = activePdfTotalPages > 0;
+      launchButtonLabel = `${t.pdfSplitAllButton} (${activePdfTotalPages} ${language === 'en' ? 'files' : 'fichiers'})`;
+    }
+  } else {
+    canLaunch =
+      files.length > 0 &&
+      (files.some((f) => f.fileType === 'pdf') || hasActiveImageChanges(imageOptions));
+    launchButtonLabel = `${t.launchBatch} (${files.length})`;
+    launchButtonIcon = Play;
+  }
 
   const handleLaunch = () => {
-    if (!hasActiveChanges) return;
+    if (!canLaunch) return;
     if (
       destinationConfig.mode === 'SameAsOriginal' &&
       !destinationConfig.custom_suffix &&
       !destinationConfig.naming_pattern &&
-      !destinationConfig.overwrite_existing
+      !destinationConfig.overwrite_existing &&
+      pdfToolMode === 'compress'
     ) {
       setConfirmOverwriteModal(true);
       return;
@@ -160,7 +190,6 @@ export const DestinationPicker: React.FC = () => {
     startBatch();
   };
 
-  const sampleFile = files[activePreviewIndex] || files[0];
   const isAllPdf = files.length > 0 && files.every((f) => f.fileType === 'pdf');
   const isAllImages = files.length > 0 && files.every((f) => f.fileType === 'image');
   const isPdfContext = sampleFile ? sampleFile.fileType === 'pdf' : isAllPdf;
@@ -284,16 +313,20 @@ export const DestinationPicker: React.FC = () => {
 
           <button
             onClick={handleLaunch}
-            disabled={files.length === 0 || !hasActiveChanges}
+            disabled={!canLaunch}
             className={`px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg transition-all flex items-center gap-2 ${
-              files.length === 0 || !hasActiveChanges
+              !canLaunch
                 ? 'bg-slate-200/80 dark:bg-slate-800 text-slate-400 dark:text-slate-500 opacity-60 cursor-not-allowed shadow-none'
                 : 'bg-mint-500 hover:bg-mint-600 text-slate-950 shadow-mint-500/20 hover:scale-[1.02] active:scale-[0.98] cursor-pointer'
             }`}
-            title={!hasActiveChanges ? t.noChangesToPerform : undefined}
+            title={!canLaunch ? t.noChangesToPerform : undefined}
           >
-            <Play className={`w-4 h-4 ${!hasActiveChanges ? 'fill-slate-400 text-slate-400' : 'fill-slate-950'}`} />
-            <span>{t.launchBatch} ({files.length})</span>
+            {React.createElement(launchButtonIcon, {
+              className: `w-4 h-4 ${!canLaunch ? 'text-slate-400' : 'text-slate-950'} ${
+                launchButtonIcon === Play && canLaunch ? 'fill-slate-950' : ''
+              }`,
+            })}
+            <span>{launchButtonLabel}</span>
           </button>
         </div>
       </div>

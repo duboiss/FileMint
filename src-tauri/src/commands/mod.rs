@@ -123,6 +123,74 @@ pub async fn generate_pdf_preview(
 }
 
 #[tauri::command]
+pub async fn merge_pdfs(
+    input_paths: Vec<String>,
+    output_path: String,
+) -> Result<pdf_processor::PdfResultInfo, String> {
+    tokio::task::spawn_blocking(move || {
+        let paths: Vec<PathBuf> = input_paths.into_iter().map(PathBuf::from).collect();
+        let out = PathBuf::from(output_path);
+        pdf_processor::merge_pdfs(&paths, &out).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn extract_pdf_pages(
+    input_path: String,
+    pages: Vec<u32>,
+    output_path: String,
+) -> Result<pdf_processor::PdfResultInfo, String> {
+    tokio::task::spawn_blocking(move || {
+        let input = PathBuf::from(input_path);
+        let out = PathBuf::from(output_path);
+        pdf_processor::extract_pdf_pages(&input, &pages, &out).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn split_pdf_all(
+    input_path: String,
+    output_dir: String,
+    base_name: String,
+) -> Result<Vec<String>, String> {
+    tokio::task::spawn_blocking(move || {
+        let input = PathBuf::from(input_path);
+        let out_dir = PathBuf::from(output_dir);
+        let files = pdf_processor::split_pdf_all(&input, &out_dir, &base_name)
+            .map_err(|e| e.to_string())?;
+        Ok(files
+            .into_iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn get_pdf_info(path: String) -> Result<pdf_processor::PdfDocumentInfo, String> {
+    tokio::task::spawn_blocking(move || {
+        let p = Path::new(&path);
+        pdf_processor::get_pdf_info(p).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn load_pdf_bytes(path: String) -> Result<Vec<u8>, String> {
+    tokio::task::spawn_blocking(move || {
+        std::fs::read(&path).map_err(|e| format!("Impossible de lire le document PDF : {}", e))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 pub async fn start_batch_processing(
     app: AppHandle,
     state: State<'_, AppState>,

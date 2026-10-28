@@ -20,6 +20,8 @@ import {
   WatchProcessedEvent,
   AppConfig,
   AppToast,
+  PdfToolMode,
+  PdfSplitAction,
 } from '../types';
 import {
   Language,
@@ -29,7 +31,12 @@ import {
 } from '../i18n/translations';
 
 import packageJson from '../../package.json';
-import { renderPdfPage1, base64ToUint8Array } from '../utils/pdfPreviewRenderer';
+import {
+  renderPdfPage1,
+  parsePageRange,
+  formatPageRange,
+  base64ToUint8Array,
+} from '../utils/pdfPreviewRenderer';
 
 export const APP_VERSION = packageJson.version;
 
@@ -868,6 +875,27 @@ interface FileMintState {
   restoreDefaultProfiles: () => void;
   importCustomProfiles: (profiles: CustomProfile[]) => boolean;
   setPdfOptions: (options: Partial<PdfCompressionOptions>) => void;
+  pdfToolMode: PdfToolMode;
+  pdfMergeOrder: string[];
+  pdfMergeOutputName: string;
+  pdfSplitAction: PdfSplitAction;
+  selectedPdfPages: number[];
+  pdfPageRangeInput: string;
+  activePdfTotalPages: number;
+  setPdfToolMode: (mode: PdfToolMode) => void;
+  setPdfMergeOrder: (order: string[]) => void;
+  reorderPdfMerge: (fromIdx: number, toIdx: number) => void;
+  setPdfMergeOutputName: (name: string) => void;
+  setPdfSplitAction: (action: PdfSplitAction) => void;
+  setSelectedPdfPages: (pages: number[]) => void;
+  togglePdfPageSelection: (pageNum: number) => void;
+  selectAllPdfPages: () => void;
+  deselectAllPdfPages: () => void;
+  invertPdfPageSelection: () => void;
+  setPdfPageRangeInput: (input: string) => void;
+  setActivePdfTotalPages: (total: number) => void;
+  executePdfMerge: () => Promise<boolean>;
+  executePdfSplit: () => Promise<boolean>;
   setDestinationConfig: (config: Partial<DestinationConfig>) => void;
   refreshPreview: () => Promise<void>;
   startBatch: () => Promise<void>;
@@ -962,6 +990,23 @@ export const persistConfigToDisk = () => {
   }, 300);
 };
 
+export const resolveDestinationDir = (
+  firstFilePath: string,
+  destConfig: DestinationConfig
+): string => {
+  if (typeof destConfig.mode === 'object' && 'Custom' in destConfig.mode) {
+    return destConfig.mode.Custom;
+  }
+  const lastSlash = Math.max(firstFilePath.lastIndexOf('/'), firstFilePath.lastIndexOf('\\'));
+  const parentDir = lastSlash >= 0 ? firstFilePath.substring(0, lastSlash) : '.';
+  if (destConfig.mode === 'SameAsOriginal') {
+    return parentDir;
+  }
+  const subfolderName = localStorage.getItem('filemint_subfolder_name') || 'FileMint';
+  const sep = firstFilePath.includes('\\') ? '\\' : '/';
+  return `${parentDir}${sep}${subfolderName}`;
+};
+
 export const useFileMintStore = create<FileMintState>((set, get) => {
   const initialLangData = getInitialLanguageData();
   const initialProfiles = loadCustomProfilesFromStorage(translations[initialLangData.language]);
@@ -996,6 +1041,99 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       profile: 'Balanced',
       optimize_structure: true,
       recompress_images: true,
+    },
+
+    pdfToolMode: 'compress',
+    pdfMergeOrder: [],
+    pdfMergeOutputName: '{nom}_fusion.pdf',
+    pdfSplitAction: 'single_pdf',
+    selectedPdfPages: [],
+    pdfPageRangeInput: '',
+    activePdfTotalPages: 1,
+
+    setPdfToolMode: (mode: PdfToolMode) => {
+      set({ pdfToolMode: mode });
+    },
+
+    setPdfMergeOrder: (order: string[]) => {
+      set({ pdfMergeOrder: order });
+    },
+
+    reorderPdfMerge: (fromIdx: number, toIdx: number) => {
+      const order = [...get().pdfMergeOrder];
+      if (fromIdx < 0 || fromIdx >= order.length || toIdx < 0 || toIdx >= order.length) return;
+      const [item] = order.splice(fromIdx, 1);
+      order.splice(toIdx, 0, item);
+      set({ pdfMergeOrder: order });
+    },
+
+    setPdfMergeOutputName: (name: string) => {
+      set({ pdfMergeOutputName: name });
+    },
+
+    setPdfSplitAction: (action: PdfSplitAction) => {
+      set({ pdfSplitAction: action });
+    },
+
+    setSelectedPdfPages: (pages: number[]) => {
+      const sorted = Array.from(new Set(pages)).sort((a, b) => a - b);
+      set({
+        selectedPdfPages: sorted,
+        pdfPageRangeInput: formatPageRange(sorted),
+      });
+    },
+
+    togglePdfPageSelection: (pageNum: number) => {
+      const current = get().selectedPdfPages;
+      const next = current.includes(pageNum)
+        ? current.filter((p) => p !== pageNum)
+        : [...current, pageNum].sort((a, b) => a - b);
+      set({
+        selectedPdfPages: next,
+        pdfPageRangeInput: formatPageRange(next),
+      });
+    },
+
+    selectAllPdfPages: () => {
+      const total = get().activePdfTotalPages;
+      const all = Array.from({ length: total }, (_, i) => i + 1);
+      set({
+        selectedPdfPages: all,
+        pdfPageRangeInput: formatPageRange(all),
+      });
+    },
+
+    deselectAllPdfPages: () => {
+      set({
+        selectedPdfPages: [],
+        pdfPageRangeInput: '',
+      });
+    },
+
+    invertPdfPageSelection: () => {
+      const total = get().activePdfTotalPages;
+      const currentSet = new Set(get().selectedPdfPages);
+      const inverted: number[] = [];
+      for (let p = 1; p <= total; p++) {
+        if (!currentSet.has(p)) inverted.push(p);
+      }
+      set({
+        selectedPdfPages: inverted,
+        pdfPageRangeInput: formatPageRange(inverted),
+      });
+    },
+
+    setPdfPageRangeInput: (input: string) => {
+      const total = get().activePdfTotalPages;
+      const parsed = parsePageRange(input, total);
+      set({
+        pdfPageRangeInput: input,
+        selectedPdfPages: parsed,
+      });
+    },
+
+    setActivePdfTotalPages: (total: number) => {
+      set({ activePdfTotalPages: Math.max(1, total) });
     },
 
     destinationConfig: {
@@ -1267,8 +1405,16 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           get().customProfiles.find((p) => p.id === defaultPresetId) || get().customProfiles[0];
 
         const updated = [...currentFiles, ...filteredNew];
+        const pdfPaths = updated.filter((f) => f.fileType === 'pdf').map((f) => f.path);
+        const existingOrder = get().pdfMergeOrder;
+        const newOrder = [
+          ...existingOrder.filter((p) => pdfPaths.includes(p)),
+          ...pdfPaths.filter((p) => !existingOrder.includes(p)),
+        ];
+
         set({
           files: updated,
+          pdfMergeOrder: newOrder,
           screen: 'config',
           activePreviewIndex: 0,
           ...(isFirstUpload && defaultProfile
@@ -1334,17 +1480,19 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
     },
 
     removeFile: (index) => {
+      const removed = get().files[index];
       const files = get().files.filter((_, i) => i !== index);
+      const newMergeOrder = removed ? get().pdfMergeOrder.filter((p) => p !== removed.path) : get().pdfMergeOrder;
       if (files.length === 0) {
-        set({ files: [], screen: 'home', preview: null, activePreviewIndex: 0 });
+        set({ files: [], pdfMergeOrder: [], screen: 'home', preview: null, activePreviewIndex: 0 });
       } else {
         const newActive = Math.min(get().activePreviewIndex, files.length - 1);
-        set({ files, activePreviewIndex: newActive });
+        set({ files, pdfMergeOrder: newMergeOrder, activePreviewIndex: newActive });
         get().refreshPreview();
       }
     },
 
-    clearFiles: () => set({ files: [], screen: 'home', preview: null, activePreviewIndex: 0 }),
+    clearFiles: () => set({ files: [], pdfMergeOrder: [], screen: 'home', preview: null, activePreviewIndex: 0 }),
 
     setActivePreviewIndex: (index) => {
       set({ activePreviewIndex: index });
@@ -1657,7 +1805,16 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           ]);
 
           if (reqId === previewRequestId) {
+            const currentSelected = get().selectedPdfPages;
+            const updatedSelected =
+              currentSelected.length === 0
+                ? Array.from({ length: res.total_pages }, (_, i) => i + 1)
+                : currentSelected.filter((p) => p <= res.total_pages);
+
             set({
+              activePdfTotalPages: res.total_pages,
+              selectedPdfPages: updatedSelected,
+              pdfPageRangeInput: formatPageRange(updatedSelected),
               preview: {
                 original_data_url: origPage.dataUrl,
                 data_url: compPage.dataUrl,
@@ -1709,8 +1866,28 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
     },
 
     startBatch: async () => {
-      const { files, imageOptions, pdfOptions, destinationConfig } = get();
+      const {
+        files,
+        imageOptions,
+        pdfOptions,
+        destinationConfig,
+        pdfToolMode,
+        activePreviewIndex,
+      } = get();
       if (files.length === 0) return;
+
+      const activeFile = files[activePreviewIndex];
+      const pdfFiles = files.filter((f) => f.fileType === 'pdf');
+
+      if (pdfFiles.length >= 2 && pdfToolMode === 'merge') {
+        const ok = await get().executePdfMerge();
+        if (ok) return;
+      }
+
+      if (activeFile?.fileType === 'pdf' && pdfToolMode === 'split') {
+        const ok = await get().executePdfSplit();
+        if (ok) return;
+      }
 
       set({
         batchRunning: true,
@@ -1809,6 +1986,340 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         set({ batchRunning: false });
       } catch (err) {
         console.error("Erreur lors de l'annulation :", err);
+      }
+    },
+
+    executePdfMerge: async (): Promise<boolean> => {
+      const { files, pdfMergeOrder, pdfMergeOutputName, destinationConfig } = get();
+      const pdfFiles = files.filter((f) => f.fileType === 'pdf');
+      if (pdfFiles.length < 2) return false;
+
+      const orderedPaths =
+        pdfMergeOrder.length > 0
+          ? pdfMergeOrder.filter((p) => pdfFiles.some((f) => f.path === p))
+          : pdfFiles.map((f) => f.path);
+
+      for (const f of pdfFiles) {
+        if (!orderedPaths.includes(f.path)) orderedPaths.push(f.path);
+      }
+
+      if (orderedPaths.length < 2) return false;
+
+      const firstFile = pdfFiles.find((f) => f.path === orderedPaths[0]) || pdfFiles[0];
+      const destDir = resolveDestinationDir(firstFile.path, destinationConfig);
+
+      const baseNameWithoutExt = firstFile.name.replace(/\.[^/.]+$/, '');
+      const rawPattern = pdfMergeOutputName.trim() || '{nom}_fusion.pdf';
+      let resolvedFileName = rawPattern
+        .replace(/\{nom\}/gi, baseNameWithoutExt)
+        .replace(/\{name\}/gi, baseNameWithoutExt);
+
+      if (!resolvedFileName.toLowerCase().endsWith('.pdf')) {
+        resolvedFileName += '.pdf';
+      }
+
+      const sep = firstFile.path.includes('\\') ? '\\' : '/';
+      const finalOutputPath = `${destDir}${sep}${resolvedFileName}`;
+
+      set({
+        batchRunning: true,
+        batchProgress: {
+          current_index: 1,
+          total_items: 1,
+          current_file: resolvedFileName,
+          success: true,
+          error_message: null,
+          saved_bytes: 0,
+        },
+        batchSummary: null,
+        screen: 'results',
+      });
+
+      if (!isTauriEnv()) {
+        await new Promise((r) => setTimeout(r, 800));
+        const totalOrig = pdfFiles.reduce((acc, f) => acc + f.sizeBytes, 0);
+        const finalSize = Math.round(totalOrig * 0.9);
+        const mockSummary: BatchSummary = {
+          total_items: 1,
+          success_count: 1,
+          failure_count: 0,
+          total_original_bytes: totalOrig,
+          total_final_bytes: finalSize,
+          total_saved_bytes: totalOrig - finalSize,
+          cancelled: false,
+          items: [
+            {
+              file_name: resolvedFileName,
+              original_size: totalOrig,
+              final_size: finalSize,
+              success: true,
+              error: null,
+              output_path: finalOutputPath,
+            },
+          ],
+        };
+        get().recordBatchCompletion(mockSummary);
+        set({ batchRunning: false, batchSummary: mockSummary });
+        return true;
+      }
+
+      try {
+        const result = await invoke<{
+          original_bytes: number;
+          compressed_bytes: number;
+          saved_percentage: number;
+          pages_count: number;
+          image_count_optimized: number;
+        }>('merge_pdfs', {
+          inputPaths: orderedPaths,
+          outputPath: finalOutputPath,
+        });
+
+        const summary: BatchSummary = {
+          total_items: 1,
+          success_count: 1,
+          failure_count: 0,
+          total_original_bytes: result.original_bytes,
+          total_final_bytes: result.compressed_bytes,
+          total_saved_bytes: Math.max(0, result.original_bytes - result.compressed_bytes),
+          cancelled: false,
+          items: [
+            {
+              file_name: resolvedFileName,
+              original_size: result.original_bytes,
+              final_size: result.compressed_bytes,
+              success: true,
+              error: null,
+              output_path: finalOutputPath,
+            },
+          ],
+        };
+
+        get().recordBatchCompletion(summary);
+        set({ batchRunning: false, batchSummary: summary });
+        return true;
+      } catch (err: any) {
+        console.error('Erreur lors de la fusion PDF :', err);
+        set({
+          batchRunning: false,
+          batchSummary: {
+            total_items: 1,
+            success_count: 0,
+            failure_count: 1,
+            total_original_bytes: 0,
+            total_final_bytes: 0,
+            total_saved_bytes: 0,
+            cancelled: false,
+            items: [
+              {
+                file_name: resolvedFileName,
+                original_size: 0,
+                final_size: 0,
+                success: false,
+                error: String(err),
+                output_path: null,
+              },
+            ],
+          },
+        });
+        return false;
+      }
+    },
+
+    executePdfSplit: async (): Promise<boolean> => {
+      const {
+        files,
+        activePreviewIndex,
+        pdfSplitAction,
+        selectedPdfPages,
+        pdfPageRangeInput,
+        destinationConfig,
+        activePdfTotalPages,
+      } = get();
+
+      const activeFile = files[activePreviewIndex];
+      if (!activeFile || activeFile.fileType !== 'pdf') return false;
+
+      const destDir = resolveDestinationDir(activeFile.path, destinationConfig);
+      const baseNameWithoutExt = activeFile.name.replace(/\.[^/.]+$/, '');
+      const sep = activeFile.path.includes('\\') ? '\\' : '/';
+
+      if (pdfSplitAction === 'single_pdf') {
+        const pagesToExtract =
+          selectedPdfPages.length > 0
+            ? selectedPdfPages
+            : parsePageRange(pdfPageRangeInput, activePdfTotalPages);
+
+        if (pagesToExtract.length === 0) return false;
+
+        const rangeStr = formatPageRange(pagesToExtract).replace(/[, ]+/g, '_');
+        const resolvedFileName = `${baseNameWithoutExt}_pages_${rangeStr}.pdf`;
+        const finalOutputPath = `${destDir}${sep}${resolvedFileName}`;
+
+        set({
+          batchRunning: true,
+          batchProgress: {
+            current_index: 1,
+            total_items: 1,
+            current_file: resolvedFileName,
+            success: true,
+            error_message: null,
+            saved_bytes: 0,
+          },
+          batchSummary: null,
+          screen: 'results',
+        });
+
+        if (!isTauriEnv()) {
+          await new Promise((r) => setTimeout(r, 600));
+          const mockSummary: BatchSummary = {
+            total_items: 1,
+            success_count: 1,
+            failure_count: 0,
+            total_original_bytes: activeFile.sizeBytes,
+            total_final_bytes: Math.round(
+              activeFile.sizeBytes * (pagesToExtract.length / (activePdfTotalPages || 1))
+            ),
+            total_saved_bytes: 0,
+            cancelled: false,
+            items: [
+              {
+                file_name: resolvedFileName,
+                original_size: activeFile.sizeBytes,
+                final_size: Math.round(
+                  activeFile.sizeBytes * (pagesToExtract.length / (activePdfTotalPages || 1))
+                ),
+                success: true,
+                error: null,
+                output_path: finalOutputPath,
+              },
+            ],
+          };
+          get().recordBatchCompletion(mockSummary);
+          set({ batchRunning: false, batchSummary: mockSummary });
+          return true;
+        }
+
+        try {
+          const result = await invoke<{
+            original_bytes: number;
+            compressed_bytes: number;
+            saved_percentage: number;
+            pages_count: number;
+            image_count_optimized: number;
+          }>('extract_pdf_pages', {
+            inputPath: activeFile.path,
+            pages: pagesToExtract,
+            outputPath: finalOutputPath,
+          });
+
+          const summary: BatchSummary = {
+            total_items: 1,
+            success_count: 1,
+            failure_count: 0,
+            total_original_bytes: result.original_bytes,
+            total_final_bytes: result.compressed_bytes,
+            total_saved_bytes: Math.max(0, result.original_bytes - result.compressed_bytes),
+            cancelled: false,
+            items: [
+              {
+                file_name: resolvedFileName,
+                original_size: result.original_bytes,
+                final_size: result.compressed_bytes,
+                success: true,
+                error: null,
+                output_path: finalOutputPath,
+              },
+            ],
+          };
+
+          get().recordBatchCompletion(summary);
+          set({ batchRunning: false, batchSummary: summary });
+          return true;
+        } catch (err: any) {
+          console.error("Erreur lors de l'extraction PDF :", err);
+          return false;
+        }
+      } else {
+        // Split all pages
+        set({
+          batchRunning: true,
+          batchProgress: {
+            current_index: 1,
+            total_items: activePdfTotalPages || 1,
+            current_file: activeFile.name,
+            success: true,
+            error_message: null,
+            saved_bytes: 0,
+          },
+          batchSummary: null,
+          screen: 'results',
+        });
+
+        if (!isTauriEnv()) {
+          await new Promise((r) => setTimeout(r, 600));
+          const total = activePdfTotalPages || 2;
+          const mockItems = Array.from({ length: total }, (_, i) => ({
+            file_name: `${baseNameWithoutExt}_page_${i + 1}.pdf`,
+            original_size: Math.round(activeFile.sizeBytes / total),
+            final_size: Math.round(activeFile.sizeBytes / total),
+            success: true,
+            error: null,
+            output_path: `${destDir}${sep}${baseNameWithoutExt}_page_${i + 1}.pdf`,
+          }));
+          const mockSummary: BatchSummary = {
+            total_items: total,
+            success_count: total,
+            failure_count: 0,
+            total_original_bytes: activeFile.sizeBytes,
+            total_final_bytes: activeFile.sizeBytes,
+            total_saved_bytes: 0,
+            cancelled: false,
+            items: mockItems,
+          };
+          get().recordBatchCompletion(mockSummary);
+          set({ batchRunning: false, batchSummary: mockSummary });
+          return true;
+        }
+
+        try {
+          const generatedPaths = await invoke<string[]>('split_pdf_all', {
+            inputPath: activeFile.path,
+            outputDir: destDir,
+            baseName: baseNameWithoutExt,
+          });
+
+          const items = generatedPaths.map((p) => {
+            const lastSep = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'));
+            const fName = lastSep >= 0 ? p.substring(lastSep + 1) : p;
+            return {
+              file_name: fName,
+              original_size: Math.round(activeFile.sizeBytes / (generatedPaths.length || 1)),
+              final_size: Math.round(activeFile.sizeBytes / (generatedPaths.length || 1)),
+              success: true,
+              error: null,
+              output_path: p,
+            };
+          });
+
+          const summary: BatchSummary = {
+            total_items: generatedPaths.length,
+            success_count: generatedPaths.length,
+            failure_count: 0,
+            total_original_bytes: activeFile.sizeBytes,
+            total_final_bytes: activeFile.sizeBytes,
+            total_saved_bytes: 0,
+            cancelled: false,
+            items,
+          };
+
+          get().recordBatchCompletion(summary);
+          set({ batchRunning: false, batchSummary: summary });
+          return true;
+        } catch (err: any) {
+          console.error('Erreur lors du découpage PDF :', err);
+          return false;
+        }
       }
     },
 

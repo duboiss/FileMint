@@ -15,6 +15,7 @@ import {
   Check,
 } from 'lucide-react';
 import { LargePreviewModal } from './LargePreviewModal';
+import { PdfPageGrid } from './PdfPageGrid';
 
 export const SideBySidePreview: React.FC = () => {
   const {
@@ -24,6 +25,7 @@ export const SideBySidePreview: React.FC = () => {
     previewLoading,
     imageOptions,
     pdfOptions,
+    pdfToolMode,
     t,
     language,
   } = useFileMintStore();
@@ -87,6 +89,11 @@ export const SideBySidePreview: React.FC = () => {
   }
 
   const isPdf = activeFile.fileType === 'pdf';
+
+  if (isPdf && pdfToolMode === 'split') {
+    return <PdfPageGrid />;
+  }
+
   const hasChanges = isPdf || hasActiveImageChanges(imageOptions);
   const hasSizeChange = Boolean(
     preview &&

@@ -61,6 +61,15 @@ export interface PdfCompressionOptions {
   target_size_kb?: number | null;
 }
 
+export type PdfToolMode = 'compress' | 'merge' | 'split';
+export type PdfSplitAction = 'single_pdf' | 'separate_pdfs';
+
+export interface PdfDocumentInfo {
+  path: string;
+  total_pages: number;
+  file_size_bytes: number;
+}
+
 export interface PdfPreviewResponse {
   original_page_pdf_base64: string;
   compressed_page_pdf_base64: string;

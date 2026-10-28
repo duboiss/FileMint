@@ -216,6 +216,38 @@ export interface TranslationDictionary {
   estimatedWeight: string;
   savings: string;
 
+  // PDF Advanced Tools (Merge & Split)
+  tabPdfCompress: string;
+  tabPdfMerge: string;
+  tabPdfSplit: string;
+  pdfMergeTitle: string;
+  pdfMergeDesc: string;
+  pdfMergeNeedsTwo: string;
+  pdfMergeTotalPages: string;
+  pdfMergeOutputNameLabel: string;
+  pdfMergeOutputNamePlaceholder: string;
+  pdfMergeButton: string;
+  pdfSplitTitle: string;
+  pdfSplitDesc: string;
+  pdfSplitActionSingle: string;
+  pdfSplitActionSingleDesc: string;
+  pdfSplitActionSeparate: string;
+  pdfSplitActionSeparateDesc: string;
+  pdfSplitRangeLabel: string;
+  pdfSplitRangePlaceholder: string;
+  pdfSplitRangeHelp: string;
+  pdfSelectAll: string;
+  pdfDeselectAll: string;
+  pdfInvertSelection: string;
+  pdfSelectEven: string;
+  pdfSelectOdd: string;
+  pdfSelectedPagesCount: string;
+  pdfExtractButton: string;
+  pdfSplitAllButton: string;
+  pdfMoveUp: string;
+  pdfMoveDown: string;
+  pdfPageNumber: string;
+
   // Destination & Launch
   destinationFolder: string;
   destinationAndNaming: string;
@@ -577,6 +609,37 @@ export const translations: Record<Language, TranslationDictionary> = {
     estimatedWeight: 'Poids estimé',
     savings: 'Économie',
 
+    tabPdfCompress: 'Compresser',
+    tabPdfMerge: 'Fusionner',
+    tabPdfSplit: 'Découper',
+    pdfMergeTitle: 'Fusionner des PDF',
+    pdfMergeDesc: 'Combinez plusieurs fichiers PDF en un seul document ordonné.',
+    pdfMergeNeedsTwo: 'Importez au moins 2 fichiers PDF pour activer la fusion.',
+    pdfMergeTotalPages: 'Total pages à fusionner :',
+    pdfMergeOutputNameLabel: 'Nom du fichier fusionné :',
+    pdfMergeOutputNamePlaceholder: '{nom}_fusion.pdf',
+    pdfMergeButton: 'Fusionner les PDF',
+    pdfSplitTitle: 'Découpage & Extraction',
+    pdfSplitDesc: 'Extrayez des pages spécifiques ou découpez le document page par page.',
+    pdfSplitActionSingle: 'Extraire en 1 fichier PDF',
+    pdfSplitActionSingleDesc: 'Réunit toutes les pages sélectionnées dans un nouveau document unique.',
+    pdfSplitActionSeparate: '1 fichier par page (Éclater)',
+    pdfSplitActionSeparateDesc: 'Découpe chaque page en un document PDF individuel indépendant.',
+    pdfSplitRangeLabel: 'Plage ou numéros de pages :',
+    pdfSplitRangePlaceholder: 'Ex: 1-3, 5, 8-10, pairs...',
+    pdfSplitRangeHelp: 'Syntaxe type impression : 1-5, 8, 12, pairs, impairs',
+    pdfSelectAll: 'Tout cocher',
+    pdfDeselectAll: 'Tout décocher',
+    pdfInvertSelection: 'Inverser',
+    pdfSelectEven: 'Pages paires',
+    pdfSelectOdd: 'Pages impaires',
+    pdfSelectedPagesCount: 'page(s) sélectionnée(s)',
+    pdfExtractButton: 'Extraire les pages',
+    pdfSplitAllButton: 'Découper en fichiers individuels',
+    pdfMoveUp: 'Monter',
+    pdfMoveDown: 'Descendre',
+    pdfPageNumber: 'Page',
+
     destinationFolder: 'Dossier de destination',
     destinationAndNaming: 'Dossier & Renommage',
     namingPatternTitle: 'Règle de renommage par lot (Masques)',
@@ -933,6 +996,37 @@ export const translations: Record<Language, TranslationDictionary> = {
     initialWeight: 'Initial size',
     estimatedWeight: 'Estimated size',
     savings: 'Savings',
+
+    tabPdfCompress: 'Compress',
+    tabPdfMerge: 'Merge',
+    tabPdfSplit: 'Split & Extract',
+    pdfMergeTitle: 'Merge PDFs',
+    pdfMergeDesc: 'Combine multiple PDF files into a single ordered document.',
+    pdfMergeNeedsTwo: 'Import at least 2 PDF files to enable merging.',
+    pdfMergeTotalPages: 'Total pages to merge:',
+    pdfMergeOutputNameLabel: 'Merged file name:',
+    pdfMergeOutputNamePlaceholder: '{nom}_fusion.pdf',
+    pdfMergeButton: 'Merge PDFs',
+    pdfSplitTitle: 'Split & Extract',
+    pdfSplitDesc: 'Extract specific pages or split the document page by page.',
+    pdfSplitActionSingle: 'Extract into 1 PDF file',
+    pdfSplitActionSingleDesc: 'Combines all selected pages into a single new document.',
+    pdfSplitActionSeparate: '1 file per page (Burst)',
+    pdfSplitActionSeparateDesc: 'Splits each page into an individual standalone PDF file.',
+    pdfSplitRangeLabel: 'Page range or numbers:',
+    pdfSplitRangePlaceholder: 'E.g. 1-3, 5, 8-10, even...',
+    pdfSplitRangeHelp: 'Standard print syntax: 1-5, 8, 12, even, odd',
+    pdfSelectAll: 'Select all',
+    pdfDeselectAll: 'Deselect all',
+    pdfInvertSelection: 'Invert',
+    pdfSelectEven: 'Even pages',
+    pdfSelectOdd: 'Odd pages',
+    pdfSelectedPagesCount: 'page(s) selected',
+    pdfExtractButton: 'Extract pages',
+    pdfSplitAllButton: 'Split into individual files',
+    pdfMoveUp: 'Move up',
+    pdfMoveDown: 'Move down',
+    pdfPageNumber: 'Page',
 
     destinationFolder: 'Destination folder',
     destinationAndNaming: 'Folder & Renaming',

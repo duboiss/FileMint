@@ -3,8 +3,9 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
 use lopdf::{Document, Object};
 use serde::{Deserialize, Serialize};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::io::Cursor;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PdfCompressionProfile {
@@ -335,6 +336,316 @@ pub fn generate_pdf_preview(
     })
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PdfDocumentInfo {
+    pub path: String,
+    pub total_pages: u32,
+    pub file_size_bytes: u64,
+}
+
+pub fn get_pdf_info(path: &Path) -> Result<PdfDocumentInfo> {
+    let file_size_bytes = std::fs::metadata(path)?.len();
+    let doc = Document::load(path)?;
+    let total_pages = doc.get_pages().len() as u32;
+
+    Ok(PdfDocumentInfo {
+        path: path.to_string_lossy().to_string(),
+        total_pages,
+        file_size_bytes,
+    })
+}
+
+fn remap_object_references(obj: &mut Object, id_map: &HashMap<(u32, u16), (u32, u16)>) {
+    match obj {
+        Object::Reference(id) => {
+            if let Some(&new_id) = id_map.get(id) {
+                *id = new_id;
+            }
+        }
+        Object::Array(arr) => {
+            for item in arr.iter_mut() {
+                remap_object_references(item, id_map);
+            }
+        }
+        Object::Dictionary(dict) => {
+            for (_, val) in dict.iter_mut() {
+                remap_object_references(val, id_map);
+            }
+        }
+        Object::Stream(stream) => {
+            for (_, val) in stream.dict.iter_mut() {
+                remap_object_references(val, id_map);
+            }
+        }
+        _ => {}
+    }
+}
+
+pub fn merge_pdfs(input_paths: &[PathBuf], output_path: &Path) -> Result<PdfResultInfo> {
+    if input_paths.is_empty() {
+        return Err(anyhow!("Aucun fichier PDF spécifié pour la fusion."));
+    }
+
+    let mut total_original_bytes: u64 = 0;
+    let mut merged_doc = Document::with_version("1.5");
+    let pages_id = merged_doc.new_object_id();
+    let catalog_id = merged_doc.new_object_id();
+    let mut accumulated_page_ids: Vec<Object> = Vec::new();
+
+    for path in input_paths {
+        let meta = std::fs::metadata(path)?;
+        total_original_bytes += meta.len();
+
+        let mut doc = Document::load(path)
+            .map_err(|e| anyhow!("Erreur lors de la lecture de {:?} : {}", path, e))?;
+
+        if doc.is_encrypted() {
+            return Err(anyhow!(
+                "Le document {:?} est protégé par mot de passe.",
+                path
+            ));
+        }
+
+        doc.renumber_objects();
+        let pages = doc.get_pages();
+        let page_object_ids: HashSet<(u32, u16)> = pages.values().cloned().collect();
+
+        let mut id_map: HashMap<(u32, u16), (u32, u16)> = HashMap::new();
+        for &old_id in doc.objects.keys() {
+            id_map.insert(old_id, merged_doc.new_object_id());
+        }
+
+        for &page_old_id in pages.values() {
+            if let Some(&new_id) = id_map.get(&page_old_id) {
+                accumulated_page_ids.push(Object::Reference(new_id));
+            }
+        }
+
+        for (old_id, mut obj) in doc.objects {
+            let new_id = id_map[&old_id];
+            remap_object_references(&mut obj, &id_map);
+
+            if page_object_ids.contains(&old_id) {
+                if let Ok(dict) = obj.as_dict_mut() {
+                    dict.set("Parent", pages_id);
+                }
+            }
+
+            merged_doc.objects.insert(new_id, obj);
+        }
+    }
+
+    let total_pages = accumulated_page_ids.len() as u32;
+
+    let mut pages_dict = lopdf::Dictionary::new();
+    pages_dict.set("Type", "Pages");
+    pages_dict.set("Kids", accumulated_page_ids);
+    pages_dict.set("Count", Object::Integer(total_pages as i64));
+    merged_doc
+        .objects
+        .insert(pages_id, Object::Dictionary(pages_dict));
+
+    let mut catalog_dict = lopdf::Dictionary::new();
+    catalog_dict.set("Type", "Catalog");
+    catalog_dict.set("Pages", pages_id);
+    merged_doc
+        .objects
+        .insert(catalog_id, Object::Dictionary(catalog_dict));
+
+    merged_doc.trailer.set("Root", catalog_id);
+    merged_doc.renumber_objects();
+    merged_doc.adjust_zero_pages();
+    merged_doc.compress();
+
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    merged_doc.save(output_path)?;
+    let final_bytes = std::fs::metadata(output_path)?.len();
+
+    let saved_percentage = if total_original_bytes > 0 && total_original_bytes > final_bytes {
+        let diff = (total_original_bytes - final_bytes) as f64;
+        ((diff / (total_original_bytes as f64)) * 100.0).max(0.0) as f32
+    } else {
+        0.0
+    };
+
+    Ok(PdfResultInfo {
+        original_bytes: total_original_bytes,
+        compressed_bytes: final_bytes,
+        saved_percentage,
+        pages_count: total_pages,
+        image_count_optimized: 0,
+    })
+}
+
+pub fn extract_pdf_pages(
+    input_path: &Path,
+    pages_to_keep: &[u32],
+    output_path: &Path,
+) -> Result<PdfResultInfo> {
+    if pages_to_keep.is_empty() {
+        return Err(anyhow!("Aucune page sélectionnée pour l'extraction."));
+    }
+
+    let original_bytes = std::fs::metadata(input_path)?.len();
+    let mut doc = Document::load(input_path)
+        .map_err(|e| anyhow!("Impossible de lire le document PDF : {}", e))?;
+
+    if doc.is_encrypted() {
+        return Err(anyhow!("Le document PDF est protégé par mot de passe."));
+    }
+
+    let total_pages = doc.get_pages().len() as u32;
+
+    let valid_pages: HashSet<u32> = pages_to_keep
+        .iter()
+        .cloned()
+        .filter(|&p| p >= 1 && p <= total_pages)
+        .collect();
+
+    if valid_pages.is_empty() {
+        return Err(anyhow!(
+            "Les pages sélectionnées sont hors limites (1 à {}).",
+            total_pages
+        ));
+    }
+
+    let to_delete: Vec<u32> = (1..=total_pages)
+        .filter(|p| !valid_pages.contains(p))
+        .collect();
+
+    if !to_delete.is_empty() && to_delete.len() < total_pages as usize {
+        doc.delete_pages(&to_delete);
+        doc.prune_objects();
+        doc.renumber_objects();
+        doc.adjust_zero_pages();
+        doc.compress();
+    }
+
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    doc.save(output_path)?;
+    let final_bytes = std::fs::metadata(output_path)?.len();
+    let final_pages_count = valid_pages.len() as u32;
+
+    let saved_percentage = if original_bytes > 0 && original_bytes > final_bytes {
+        let diff = (original_bytes - final_bytes) as f64;
+        ((diff / (original_bytes as f64)) * 100.0).max(0.0) as f32
+    } else {
+        0.0
+    };
+
+    Ok(PdfResultInfo {
+        original_bytes,
+        compressed_bytes: final_bytes,
+        saved_percentage,
+        pages_count: final_pages_count,
+        image_count_optimized: 0,
+    })
+}
+
+pub fn split_pdf_all(
+    input_path: &Path,
+    output_dir: &Path,
+    base_name: &str,
+) -> Result<Vec<PathBuf>> {
+    let doc = Document::load(input_path)
+        .map_err(|e| anyhow!("Impossible de lire le document PDF : {}", e))?;
+
+    if doc.is_encrypted() {
+        return Err(anyhow!("Le document PDF est protégé par mot de passe."));
+    }
+
+    let total_pages = doc.get_pages().len() as u32;
+    if total_pages == 0 {
+        return Err(anyhow!("Le document ne contient aucune page."));
+    }
+
+    std::fs::create_dir_all(output_dir)?;
+    let mut generated_files = Vec::with_capacity(total_pages as usize);
+
+    for page_num in 1..=total_pages {
+        let mut single_page_doc = doc.clone();
+        let to_delete: Vec<u32> = (1..=total_pages).filter(|&p| p != page_num).collect();
+        if !to_delete.is_empty() {
+            single_page_doc.delete_pages(&to_delete);
+            single_page_doc.prune_objects();
+            single_page_doc.renumber_objects();
+            single_page_doc.adjust_zero_pages();
+            single_page_doc.compress();
+        }
+
+        let out_filename = format!("{}_page_{}.pdf", base_name, page_num);
+        let out_file_path = output_dir.join(out_filename);
+        single_page_doc.save(&out_file_path)?;
+        generated_files.push(out_file_path);
+    }
+
+    Ok(generated_files)
+}
+
+pub fn parse_page_ranges(input: &str, total_pages: u32) -> Vec<u32> {
+    let mut pages = BTreeSet::new();
+    let normalized = input.to_lowercase().replace(';', ",");
+
+    for part in normalized.split([',', ' ']) {
+        let trimmed = part.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        if trimmed == "pairs" || trimmed == "even" {
+            for p in (2..=total_pages).step_by(2) {
+                pages.insert(p);
+            }
+            continue;
+        }
+
+        if trimmed == "impairs" || trimmed == "odd" {
+            for p in (1..=total_pages).step_by(2) {
+                pages.insert(p);
+            }
+            continue;
+        }
+
+        if trimmed == "toutes" || trimmed == "all" || trimmed == "*" {
+            for p in 1..=total_pages {
+                pages.insert(p);
+            }
+            continue;
+        }
+
+        if let Some((start_s, end_s)) = trimmed.split_once('-') {
+            let start = start_s.trim().parse::<u32>().unwrap_or(1);
+            let end = if end_s.trim() == "fin" || end_s.trim() == "end" {
+                total_pages
+            } else {
+                end_s.trim().parse::<u32>().unwrap_or(total_pages)
+            };
+            let (from, to) = if start <= end {
+                (start, end)
+            } else {
+                (end, start)
+            };
+            for p in from..=to {
+                if p >= 1 && p <= total_pages {
+                    pages.insert(p);
+                }
+            }
+        } else if let Ok(single) = trimmed.parse::<u32>() {
+            if single >= 1 && single <= total_pages {
+                pages.insert(single);
+            }
+        }
+    }
+
+    pages.into_iter().collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -429,5 +740,109 @@ startxref
         assert!(!preview.original_page_pdf_base64.is_empty());
         assert!(!preview.compressed_page_pdf_base64.is_empty());
         assert!(preview.estimated_bytes > 0);
+    }
+
+    #[test]
+    fn test_merge_pdfs() {
+        let (temp1, _cleaner1) = create_temp_sample_pdf();
+        let (temp2, _cleaner2) = create_temp_sample_pdf();
+
+        let out_path = std::env::temp_dir().join(format!(
+            "filemint_test_merge_{}.pdf",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        let _cleaner_out = TempFileCleaner(out_path.clone());
+
+        let result = merge_pdfs(&[temp1, temp2], &out_path).unwrap();
+        assert_eq!(result.pages_count, 2);
+        assert!(result.compressed_bytes > 0);
+        assert!(out_path.exists());
+
+        let merged_doc = Document::load(&out_path).unwrap();
+        assert_eq!(merged_doc.get_pages().len(), 2);
+    }
+
+    #[test]
+    fn test_extract_pdf_pages_function() {
+        let (temp1, _cleaner1) = create_temp_sample_pdf();
+        let (temp2, _cleaner2) = create_temp_sample_pdf();
+
+        let merged_path = std::env::temp_dir().join(format!(
+            "filemint_test_merged_for_extract_{}.pdf",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        let _cleaner_merged = TempFileCleaner(merged_path.clone());
+        let _ = merge_pdfs(&[temp1, temp2], &merged_path).unwrap();
+
+        let extract_out = std::env::temp_dir().join(format!(
+            "filemint_test_extracted_{}.pdf",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        let _cleaner_extract = TempFileCleaner(extract_out.clone());
+
+        // Extract page 2 only
+        let res = extract_pdf_pages(&merged_path, &[2], &extract_out).unwrap();
+        assert_eq!(res.pages_count, 1);
+        let extracted_doc = Document::load(&extract_out).unwrap();
+        assert_eq!(extracted_doc.get_pages().len(), 1);
+    }
+
+    #[test]
+    fn test_split_pdf_all() {
+        let (temp1, _cleaner1) = create_temp_sample_pdf();
+        let (temp2, _cleaner2) = create_temp_sample_pdf();
+
+        let merged_path = std::env::temp_dir().join(format!(
+            "filemint_test_merged_for_split_{}.pdf",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        let _cleaner_merged = TempFileCleaner(merged_path.clone());
+        let _ = merge_pdfs(&[temp1, temp2], &merged_path).unwrap();
+
+        let split_dir = std::env::temp_dir().join(format!(
+            "filemint_test_split_dir_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        let files = split_pdf_all(&merged_path, &split_dir, "document").unwrap();
+        assert_eq!(files.len(), 2);
+        for f in &files {
+            assert!(f.exists());
+            let doc = Document::load(f).unwrap();
+            assert_eq!(doc.get_pages().len(), 1);
+            let _ = std::fs::remove_file(f);
+        }
+        let _ = std::fs::remove_dir(&split_dir);
+    }
+
+    #[test]
+    fn test_parse_page_ranges() {
+        assert_eq!(parse_page_ranges("1-3, 5", 10), vec![1, 2, 3, 5]);
+        assert_eq!(parse_page_ranges("pairs", 6), vec![2, 4, 6]);
+        assert_eq!(parse_page_ranges("impairs", 6), vec![1, 3, 5]);
+        assert_eq!(parse_page_ranges("2-fin", 5), vec![2, 3, 4, 5]);
+        assert_eq!(parse_page_ranges("100", 5), Vec::<u32>::new());
+    }
+
+    #[test]
+    fn test_get_pdf_info() {
+        let (temp_path, _cleaner) = create_temp_sample_pdf();
+        let info = get_pdf_info(&temp_path).unwrap();
+        assert_eq!(info.total_pages, 1);
+        assert!(info.file_size_bytes > 0);
     }
 }

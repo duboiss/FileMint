@@ -195,6 +195,7 @@ export interface TranslationDictionary {
   viewSplit: string;
   viewSingle: string;
   noChangesToCompare: string;
+  noChangesToPerform: string;
   originalFileNoChanges: string;
   enlarge: string;
   clickToEnlarge: string;
@@ -553,6 +554,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     viewSplit: 'Curseur',
     viewSingle: 'Résultat seul',
     noChangesToCompare: 'Aucun changement à comparer',
+    noChangesToPerform: 'Aucun changement à effectuer',
     originalFileNoChanges: "Fichier d'origine (aucun changement)",
     enlarge: 'Agrandir',
     clickToEnlarge: 'Cliquer pour afficher en grand',
@@ -907,6 +909,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     viewSplit: 'Split slider',
     viewSingle: 'Result only',
     noChangesToCompare: 'No changes to compare',
+    noChangesToPerform: 'No changes to perform',
     originalFileNoChanges: 'Original file (no changes)',
     enlarge: 'Enlarge',
     clickToEnlarge: 'Click to view full screen',

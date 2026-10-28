@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useFileMintStore } from '../store/useFileMintStore';
+import { useFileMintStore, hasActiveImageChanges } from '../store/useFileMintStore';
 import { open } from '@tauri-apps/plugin-dialog';
 import { Folder, Play, AlertCircle, ChevronDown, ChevronUp, Tag, Sparkles } from 'lucide-react';
 import { FileItem, ImageTransformOptions, PdfCompressionOptions, PreviewResult } from '../types';
@@ -142,7 +142,12 @@ export const DestinationPicker: React.FC = () => {
     handlePatternChange(currentPattern + tag);
   };
 
+  const hasActiveChanges =
+    files.length > 0 &&
+    (files.some((f) => f.fileType === 'pdf') || hasActiveImageChanges(imageOptions));
+
   const handleLaunch = () => {
+    if (!hasActiveChanges) return;
     if (
       destinationConfig.mode === 'SameAsOriginal' &&
       !destinationConfig.custom_suffix &&
@@ -279,10 +284,15 @@ export const DestinationPicker: React.FC = () => {
 
           <button
             onClick={handleLaunch}
-            disabled={files.length === 0}
-            className="px-6 py-2.5 rounded-xl bg-mint-500 hover:bg-mint-600 disabled:opacity-50 text-slate-950 font-bold text-xs shadow-lg shadow-mint-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 cursor-pointer"
+            disabled={files.length === 0 || !hasActiveChanges}
+            className={`px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg transition-all flex items-center gap-2 ${
+              files.length === 0 || !hasActiveChanges
+                ? 'bg-slate-200/80 dark:bg-slate-800 text-slate-400 dark:text-slate-500 opacity-60 cursor-not-allowed shadow-none'
+                : 'bg-mint-500 hover:bg-mint-600 text-slate-950 shadow-mint-500/20 hover:scale-[1.02] active:scale-[0.98] cursor-pointer'
+            }`}
+            title={!hasActiveChanges ? t.noChangesToPerform : undefined}
           >
-            <Play className="w-4 h-4 fill-slate-950" />
+            <Play className={`w-4 h-4 ${!hasActiveChanges ? 'fill-slate-400 text-slate-400' : 'fill-slate-950'}`} />
             <span>{t.launchBatch} ({files.length})</span>
           </button>
         </div>

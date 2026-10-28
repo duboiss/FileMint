@@ -190,12 +190,20 @@ export const ResultsSummary: React.FC = () => {
                 {item.success && (
                   <div className="flex items-center gap-3 shrink-0">
                     <div className="flex items-center gap-2 font-mono text-[11px]">
-                      <span className="text-slate-400 line-through">
-                        {formatFileSize(item.original_size, language)}
-                      </span>
-                      <span className="font-bold text-mint-500">
-                        {formatFileSize(item.final_size, language)}
-                      </span>
+                      {item.original_size !== item.final_size ? (
+                        <>
+                          <span className="text-slate-400 line-through">
+                            {formatFileSize(item.original_size, language)}
+                          </span>
+                          <span className="font-bold text-mint-500">
+                            {formatFileSize(item.final_size, language)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="font-semibold text-slate-600 dark:text-slate-300">
+                          {formatFileSize(item.original_size, language)}
+                        </span>
+                      )}
                     </div>
                     {item.output_path && (
                       <button

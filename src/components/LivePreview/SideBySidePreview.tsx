@@ -395,7 +395,7 @@ export const SideBySidePreview: React.FC = () => {
             <div className="flex items-center justify-center max-h-full max-w-full min-h-0 min-w-0 my-auto py-2">
               <div
                 onClick={() => setIsLargeModalOpen(true)}
-                className="group relative flex flex-col items-center border border-slate-200 dark:border-slate-800 rounded-3xl p-3 bg-white/70 dark:bg-slate-900/60 shadow-2xl cursor-zoom-in hover:border-mint-500/60 transition-all max-h-full max-w-full min-h-0 min-w-0"
+                className="group relative inline-block border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-2xl select-none cursor-zoom-in hover:border-mint-500/60 transition-all max-h-full max-w-full touch-none"
                 style={{
                   transform: zoomLevel !== 1 ? `scale(${zoomLevel})` : undefined,
                   transformOrigin: 'center',
@@ -403,35 +403,36 @@ export const SideBySidePreview: React.FC = () => {
                 }}
                 title={t.clickToEnlarge}
               >
-                <div className="text-[10px] uppercase font-bold tracking-wider mb-2 flex items-center justify-between w-full px-1.5 shrink-0">
-                  <span className="flex items-center gap-1.5 font-semibold text-mint-600 dark:text-mint-400">
-                    {hasChanges ? (
-                      <>
-                        <Sparkles className="w-3.5 h-3.5 text-mint-500" />
-                        <span>{isPdf ? `${t.liveOptimizedPreview} (${t.pdfPage1Preview})` : t.liveOptimizedPreview}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-slate-500 dark:text-slate-400 font-medium">{t.originalFileNoChanges}</span>
-                      </>
-                    )}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400 font-normal">
-                    {preview.new_width || activeFile.width || 0}×{preview.new_height || activeFile.height || 0} px
+                {/* Floating badge */}
+                <div className="absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-slate-950/75 dark:bg-slate-900/90 text-slate-100 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none shadow-lg border border-white/10 flex items-center gap-1.5">
+                  {hasChanges ? (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 text-mint-400" />
+                      <span className="text-mint-400 font-semibold">
+                        {isPdf ? `${t.liveOptimizedPreview} (${t.pdfPage1Preview})` : t.liveOptimizedPreview}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-slate-400 font-medium">{t.originalFileNoChanges}</span>
+                    </>
+                  )}
+                  <span className="font-mono text-slate-400 font-normal">
+                    ({preview.new_width || activeFile.width || 0}×{preview.new_height || activeFile.height || 0})
                   </span>
                 </div>
-                <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-auto">
-                  <img
-                    src={preview.data_url}
-                    alt={t.result}
-                    className="max-h-full max-w-full w-auto h-auto object-contain rounded-2xl shadow-sm block"
-                    style={{
-                      maxHeight: 'min(560px, calc(100vh - 380px))',
-                      maxWidth: 'min(1100px, calc(100vw - 440px))',
-                    }}
-                  />
-                </div>
+
+                <img
+                  src={preview.data_url}
+                  alt={t.result}
+                  draggable={false}
+                  className="max-h-full max-w-full w-auto h-auto object-contain block rounded-3xl pointer-events-none select-none"
+                  style={{
+                    maxHeight: 'min(560px, calc(100vh - 380px))',
+                    maxWidth: 'min(1100px, calc(100vw - 440px))',
+                  }}
+                />
               </div>
             </div>
           ) : (

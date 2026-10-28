@@ -600,33 +600,45 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
               )}
 
               {effectiveViewMode === 'sideBySide' && (
-                <div className="flex items-center gap-8 max-h-[75vh] max-w-[90vw]">
+                <div className="flex items-center gap-6 max-h-[75vh] max-w-[90vw]">
+                  {/* Initial Card */}
                   <div
                     onPointerMove={handleImagePointerMove}
                     onPointerLeave={handleImagePointerLeave}
-                    className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl"
+                    className="relative inline-block border border-slate-800 rounded-2xl overflow-hidden shadow-2xl bg-slate-950 max-h-[75vh] max-w-[43vw] select-none"
                   >
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                      {t.initial} ({activeFile.width}×{activeFile.height})
-                    </span>
+                    <div className="absolute top-3 left-3 z-20 px-2.5 py-1 rounded-full bg-slate-950/75 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none border border-white/10 shadow-lg">
+                      <span>{t.initial}</span>
+                      {activeFile.width && activeFile.height && (
+                        <span className="font-mono font-normal ml-1">({activeFile.width}×{activeFile.height})</span>
+                      )}
+                    </div>
                     <img
                       src={currentPreview.original_data_url || currentPreview.data_url}
                       alt={t.initial}
-                      className="max-h-[68vh] max-w-[42vw] object-contain rounded-lg pointer-events-none"
+                      draggable={false}
+                      className="max-h-[75vh] max-w-[43vw] object-contain block pointer-events-none select-none"
                     />
                   </div>
+
+                  {/* Result Card */}
                   <div
                     onPointerMove={handleImagePointerMove}
                     onPointerLeave={handleImagePointerLeave}
-                    className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-mint-500/30 shadow-xl shadow-mint-500/5"
+                    className="relative inline-block border border-mint-500/30 rounded-2xl overflow-hidden shadow-2xl shadow-mint-500/5 bg-slate-950 max-h-[75vh] max-w-[43vw] select-none"
                   >
-                    <span className="text-[11px] font-bold text-mint-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <Eye className="w-3.5 h-3.5" /> {t.result} ({currentPreview.new_width}×{currentPreview.new_height})
-                    </span>
+                    <div className="absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-mint-500/90 text-slate-950 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none shadow-lg flex items-center gap-1.5">
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>{t.result}</span>
+                      {currentPreview.new_width && currentPreview.new_height && (
+                        <span className="font-mono font-normal">({currentPreview.new_width}×{currentPreview.new_height})</span>
+                      )}
+                    </div>
                     <img
                       src={currentPreview.data_url}
                       alt={t.result}
-                      className="max-h-[68vh] max-w-[42vw] object-contain rounded-lg pointer-events-none"
+                      draggable={false}
+                      className="max-h-[75vh] max-w-[43vw] object-contain block pointer-events-none select-none"
                     />
                   </div>
                 </div>
@@ -636,12 +648,20 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                 <div
                   onPointerMove={handleImagePointerMove}
                   onPointerLeave={handleImagePointerLeave}
-                  className="p-2 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-2xl flex items-center justify-center"
+                  className="relative inline-block border border-slate-800 rounded-2xl overflow-hidden shadow-2xl max-h-[75vh] max-w-[85vw] bg-slate-950 select-none"
                 >
+                  <div className="absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-mint-500/90 text-slate-950 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none shadow-lg flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>{t.result}</span>
+                    {currentPreview.new_width && currentPreview.new_height && (
+                      <span className="font-mono font-normal">({currentPreview.new_width}×{currentPreview.new_height})</span>
+                    )}
+                  </div>
                   <img
                     src={currentPreview.data_url}
                     alt={t.result}
-                    className="max-h-[76vh] max-w-[88vw] object-contain rounded-xl pointer-events-none"
+                    draggable={false}
+                    className="max-h-[75vh] max-w-[85vw] object-contain block pointer-events-none select-none"
                   />
                 </div>
               )}

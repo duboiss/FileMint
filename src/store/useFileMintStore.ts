@@ -19,6 +19,7 @@ import {
   WatchFolderRule,
   WatchProcessedEvent,
   AppConfig,
+  AppToast,
 } from '../types';
 import {
   Language,
@@ -809,6 +810,10 @@ interface FileMintState {
   recordWatchProcessed: (event: WatchProcessedEvent) => void;
   dismissWatchToast: () => void;
 
+  appToast: AppToast | null;
+  showAppToast: (title: string, description?: string, type?: 'success' | 'info' | 'error') => void;
+  dismissAppToast: () => void;
+
   language: Language;
   showWelcomeModal: boolean;
   t: TranslationDictionary;
@@ -871,6 +876,7 @@ interface FileMintState {
 let previewDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let previewRequestId = 0;
 let watchToastTimer: ReturnType<typeof setTimeout> | null = null;
+let appToastTimer: ReturnType<typeof setTimeout> | null = null;
 
 const syncWatchFoldersToBackend = async (
   rules: WatchFolderRule[],
@@ -1104,6 +1110,29 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         watchToastTimer = null;
       }
       set({ watchToastVisible: false });
+    },
+
+    appToast: null,
+
+    showAppToast: (title: string, description?: string, type: 'success' | 'info' | 'error' = 'success') => {
+      if (appToastTimer) {
+        clearTimeout(appToastTimer);
+        appToastTimer = null;
+      }
+      const id = `toast_${Date.now()}`;
+      set({ appToast: { id, title, description, type } });
+      appToastTimer = setTimeout(() => {
+        set({ appToast: null });
+        appToastTimer = null;
+      }, 4500);
+    },
+
+    dismissAppToast: () => {
+      if (appToastTimer) {
+        clearTimeout(appToastTimer);
+        appToastTimer = null;
+      }
+      set({ appToast: null });
     },
 
     settingsOpen: false,
@@ -1895,6 +1924,31 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           contextMenuEnabled: res.enabled,
           contextMenuMode: (res.mode as ContextMenuMode) || targetMode,
         });
+
+        if (shouldEnable && res.enabled) {
+          get().showAppToast(
+            get().t.contextMenuReadyTitle,
+            get().t.contextMenuReadyDesc,
+            'success'
+          );
+
+          if (isTauriEnv()) {
+            import('@tauri-apps/plugin-notification')
+              .then(({ isPermissionGranted, sendNotification }) => {
+                isPermissionGranted()
+                  .then((granted) => {
+                    if (granted) {
+                      sendNotification({
+                        title: 'FileMint',
+                        body: get().t.contextMenuReadyTitle,
+                      });
+                    }
+                  })
+                  .catch(() => {});
+              })
+              .catch(() => {});
+          }
+        }
       } catch (err) {
         console.error('Erreur menu contextuel :', err);
       } finally {

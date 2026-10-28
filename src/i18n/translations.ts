@@ -297,6 +297,8 @@ export interface TranslationDictionary {
   contextMenuBadgeRecommended: string;
   contextMenuWelcomeTitle: string;
   contextMenuWelcomeSubtitle: string;
+  contextMenuReadyTitle: string;
+  contextMenuReadyDesc: string;
   watchFolderSection: string;
   watchFolderDesc: string;
   watchFoldersSection: string;
@@ -650,6 +652,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     contextMenuBadgeRecommended: 'Recommandé',
     contextMenuWelcomeTitle: 'Menu contextuel (clic droit Windows) :',
     contextMenuWelcomeSubtitle: 'Accédez directement à FileMint au clic droit dans l\'Explorateur.',
+    contextMenuReadyTitle: 'Menu contextuel Windows prêt !',
+    contextMenuReadyDesc: 'FileMint est désormais accessible d\'un clic droit sur vos images et PDF.',
     watchFolderSection: 'Dossiers de surveillance automatique',
     watchFolderDesc: 'Compresse silencieusement en arrière-plan vos fichiers (images ou PDF) déposés dans vos dossiers surveillés.',
     watchFoldersSection: 'Dossiers de surveillance automatique',
@@ -1002,6 +1006,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     contextMenuBadgeRecommended: 'Recommended',
     contextMenuWelcomeTitle: 'Context menu (Windows right-click):',
     contextMenuWelcomeSubtitle: 'Access FileMint directly via right-click in Explorer.',
+    contextMenuReadyTitle: 'Windows context menu ready!',
+    contextMenuReadyDesc: 'FileMint is now accessible via right-click on your images and PDFs.',
     watchFolderSection: 'Automatic Watch Folders',
     watchFolderDesc: 'Silently optimizes in the background any file (image or PDF) dropped into your watched folders.',
     watchFoldersSection: 'Automatic Watch Folders',

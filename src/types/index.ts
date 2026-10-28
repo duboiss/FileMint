@@ -201,3 +201,10 @@ export interface AppConfig {
   custom_profiles?: CustomProfile[] | null;
   watch_folders?: WatchFolderRule[] | null;
 }
+
+export interface AppToast {
+  id: string;
+  title: string;
+  description?: string;
+  type?: 'success' | 'info' | 'error';
+}

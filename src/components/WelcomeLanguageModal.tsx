@@ -28,7 +28,6 @@ export const WelcomeLanguageModal: React.FC = () => {
   const [selectedContextMenu, setSelectedContextMenu] = useState<ContextMenuMode>(
     contextMenuMode === 'disabled' ? 'disabled' : contextMenuMode || 'modern'
   );
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!showWelcomeModal) return null;
 
@@ -37,22 +36,16 @@ export const WelcomeLanguageModal: React.FC = () => {
     setTheme(mode);
   };
 
-  const handleConfirm = async () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      setTheme(selectedTheme);
-      setLanguage(selectedLang);
+  const handleConfirm = () => {
+    setTheme(selectedTheme);
+    setLanguage(selectedLang);
+    // Dismiss modal immediately for a frictionless startup experience
+    setWelcomeModalOpen(false);
 
-      // Explicitly apply the chosen context menu mode and wait for completion
-      await setContextMenuMode(selectedContextMenu);
-      setWelcomeModalOpen(false);
-    } catch (err) {
-      console.error('Erreur configuration initiale :', err);
-      setWelcomeModalOpen(false);
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Run context menu registration asynchronously in the background
+    setContextMenuMode(selectedContextMenu).catch((err) => {
+      console.warn('Background context menu setup error:', err);
+    });
   };
 
   return (
@@ -215,24 +208,11 @@ export const WelcomeLanguageModal: React.FC = () => {
         {/* 5. Confirm */}
         <button
           onClick={handleConfirm}
-          disabled={isSubmitting}
-          className={`w-full py-2.5 rounded-xl bg-mint-500 hover:bg-mint-600 text-slate-950 font-bold text-sm shadow-lg shadow-mint-500/25 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer ${
-            isSubmitting ? 'opacity-75 pointer-events-none' : ''
-          }`}
+          className="w-full py-2.5 rounded-xl bg-mint-500 hover:bg-mint-600 text-slate-950 font-bold text-sm shadow-lg shadow-mint-500/25 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
         >
-          {isSubmitting ? (
-            <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <Zap className="w-4 h-4 fill-slate-950" />
-          )}
+          <Zap className="w-4 h-4 fill-slate-950" />
           <span>
-            {isSubmitting
-              ? selectedLang === 'fr'
-                ? 'Configuration en cours...'
-                : 'Setting up...'
-              : selectedLang === 'fr'
-              ? 'Commencer'
-              : 'Get Started'}
+            {selectedLang === 'fr' ? 'Commencer' : 'Get Started'}
           </span>
         </button>
       </div>

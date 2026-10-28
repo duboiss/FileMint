@@ -230,11 +230,6 @@ export const SideBySidePreview: React.FC = () => {
                   )}
                 </>
               )}
-              {preview && (preview.new_width || activeFile.width) ? (
-                <span className="shrink-0 text-slate-400">
-                  • {preview.new_width || activeFile.width}×{preview.new_height || activeFile.height} px
-                </span>
-              ) : null}
             </div>
           </div>
 

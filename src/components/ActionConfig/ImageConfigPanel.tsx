@@ -689,14 +689,6 @@ export const ImageConfigPanel: React.FC = () => {
               <Maximize2 className="w-3.5 h-3.5 text-mint-500 shrink-0" />
               <span>{t.resizeMode}</span>
             </div>
-            {liveW > 0 && liveH > 0 && (
-              <span
-                className="font-mono text-[11px] font-bold text-mint-600 dark:text-mint-400 bg-mint-500/10 border border-mint-500/20 px-2 py-0.5 rounded-lg shrink-0"
-                title={`${t.previewDimensions} : ${liveW} × ${liveH} px`}
-              >
-                {liveW} × {liveH} px
-              </span>
-            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-xs">
@@ -766,18 +758,22 @@ export const ImageConfigPanel: React.FC = () => {
                 <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
                   {t.previewDimensions}
                 </span>
-                <div className="flex items-center gap-1.5 font-mono mt-0.5 truncate">
-                  {hasDimensionChange && baseW > 0 && (
+                <div className="flex items-center gap-1.5 font-mono mt-0.5">
+                  {hasDimensionChange && baseW > 0 ? (
                     <>
-                      <span className="text-slate-400 line-through text-[11px] shrink-0">
-                        {baseW} × {baseH}
+                      <span className="text-slate-500 dark:text-slate-400 text-xs shrink-0">
+                        {baseW} × {baseH} px
                       </span>
                       <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
+                      <span className="font-bold text-mint-600 dark:text-mint-400 text-xs shrink-0">
+                        {liveW} × {liveH} px
+                      </span>
                     </>
+                  ) : (
+                    <span className="font-semibold text-slate-700 dark:text-slate-300 text-xs shrink-0">
+                      {liveW} × {liveH} px
+                    </span>
                   )}
-                  <span className="font-bold text-mint-600 dark:text-mint-400 text-xs shrink-0">
-                    {liveW} × {liveH} px
-                  </span>
                 </div>
               </div>
               {hasDimensionChange && baseW > 0 && (
@@ -792,16 +788,9 @@ export const ImageConfigPanel: React.FC = () => {
             <div className="p-4 rounded-2xl bg-white/70 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2">
               <div className="flex justify-between text-xs font-medium">
                 <span className="text-slate-500">{t.targetPercentage}</span>
-                <div className="flex items-center gap-1.5 font-mono">
-                  <span className="font-bold text-mint-500">
-                    {imageOptions.resize_mode.Percentage?.percent || 50}%
-                  </span>
-                  {liveW > 0 && (
-                    <span className="text-[11px] text-slate-400 font-normal">
-                      ({liveW} × {liveH} px)
-                    </span>
-                  )}
-                </div>
+                <span className="font-mono font-bold text-mint-500">
+                  {imageOptions.resize_mode.Percentage?.percent || 50}%
+                </span>
               </div>
               <input
                 type="range"

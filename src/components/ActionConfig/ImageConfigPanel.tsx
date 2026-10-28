@@ -32,7 +32,6 @@ export const ImageConfigPanel: React.FC = () => {
     imageOptions,
     setImageOptions,
     setRotation,
-    rotateClockwise,
     toggleFlipHorizontal,
     toggleFlipVertical,
     toggleGrayscale,
@@ -429,126 +428,128 @@ export const ImageConfigPanel: React.FC = () => {
             )}
           </div>
 
-          <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-800/40 space-y-3">
-            <div className="flex items-center justify-between">
+          <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-800/40 space-y-4">
+            {/* 1. Rotation */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  <RotateCw className="w-3.5 h-3.5 text-slate-500" />
+                  <span>{t.rotationTitle}</span>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700/60 font-mono text-slate-500 dark:text-slate-300">
+                  {(imageOptions.rotation || 0) % 360}°
+                </span>
+              </div>
+
+              <div className="grid grid-cols-4 gap-1.5">
+                {[
+                  { angle: 0, label: t.rotate0 },
+                  { angle: 90, label: t.rotate90 },
+                  { angle: 180, label: t.rotate180 },
+                  { angle: 270, label: t.rotate270 },
+                ].map(({ angle, label }) => {
+                  const isActive = ((imageOptions.rotation || 0) % 360) === angle;
+                  return (
+                    <button
+                      key={angle}
+                      type="button"
+                      onClick={() => setRotation(angle)}
+                      title={label}
+                      className={`py-2 px-1 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5 cursor-pointer ${
+                        isActive
+                          ? 'border-mint-500 bg-mint-500/10 text-mint-600 dark:text-mint-400 font-bold shadow-sm'
+                          : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <RotateCw
+                        className="w-4 h-4 transition-transform duration-300"
+                        style={{ transform: `rotate(${angle}deg)` }}
+                      />
+                      <span className="text-[11px] font-mono font-medium">{angle}°</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Separator */}
+            <div className="border-t border-slate-200/70 dark:border-slate-700/50" />
+
+            {/* 2. Miroir (Retournement) */}
+            <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                <RotateCw className="w-3.5 h-3.5 text-slate-500" />
-                <span>{t.rotationTitle}</span>
+                <FlipHorizontal className="w-3.5 h-3.5 text-slate-500" />
+                <span>{t.flipTitle}</span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700/60 font-mono text-slate-500 dark:text-slate-300">
-                {(imageOptions.rotation || 0) % 360}°
-              </span>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={toggleFlipHorizontal}
+                  className={`py-2 px-2.5 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    imageOptions.flip_horizontal
+                      ? 'border-mint-500 bg-mint-500/10 text-mint-600 dark:text-mint-400 font-semibold shadow-sm'
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                  title={t.flipHorizontal}
+                >
+                  <FlipHorizontal className="w-4 h-4 shrink-0" />
+                  <span className="text-xs whitespace-nowrap">{t.flipHorizontalLabel}</span>
+                  {imageOptions.flip_horizontal && (
+                    <Check className="w-3.5 h-3.5 text-mint-500 shrink-0" />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={toggleFlipVertical}
+                  className={`py-2 px-2.5 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    imageOptions.flip_vertical
+                      ? 'border-mint-500 bg-mint-500/10 text-mint-600 dark:text-mint-400 font-semibold shadow-sm'
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                  title={t.flipVertical}
+                >
+                  <FlipVertical className="w-4 h-4 shrink-0" />
+                  <span className="text-xs whitespace-nowrap">{t.flipVerticalLabel}</span>
+                  {imageOptions.flip_vertical && (
+                    <Check className="w-3.5 h-3.5 text-mint-500 shrink-0" />
+                  )}
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-1.5">
-              {[
-                { angle: 0, label: t.rotate0 },
-                { angle: 90, label: t.rotate90 },
-                { angle: 180, label: t.rotate180 },
-                { angle: 270, label: t.rotate270 },
-              ].map(({ angle, label }) => {
-                const isActive = ((imageOptions.rotation || 0) % 360) === angle;
-                return (
-                  <button
-                    key={angle}
-                    type="button"
-                    onClick={() => setRotation(angle)}
-                    title={label}
-                    className={`py-2 px-1 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5 cursor-pointer ${
-                      isActive
-                        ? 'border-mint-500 bg-mint-500/10 text-mint-600 dark:text-mint-400 font-bold shadow-sm'
-                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <RotateCw
-                      className="w-4 h-4 transition-transform duration-300"
-                      style={{ transform: `rotate(${angle}deg)` }}
-                    />
-                    <span className="text-[11px] font-mono font-medium">{angle}°</span>
-                  </button>
-                );
-              })}
-            </div>
+            {/* Separator */}
+            <div className="border-t border-slate-200/70 dark:border-slate-700/50" />
 
-            <button
-              type="button"
-              onClick={rotateClockwise}
-              className="w-full py-2 px-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-mint-500 hover:bg-mint-500/5 text-slate-700 dark:text-slate-300 hover:text-mint-600 dark:hover:text-mint-400 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              <RotateCw className="w-3.5 h-3.5" />
-              <span>{t.rotateCwQuick} (+90°)</span>
-            </button>
-          </div>
-
-          <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-800/40 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
-              <FlipHorizontal className="w-3.5 h-3.5 text-slate-500" />
-              <span>{t.flipTitle}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={toggleFlipHorizontal}
-                className={`py-2 px-2.5 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                  imageOptions.flip_horizontal
-                    ? 'border-mint-500 bg-mint-500/10 text-mint-600 dark:text-mint-400 font-semibold shadow-sm'
-                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white'
-                }`}
-                title={t.flipHorizontal}
-              >
-                <FlipHorizontal className="w-4 h-4 shrink-0" />
-                <span className="text-xs whitespace-nowrap">{t.flipHorizontalLabel}</span>
-                {imageOptions.flip_horizontal && (
-                  <Check className="w-3.5 h-3.5 text-mint-500 shrink-0" />
-                )}
-              </button>
+            {/* 3. Effets de couleur (Noir & Blanc) */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                <Palette className="w-3.5 h-3.5 text-slate-500" />
+                <span>{t.colorEffectsTitle}</span>
+              </div>
 
               <button
                 type="button"
-                onClick={toggleFlipVertical}
-                className={`py-2 px-2.5 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                  imageOptions.flip_vertical
-                    ? 'border-mint-500 bg-mint-500/10 text-mint-600 dark:text-mint-400 font-semibold shadow-sm'
+                onClick={toggleGrayscale}
+                className={`p-2.5 rounded-xl border w-full text-left flex items-center justify-between transition-all cursor-pointer ${
+                  imageOptions.grayscale
+                    ? 'border-mint-500 bg-mint-500/10 text-mint-600 dark:text-mint-400 font-bold shadow-sm'
                     : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white'
                 }`}
-                title={t.flipVertical}
               >
-                <FlipVertical className="w-4 h-4 shrink-0" />
-                <span className="text-xs whitespace-nowrap">{t.flipVerticalLabel}</span>
-                {imageOptions.flip_vertical && (
-                  <Check className="w-3.5 h-3.5 text-mint-500 shrink-0" />
-                )}
+                <div className="flex items-center gap-2.5">
+                  <div className={`p-1.5 rounded-lg ${imageOptions.grayscale ? 'bg-mint-500/20 text-mint-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                    <Palette className="w-4 h-4 shrink-0" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold block">{t.grayscale}</span>
+                    <span className="text-[10px] text-slate-400 font-normal leading-tight block mt-0.5">{t.grayscaleDesc}</span>
+                  </div>
+                </div>
+                {imageOptions.grayscale && <Check className="w-4 h-4 text-mint-500 shrink-0 ml-2" />}
               </button>
             </div>
-          </div>
-
-          <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-800/40 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
-              <Palette className="w-3.5 h-3.5 text-slate-500" />
-              <span>{t.colorEffectsTitle}</span>
-            </div>
-
-            <button
-              type="button"
-              onClick={toggleGrayscale}
-              className={`p-3 rounded-xl border w-full text-left flex items-center justify-between transition-all cursor-pointer ${
-                imageOptions.grayscale
-                  ? 'border-mint-500 bg-mint-500/10 text-mint-600 dark:text-mint-400 font-bold shadow-sm'
-                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <div className="flex items-start gap-2.5">
-                <div className={`p-2 rounded-lg ${imageOptions.grayscale ? 'bg-mint-500/20 text-mint-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-                  <Palette className="w-4 h-4 shrink-0" />
-                </div>
-                <div>
-                  <span className="text-xs font-semibold block">{t.grayscale}</span>
-                  <span className="text-[11px] text-slate-400 font-normal leading-tight block mt-0.5">{t.grayscaleDesc}</span>
-                </div>
-              </div>
-              {imageOptions.grayscale && <Check className="w-4 h-4 text-mint-500 shrink-0 ml-2" />}
-            </button>
           </div>
 
           {hasActiveManipulations && (

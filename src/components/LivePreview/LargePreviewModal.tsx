@@ -171,44 +171,36 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
         className="w-[96vw] h-[94vh] rounded-3xl bg-slate-900 border border-slate-700/80 shadow-2xl flex flex-col overflow-hidden text-slate-100"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="h-14 px-6 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between text-xs backdrop-blur-sm z-20">
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 rounded-lg bg-mint-500/10 text-mint-400">
+        <div className="h-14 min-h-[3.5rem] px-4 sm:px-6 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between text-xs backdrop-blur-sm z-20 gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
+            <div className="p-1.5 rounded-lg bg-mint-500/10 text-mint-400 shrink-0">
               <Eye className="w-4 h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-sm text-slate-100 cursor-help" title={activeFile.path}>
-                  {activeFile.name}
-                </span>
-                <span className="text-slate-500">•</span>
-                <span className="text-slate-400">
-                  {t.initial}{' '}
-                  <strong className="text-slate-200 font-mono">
-                    {formatFileSize(activeFile.sizeBytes, language)}
-                  </strong>{' '}
+            <div className="min-w-0 flex-1 flex items-center gap-2">
+              <span className="font-bold text-sm text-slate-100 truncate max-w-[140px] sm:max-w-[200px] md:max-w-xs shrink-0 cursor-help" title={activeFile.path}>
+                {activeFile.name}
+              </span>
+              <span className="text-slate-500 shrink-0">•</span>
+              <div className="flex items-center gap-1.5 min-w-0 truncate text-[11px] text-slate-400">
+                <span className="shrink-0 font-mono text-slate-300">
+                  {formatFileSize(activeFile.sizeBytes, language)}
                   {isImage && activeFile.width && activeFile.height ? (
-                    `(${activeFile.width}×${activeFile.height})`
+                    <span className="hidden lg:inline text-slate-500 ml-1">({activeFile.width}×{activeFile.height})</span>
                   ) : !isImage ? (
-                    <span className="text-mint-400 text-[11px]">({t.pdfPage1Preview})</span>
+                    <span className="text-mint-400 text-[10px] ml-1">({t.pdfPage1Preview})</span>
                   ) : null}
                 </span>
                 {Boolean(currentPreview?.estimated_bytes && currentPreview.estimated_bytes !== activeFile.sizeBytes) && (
                   <>
-                    <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
-                    <span className="text-slate-400">
-                      {t.projected}{' '}
-                      <strong className="text-mint-400 font-mono">
-                        {formatFileSize(currentPreview!.estimated_bytes, language)}
-                      </strong>{' '}
-                      {isImage ? (
-                        `(${currentPreview!.new_width}×${currentPreview!.new_height})`
-                      ) : (
-                        <span className="text-mint-400 text-[11px]">({t.pdfPage1Preview})</span>
-                      )}
+                    <ArrowRight className="w-3 h-3 text-slate-500 shrink-0" />
+                    <span className="shrink-0 text-mint-400 font-mono font-bold">
+                      {formatFileSize(currentPreview!.estimated_bytes, language)}
+                      {isImage && currentPreview?.new_width && currentPreview?.new_height ? (
+                        <span className="hidden lg:inline text-mint-500/80 font-normal ml-1">({currentPreview.new_width}×{currentPreview.new_height})</span>
+                      ) : null}
                     </span>
                     {currentPreview!.saved_percentage > 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[11px]">
+                      <span className="shrink-0 px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px]">
                         -{currentPreview!.saved_percentage.toFixed(0)}%
                       </span>
                     )}
@@ -218,12 +210,12 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <div className="flex items-center bg-slate-800/80 p-0.5 rounded-xl border border-slate-700/60">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="flex items-center bg-slate-800/80 p-0.5 rounded-xl border border-slate-700/60 shrink-0">
               <button
                 disabled={!hasChanges}
                 onClick={() => setViewMode('split')}
-                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                className={`px-2 sm:px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all shrink-0 ${
                   !hasChanges
                     ? 'opacity-40 cursor-not-allowed text-slate-500'
                     : effectiveViewMode === 'split'
@@ -232,13 +224,13 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                 }`}
                 title={hasChanges ? t.viewSplit : t.noChangesToCompare}
               >
-                <Sliders className="w-3.5 h-3.5" />
-                <span>{t.viewSplit}</span>
+                <Sliders className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden xl:inline">{t.viewSplit}</span>
               </button>
               <button
                 disabled={!hasChanges}
                 onClick={() => setViewMode('sideBySide')}
-                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                className={`px-2 sm:px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all shrink-0 ${
                   !hasChanges
                     ? 'opacity-40 cursor-not-allowed text-slate-500'
                     : effectiveViewMode === 'sideBySide'
@@ -247,20 +239,20 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                 }`}
                 title={hasChanges ? t.viewSideBySide : t.noChangesToCompare}
               >
-                <Columns className="w-3.5 h-3.5" />
-                <span>{t.viewSideBySide}</span>
+                <Columns className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden xl:inline">{t.viewSideBySide}</span>
               </button>
               <button
                 onClick={() => setViewMode('single')}
-                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                className={`px-2 sm:px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all shrink-0 ${
                   effectiveViewMode === 'single'
                     ? 'bg-mint-500 text-slate-950 font-semibold shadow-sm cursor-pointer'
                     : 'text-slate-400 hover:text-slate-200 cursor-pointer'
                 }`}
                 title={t.viewSingle}
               >
-                <Maximize2 className="w-3.5 h-3.5" />
-                <span>{t.viewSingle}</span>
+                <Maximize2 className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden xl:inline">{t.viewSingle}</span>
               </button>
             </div>
 

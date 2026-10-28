@@ -42,6 +42,7 @@ export interface TranslationDictionary {
   pdfCardTitle: string;
   pdfCardSubtitle: string;
   privacyBadge: string;
+  privacyBadgeShort: string;
 
   // FileList
   fileQueue: string;
@@ -444,6 +445,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     pdfCardTitle: 'Documents PDF',
     pdfCardSubtitle: 'Optimisation structurelle et compression locale des flux sans perte de clarté.',
     privacyBadge: '100% local & hors ligne : aucun fichier n\'est transmis à un serveur.',
+    privacyBadgeShort: '100% local & hors ligne',
 
     fileQueue: 'File de traitement',
     fileCountSingle: 'fichier',
@@ -837,6 +839,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     pdfCardTitle: 'PDF Documents',
     pdfCardSubtitle: 'Structural optimization and local stream compression without text degradation.',
     privacyBadge: '100% local & offline: no files are ever uploaded or transmitted.',
+    privacyBadgeShort: '100% local & offline',
 
     fileQueue: 'Processing Queue',
     fileCountSingle: 'file',

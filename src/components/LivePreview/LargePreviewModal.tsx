@@ -484,7 +484,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
         <div
           ref={containerRef}
           onWheel={handleWheel}
-          className={`flex-1 relative overflow-hidden flex items-center justify-center p-4 bg-slate-950/60 ${
+          className={`flex-1 relative overflow-hidden flex items-center justify-center px-4 sm:px-6 py-5 sm:py-6 bg-slate-950/60 ${
             isLoupeActive
               ? 'cursor-crosshair'
               : zoomLevel > 1
@@ -516,7 +516,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
 
           {currentPreview?.data_url ? (
             <div
-              className="transition-transform duration-75 ease-out max-h-full max-w-full flex items-center justify-center"
+              className="transition-transform duration-75 ease-out max-h-full max-w-full flex items-center justify-center my-auto"
               style={{
                 transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
                 transformOrigin: 'center center',
@@ -532,7 +532,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                   onPointerUp={handleSplitPointerUp}
                   onPointerCancel={() => setIsDraggingSplit(false)}
                   onPointerLeave={handleImagePointerLeave}
-                  className="relative inline-block border border-slate-800 rounded-2xl overflow-hidden shadow-2xl max-h-[75vh] max-w-[85vw] select-none cursor-ew-resize group bg-slate-950 touch-none"
+                  className="relative inline-block border border-slate-800 rounded-2xl overflow-hidden shadow-2xl max-h-[66vh] max-w-[85vw] select-none cursor-ew-resize group bg-slate-950 touch-none my-auto"
                 >
                   {/* Badges for split comparison */}
                   <div className="absolute top-3 left-3 z-20 px-2.5 py-1 rounded-full bg-slate-950/75 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none border border-white/10 shadow-lg">
@@ -547,7 +547,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                     src={currentPreview.data_url}
                     alt={t.result}
                     draggable={false}
-                    className="max-h-[75vh] max-w-[85vw] object-contain block pointer-events-none select-none"
+                    className="max-h-[66vh] max-w-[85vw] object-contain block pointer-events-none select-none"
                   />
 
                   {/* Clipped Initial image on top */}
@@ -589,12 +589,12 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
               )}
 
               {effectiveViewMode === 'sideBySide' && (
-                <div className="flex items-center gap-6 max-h-[75vh] max-w-[90vw]">
+                <div className="flex items-center gap-6 max-h-[66vh] max-w-[90vw] my-auto">
                   {/* Initial Card */}
                   <div
                     onPointerMove={handleImagePointerMove}
                     onPointerLeave={handleImagePointerLeave}
-                    className="relative inline-block border border-slate-800 rounded-2xl overflow-hidden shadow-2xl bg-slate-950 max-h-[75vh] max-w-[43vw] select-none"
+                    className="relative inline-block border border-slate-800 rounded-2xl overflow-hidden shadow-2xl bg-slate-950 max-h-[66vh] max-w-[43vw] select-none"
                   >
                     <div className="absolute top-3 left-3 z-20 px-2.5 py-1 rounded-full bg-slate-950/75 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none border border-white/10 shadow-lg">
                       <span>{t.initial}</span>
@@ -606,7 +606,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                       src={currentPreview.original_data_url || currentPreview.data_url}
                       alt={t.initial}
                       draggable={false}
-                      className="max-h-[75vh] max-w-[43vw] object-contain block pointer-events-none select-none"
+                      className="max-h-[66vh] max-w-[43vw] object-contain block pointer-events-none select-none"
                     />
                   </div>
 
@@ -614,7 +614,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                   <div
                     onPointerMove={handleImagePointerMove}
                     onPointerLeave={handleImagePointerLeave}
-                    className="relative inline-block border border-mint-500/30 rounded-2xl overflow-hidden shadow-2xl shadow-mint-500/5 bg-slate-950 max-h-[75vh] max-w-[43vw] select-none"
+                    className="relative inline-block border border-mint-500/30 rounded-2xl overflow-hidden shadow-2xl shadow-mint-500/5 bg-slate-950 max-h-[66vh] max-w-[43vw] select-none"
                   >
                     <div className="absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-mint-500/90 text-slate-950 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none shadow-lg flex items-center gap-1.5">
                       <Eye className="w-3.5 h-3.5" />
@@ -627,7 +627,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                       src={currentPreview.data_url}
                       alt={t.result}
                       draggable={false}
-                      className="max-h-[75vh] max-w-[43vw] object-contain block pointer-events-none select-none"
+                      className="max-h-[66vh] max-w-[43vw] object-contain block pointer-events-none select-none"
                     />
                   </div>
                 </div>
@@ -637,7 +637,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                 <div
                   onPointerMove={handleImagePointerMove}
                   onPointerLeave={handleImagePointerLeave}
-                  className="relative inline-block border border-slate-800 rounded-2xl overflow-hidden shadow-2xl max-h-[75vh] max-w-[85vw] bg-slate-950 select-none"
+                  className="relative inline-block border border-slate-800 rounded-2xl overflow-hidden shadow-2xl max-h-[66vh] max-w-[85vw] bg-slate-950 select-none my-auto"
                 >
                   <div className="absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-mint-500/90 text-slate-950 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none shadow-lg flex items-center gap-1.5">
                     <Eye className="w-3.5 h-3.5" />
@@ -650,7 +650,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                     src={currentPreview.data_url}
                     alt={t.result}
                     draggable={false}
-                    className="max-h-[75vh] max-w-[85vw] object-contain block pointer-events-none select-none"
+                    className="max-h-[66vh] max-w-[85vw] object-contain block pointer-events-none select-none"
                   />
                 </div>
               )}
@@ -840,57 +840,67 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
           </div>
         </div>
 
-        <div className="h-8 px-6 border-t border-slate-800/80 bg-slate-950/60 flex items-center justify-between text-[11px] text-slate-400">
-          <div className="flex items-center gap-4">
-            <span>
-              {t.shortcuts}{' '}
-              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
-                Esc
-              </kbd>{' '}
-              {t.shortcutEsc}
+        <div className="min-h-[2rem] px-4 sm:px-6 py-1 border-t border-slate-800/80 bg-slate-950/70 flex items-center justify-between text-[11px] text-slate-400 gap-3 select-none overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0 py-0.5">
+            <span className="font-semibold text-slate-400 shrink-0 hidden md:inline">
+              {t.shortcuts}
             </span>
-            <span>
-              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+            <span className="inline-flex items-center gap-1 whitespace-nowrap shrink-0">
+              <kbd className="px-1.5 py-0.2 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">
+                Esc
+              </kbd>
+              <span>{t.shortcutEsc}</span>
+            </span>
+            <span className="inline-flex items-center gap-1 whitespace-nowrap shrink-0">
+              <kbd className="px-1.5 py-0.2 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">
                 +
-              </kbd>{' '}
-              /{' '}
-              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+              </kbd>
+              <span className="text-slate-500">/</span>
+              <kbd className="px-1.5 py-0.2 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">
                 -
-              </kbd>{' '}
-              {t.shortcutZoom}
+              </kbd>
+              <span>{t.shortcutZoom}</span>
             </span>
             {canAdjustQuality && (
-              <span>
-                <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+              <span className="inline-flex items-center gap-1 whitespace-nowrap shrink-0">
+                <kbd className="px-1.5 py-0.2 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">
                   [
-                </kbd>{' '}
-                /{' '}
-                <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+                </kbd>
+                <span className="text-slate-500">/</span>
+                <kbd className="px-1.5 py-0.2 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">
                   ]
-                </kbd>{' '}
-                {t.compressionLevel}
+                </kbd>
+                <span className="hidden sm:inline">{t.compressionLevel}</span>
+                <span className="sm:hidden">{t.tagQuality}</span>
               </span>
             )}
-            <span>
-              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+            <span className="inline-flex items-center gap-1 whitespace-nowrap shrink-0">
+              <kbd className="px-1.5 py-0.2 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">
                 0
-              </kbd>{' '}
-              {t.shortcutReset}
+              </kbd>
+              <span>{t.shortcutReset}</span>
             </span>
-            <span>
-              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+            <span className="inline-flex items-center gap-1 whitespace-nowrap shrink-0">
+              <kbd className="px-1.5 py-0.2 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">
                 L
-              </kbd>{' '}
-              {t.loupeTitle}
+              </kbd>
+              <span>{t.loupeTitle}</span>
             </span>
-            <span>
-              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+            <span className="inline-flex items-center gap-1 whitespace-nowrap shrink-0">
+              <kbd className="px-1.5 py-0.2 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">
                 {language === 'en' ? 'Space' : 'Espace'}
-              </kbd>{' '}
-              200%/400%
+              </kbd>
+              <span>200%/400%</span>
             </span>
           </div>
-          <div>{t.privacyBadge}</div>
+
+          <div className="shrink-0 whitespace-nowrap text-slate-400 flex items-center gap-1.5 pl-3 border-l border-slate-800/80 text-[10px] sm:text-[11px]">
+            <span className="hidden xl:inline">{t.privacyBadge}</span>
+            <span className="xl:hidden flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+              <span>{t.privacyBadgeShort}</span>
+            </span>
+          </div>
         </div>
       </div>
     </div>

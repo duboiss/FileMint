@@ -585,17 +585,6 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                       </svg>
                     </div>
                   </div>
-
-                  {/* Optional accessibility slider at bottom */}
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={splitPos}
-                    onChange={(e) => setSplitPos(Number(e.target.value))}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    className="absolute inset-x-0 bottom-6 w-3/5 mx-auto opacity-75 hover:opacity-100 transition-opacity accent-mint-500 z-20 cursor-ew-resize"
-                  />
                 </div>
               )}
 

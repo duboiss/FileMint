@@ -513,18 +513,6 @@ export const SideBySidePreview: React.FC = () => {
                     </svg>
                   </div>
                 </div>
-
-                {/* Interactive Slider Input for accessibility / fine-grained control */}
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={splitPos}
-                  onChange={(e) => setSplitPos(Number(e.target.value))}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="absolute inset-x-0 bottom-3 w-3/5 mx-auto opacity-70 hover:opacity-100 transition-opacity accent-mint-500 z-20 cursor-ew-resize"
-                  title="Curseur comparaison avant/après"
-                />
               </div>
             </div>
           )

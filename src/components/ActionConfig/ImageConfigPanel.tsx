@@ -25,6 +25,7 @@ import {
   Shield,
   Camera,
   Target,
+  Info,
 } from 'lucide-react';
 
 export const ImageConfigPanel: React.FC = () => {
@@ -414,6 +415,12 @@ export const ImageConfigPanel: React.FC = () => {
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 shrink-0">
               <Sparkles className="w-3.5 h-3.5 text-mint-500 shrink-0" />
               <span className="whitespace-nowrap">{t.manipulationTitle}</span>
+              <span
+                className="cursor-help text-slate-400 hover:text-blue-500 transition-colors"
+                title={t.retouchWeightNoteDesc}
+              >
+                <Info className="w-3.5 h-3.5" />
+              </span>
             </div>
             {hasActiveManipulations && (
               <button
@@ -548,14 +555,26 @@ export const ImageConfigPanel: React.FC = () => {
           </div>
 
           {hasActiveManipulations && (
-            <button
-              type="button"
-              onClick={resetManipulations}
-              className="w-full py-2 px-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500/60 hover:bg-amber-500/5 text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-            >
-              <Undo className="w-3.5 h-3.5" />
-              <span>{t.resetManipulations}</span>
-            </button>
+            <div className="space-y-3 animate-fadeIn">
+              <div className="p-3 rounded-2xl bg-blue-500/10 dark:bg-blue-500/10 border border-blue-500/25 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                  <Info className="w-3.5 h-3.5 shrink-0" />
+                  <span>{t.retouchWeightNoteTitle}</span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                  {t.retouchWeightNoteDesc}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={resetManipulations}
+                className="w-full py-2 px-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500/60 hover:bg-amber-500/5 text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Undo className="w-3.5 h-3.5" />
+                <span>{t.resetManipulations}</span>
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -838,24 +857,7 @@ export const ImageConfigPanel: React.FC = () => {
             </button>
           </div>
 
-          {imageOptions.compress === false ? (
-            <div className="p-4 rounded-2xl bg-mint-500/10 border border-mint-500/30 space-y-2 animate-fadeIn">
-              <div className="flex items-center gap-2 text-xs font-semibold text-mint-600 dark:text-mint-400">
-                <Check className="w-4 h-4 shrink-0" />
-                <span>{t.noCompressionTitle}</span>
-              </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                {t.noCompressionNotice}
-              </p>
-              <button
-                type="button"
-                onClick={() => setImageOptions({ compress: true })}
-                className="text-xs text-mint-600 dark:text-mint-400 hover:text-mint-500 font-semibold underline underline-offset-2 cursor-pointer pt-0.5 block"
-              >
-                {t.enableCompression}
-              </button>
-            </div>
-          ) : (
+          {imageOptions.compress !== false && (
             <>
               {/* Mode switch: Manual quality vs Target size */}
               <div className="grid grid-cols-2 p-1 bg-slate-200/50 dark:bg-slate-800/60 rounded-2xl border border-slate-300/40 dark:border-slate-700/50 text-[11px] font-semibold shadow-inner">

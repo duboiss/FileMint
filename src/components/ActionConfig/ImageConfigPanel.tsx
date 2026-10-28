@@ -69,6 +69,7 @@ export const ImageConfigPanel: React.FC = () => {
 
   // Helper to extract active resize mode
   const resizeType = Object.keys(imageOptions.resize_mode)[0] || 'None';
+  const activeProfilesCount = customProfiles.filter((p) => p.id !== 'preset_none').length;
 
   const hasActiveManipulations =
     (imageOptions.rotation || 0) !== 0 ||
@@ -104,44 +105,29 @@ export const ImageConfigPanel: React.FC = () => {
   };
 
   const renderProfileSummary = (options: typeof imageOptions) => {
-    const formatLabel = options.format === 'Original' ? t.keepOriginal : options.format;
     const resizeLabel = formatResizeSummary(options);
     const qualityLabel = options.compress === false ? t.noCompression : `Q${options.quality}`;
 
-    const exceptionParts: string[] = [];
+    const parts: string[] = [resizeLabel, qualityLabel];
+
     if ((options.rotation || 0) % 360 !== 0) {
-      exceptionParts.push(`${(options.rotation || 0) % 360}°`);
+      parts.push(`${(options.rotation || 0) % 360}°`);
     }
     if (options.flip_horizontal || options.flip_vertical) {
-      exceptionParts.push(t.mirrorSummary);
+      parts.push(t.mirrorSummary);
     }
     if (options.grayscale) {
-      exceptionParts.push(t.bwSummary);
+      parts.push(t.bwSummary);
     }
     if (options.metadata_policy === 'RemoveGps') {
-      exceptionParts.push(t.noGpsSummary);
+      parts.push(t.noGpsSummary);
     } else if (options.metadata_policy === 'RemoveAll') {
-      exceptionParts.push(t.noExifSummary);
+      parts.push(t.noExifSummary);
     }
 
     return (
-      <div className="flex items-center gap-1.5 mt-1 font-mono text-[10px] leading-tight min-w-0">
-        <span className="px-1.5 py-0.5 rounded bg-slate-200/90 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 font-bold tracking-wider uppercase shrink-0">
-          {formatLabel}
-        </span>
-
-        <span className="text-slate-500 dark:text-slate-400 truncate">
-          {resizeLabel} • {qualityLabel}
-        </span>
-
-        {exceptionParts.length > 0 && (
-          <span
-            className="px-1.5 py-0.5 rounded bg-mint-500/10 text-mint-600 dark:text-mint-400 font-sans font-medium shrink-0"
-            title={exceptionParts.join(', ')}
-          >
-            {exceptionParts.join(' · ')}
-          </span>
-        )}
+      <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-1 leading-normal break-words">
+        {parts.join(' • ')}
       </div>
     );
   };
@@ -185,12 +171,12 @@ export const ImageConfigPanel: React.FC = () => {
               <Bookmark className="w-3.5 h-3.5 text-mint-500 shrink-0" />
               <span>{t.tabPresets}</span>
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                {customProfiles.length}/20
+                {activeProfilesCount}/20
               </span>
             </div>
 
             <div className="flex items-center gap-1">
-              {customProfiles.length < 20 && !isCreatingProfile && (
+              {activeProfilesCount < 20 && !isCreatingProfile && (
                 <button
                   type="button"
                   onClick={() => {
@@ -220,7 +206,7 @@ export const ImageConfigPanel: React.FC = () => {
             <div className="p-3.5 rounded-2xl border border-mint-500/50 bg-mint-500/5 dark:bg-mint-500/10 space-y-2.5 animate-fadeIn">
               <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-between">
                 <span>{t.saveCurrentAsProfile}</span>
-                <span className="text-[10px] font-mono text-slate-400">{customProfiles.length}/20</span>
+                <span className="text-[10px] font-mono text-slate-400">{activeProfilesCount}/20</span>
               </div>
 
               <input
@@ -240,8 +226,15 @@ export const ImageConfigPanel: React.FC = () => {
                 className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-mint-500 focus:ring-1 focus:ring-mint-500"
               />
 
-              <div className="bg-white/60 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
-                {renderProfileSummary(imageOptions)}
+              <div className="bg-white/60 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  {renderProfileSummary(imageOptions)}
+                </div>
+                {imageOptions.format !== 'Original' && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-slate-200/90 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 shrink-0">
+                    {imageOptions.format}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-1">
@@ -296,49 +289,49 @@ export const ImageConfigPanel: React.FC = () => {
                     onClick={() => {
                       if (!isEditing) applyCustomProfile(profile.id);
                     }}
-                    className={`p-3 rounded-2xl border text-left transition-all flex items-center justify-between group cursor-pointer ${
+                    className={`p-3 rounded-2xl border text-left transition-all group cursor-pointer ${
                       isActive
                         ? 'border-mint-500 bg-mint-500/10 text-slate-900 dark:text-white shadow-sm ring-1 ring-mint-500/30'
                         : 'border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
-                    <div className="flex-1 min-w-0 pr-2">
-                      {isEditing ? (
-                        <div
-                          className="flex items-center gap-1.5"
-                          onClick={(e) => e.stopPropagation()}
+                    {isEditing ? (
+                      <div
+                        className="flex items-center gap-1.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="text"
+                          autoFocus
+                          value={editingProfileName}
+                          onChange={(e) => setEditingProfileName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveRename(profile.id);
+                            if (e.key === 'Escape') setEditingProfileId(null);
+                          }}
+                          className="px-2 py-1 text-xs rounded-lg border border-mint-500 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none w-full"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveRename(profile.id)}
+                          className="p-1 rounded-md bg-mint-500 text-slate-950 hover:bg-mint-600 cursor-pointer"
+                          title={t.save}
                         >
-                          <input
-                            type="text"
-                            autoFocus
-                            value={editingProfileName}
-                            onChange={(e) => setEditingProfileName(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveRename(profile.id);
-                              if (e.key === 'Escape') setEditingProfileId(null);
-                            }}
-                            className="px-2 py-1 text-xs rounded-lg border border-mint-500 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none w-full"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleSaveRename(profile.id)}
-                            className="p-1 rounded-md bg-mint-500 text-slate-950 hover:bg-mint-600 cursor-pointer"
-                            title={t.save}
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingProfileId(null)}
-                            className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                            title={t.cancel}
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="font-semibold text-xs flex items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingProfileId(null)}
+                          className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                          title={t.cancel}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between gap-2 min-h-[20px]">
+                          <div className="font-semibold text-xs flex items-center gap-1.5 min-w-0">
                             <span className="truncate">{profile.name}</span>
                             {isActive && (
                               <span className="w-1.5 h-1.5 rounded-full bg-mint-500 shrink-0" />
@@ -349,49 +342,64 @@ export const ImageConfigPanel: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          {renderProfileSummary(profile.options)}
-                        </>
-                      )}
-                    </div>
 
-                    {!isEditing && (
-                      <div className="flex items-center gap-1 shrink-0">
-                        {isActive && <Check className="w-4 h-4 text-mint-500 shrink-0 mr-1" />}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {profile.id !== 'preset_none' && (
+                              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleUpdateProfile(profile.id, e)}
+                                  className="p-1 rounded-md text-slate-400 hover:text-mint-500 hover:bg-mint-500/10 transition-colors cursor-pointer"
+                                  title={t.updateProfileWithCurrent}
+                                >
+                                  <Save className="w-3.5 h-3.5" />
+                                </button>
 
-                        <button
-                          type="button"
-                          onClick={(e) => handleUpdateProfile(profile.id, e)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-mint-500 hover:bg-mint-500/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 cursor-pointer"
-                          title={t.updateProfileWithCurrent}
-                        >
-                          <Save className="w-3.5 h-3.5" />
-                        </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingProfileId(profile.id);
+                                    setEditingProfileName(profile.name);
+                                  }}
+                                  className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                                  title={t.renameProfile}
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
 
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingProfileId(profile.id);
-                            setEditingProfileName(profile.name);
-                          }}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 cursor-pointer"
-                          title={t.renameProfile}
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteCustomProfile(profile.id);
+                                  }}
+                                  className="p-1 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 cursor-pointer"
+                                  title={t.deleteProfile}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
 
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteCustomProfile(profile.id);
-                          }}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 cursor-pointer"
-                          title={t.deleteProfile}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                            {profile.options.format !== 'Original' && (
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider ${
+                                  isActive
+                                    ? 'bg-mint-500/20 text-mint-700 dark:text-mint-300'
+                                    : 'bg-slate-200/90 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200'
+                                }`}
+                              >
+                                {profile.options.format}
+                              </span>
+                            )}
+
+                            {isActive && <Check className="w-4 h-4 text-mint-500 shrink-0" />}
+                          </div>
+                        </div>
+
+                        {renderProfileSummary(profile.options)}
+                      </>
                     )}
                   </div>
                 );

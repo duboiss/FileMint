@@ -186,7 +186,7 @@ export const formatResizeSummary = (options: ImageTransformOptions): string => {
   if (options.resize_mode.Exact) {
     return `${options.resize_mode.Exact.width || 'auto'}×${options.resize_mode.Exact.height || 'auto'}`;
   }
-  return '100% (Original)';
+  return '100%';
 };
 
 export const createProfilesExportJson = (profiles: CustomProfile[]): string => {
@@ -254,13 +254,15 @@ export const validateAndSanitizeProfiles = (data: unknown): CustomProfile[] | nu
       compress: rawOpt.compress !== false,
     };
 
+    const nonNoneCount = validProfiles.filter((p) => p.id !== 'preset_none').length;
+    if (id !== 'preset_none' && nonNoneCount >= MAX_CUSTOM_PROFILES) continue;
+
     validProfiles.push({
       id,
       name,
       options: sanitizedOptions,
       createdAt,
     });
-    if (validProfiles.length >= MAX_CUSTOM_PROFILES) break;
   }
 
   return validProfiles.length > 0 ? validProfiles : null;
@@ -532,18 +534,20 @@ const loadCustomProfilesFromStorage = (dict?: TranslationDictionary): CustomProf
       if (validated && validated.length > 0) {
         // Ensure preset_none is available
         const hasNone = validated.some((p: CustomProfile) => p.id === 'preset_none');
-        if (!hasNone) {
-          const noneProfile: CustomProfile = {
-            id: 'preset_none',
-            name: dict?.presetNone || 'Aucun',
-            options: getPresetOptions('none'),
-            createdAt: 0,
-          };
-          const merged = [noneProfile, ...validated].slice(0, MAX_CUSTOM_PROFILES);
-          saveCustomProfilesToStorage(merged);
-          return merged;
-        }
-        return validated.slice(0, MAX_CUSTOM_PROFILES);
+        const noneProfile: CustomProfile = hasNone
+          ? validated.find((p: CustomProfile) => p.id === 'preset_none')!
+          : {
+              id: 'preset_none',
+              name: dict?.presetNone || 'Aucun',
+              options: getPresetOptions('none'),
+              createdAt: 0,
+            };
+        const nonNone = validated
+          .filter((p: CustomProfile) => p.id !== 'preset_none')
+          .slice(0, MAX_CUSTOM_PROFILES);
+        const merged = [noneProfile, ...nonNone];
+        saveCustomProfilesToStorage(merged);
+        return merged;
       }
     }
   } catch (err) {
@@ -556,7 +560,10 @@ const loadCustomProfilesFromStorage = (dict?: TranslationDictionary): CustomProf
 
 const saveCustomProfilesToStorage = (profiles: CustomProfile[]) => {
   try {
-    localStorage.setItem(CUSTOM_PROFILES_STORAGE_KEY, JSON.stringify(profiles.slice(0, MAX_CUSTOM_PROFILES)));
+    const noneItem = profiles.find((p) => p.id === 'preset_none');
+    const nonNone = profiles.filter((p) => p.id !== 'preset_none').slice(0, MAX_CUSTOM_PROFILES);
+    const toSave = noneItem ? [noneItem, ...nonNone] : nonNone;
+    localStorage.setItem(CUSTOM_PROFILES_STORAGE_KEY, JSON.stringify(toSave));
   } catch (err) {
     console.warn('Error saving custom profiles to storage:', err);
   }
@@ -1403,7 +1410,8 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       const trimmed = name.trim();
       if (!trimmed) return false;
       const current = get().customProfiles;
-      if (current.length >= MAX_CUSTOM_PROFILES) return false;
+      const nonNoneProfiles = current.filter((p) => p.id !== 'preset_none');
+      if (nonNoneProfiles.length >= MAX_CUSTOM_PROFILES) return false;
 
       const newProfile: CustomProfile = {
         id: `profile_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -1412,7 +1420,9 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         createdAt: Date.now(),
       };
 
-      const updated = [newProfile, ...current].slice(0, MAX_CUSTOM_PROFILES);
+      const noneProfile = current.find((p) => p.id === 'preset_none');
+      const updatedNonNone = [newProfile, ...nonNoneProfiles].slice(0, MAX_CUSTOM_PROFILES);
+      const updated = noneProfile ? [noneProfile, ...updatedNonNone] : updatedNonNone;
       saveCustomProfilesToStorage(updated);
       set({
         customProfiles: updated,
@@ -1439,6 +1449,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
     },
 
     deleteCustomProfile: (id: string) => {
+      if (id === 'preset_none') return;
       const updated = get().customProfiles.filter((p) => p.id !== id);
       saveCustomProfilesToStorage(updated);
       set((state) => {
@@ -1459,6 +1470,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
     },
 
     renameCustomProfile: (id: string, newName: string) => {
+      if (id === 'preset_none') return false;
       const trimmed = newName.trim();
       if (!trimmed) return false;
       const updated = get().customProfiles.map((p) =>
@@ -1471,6 +1483,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
     },
 
     updateCustomProfileOptions: (id: string) => {
+      if (id === 'preset_none') return false;
       const current = get().customProfiles;
       const target = current.find((p) => p.id === id);
       if (!target) return false;
@@ -1507,7 +1520,17 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
 
     importCustomProfiles: (profiles: CustomProfile[]) => {
       if (!profiles || profiles.length === 0) return false;
-      const sanitized = profiles.slice(0, MAX_CUSTOM_PROFILES);
+      const validated = validateAndSanitizeProfiles(profiles);
+      if (!validated || validated.length === 0) return false;
+
+      const noneItem = validated.find((p) => p.id === 'preset_none') || {
+        id: 'preset_none',
+        name: get().t.presetNone || 'Aucun',
+        options: getPresetOptions('none'),
+        createdAt: 0,
+      };
+      const nonNone = validated.filter((p) => p.id !== 'preset_none').slice(0, MAX_CUSTOM_PROFILES);
+      const sanitized = [noneItem, ...nonNone];
       saveCustomProfilesToStorage(sanitized);
       const firstProfile = sanitized[0];
       const newDefaultId = firstProfile ? firstProfile.id : '';

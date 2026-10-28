@@ -137,9 +137,9 @@ export const ImageConfigPanel: React.FC = () => {
         {(
           [
             { id: 'presets', label: t.tabPresets },
-            { id: 'manipulate', label: t.tabManipulate, hasBadge: hasActiveManipulations },
             { id: 'resize', label: t.tabResize },
             { id: 'compress', label: t.tabCompress },
+            { id: 'manipulate', label: t.tabManipulate, hasBadge: hasActiveManipulations },
             { id: 'convert', label: t.tabConvert },
           ] as Array<{ id: ImageConfigTab; label: string; hasBadge?: boolean }>
         ).map((tab) => {

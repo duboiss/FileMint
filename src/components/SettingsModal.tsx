@@ -514,9 +514,9 @@ export const SettingsModal: React.FC = () => {
                   {(
                     [
                       { id: 'presets', label: t.tabPresets },
-                      { id: 'manipulate', label: t.tabManipulate },
                       { id: 'resize', label: t.tabResize },
                       { id: 'compress', label: t.tabCompress },
+                      { id: 'manipulate', label: t.tabManipulate },
                       { id: 'convert', label: t.tabConvert },
                     ] as const
                   ).map((item) => (

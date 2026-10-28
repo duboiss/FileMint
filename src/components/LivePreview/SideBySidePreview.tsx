@@ -325,9 +325,14 @@ export const SideBySidePreview: React.FC = () => {
           >
             <ZoomOut className="w-3.5 h-3.5" />
           </button>
-          <span className="text-[10px] font-mono text-slate-400 w-8 text-center">
+          <button
+            type="button"
+            onClick={() => setZoomLevel(1)}
+            className="px-1.5 py-0.5 rounded text-[11px] font-mono text-mint-600 dark:text-mint-400 hover:bg-slate-200 dark:hover:bg-slate-800 font-semibold min-w-[42px] text-center cursor-pointer transition-colors"
+            title={t.resetZoom}
+          >
             {Math.round(zoomLevel * 100)}%
-          </span>
+          </button>
           <button
             onClick={() => setZoomLevel((z) => Math.min(3, z + 0.25))}
             className="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"

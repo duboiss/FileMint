@@ -267,11 +267,12 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                 <ZoomOut className="w-3.5 h-3.5" />
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setZoomLevel(zoomLevel === 1 ? 2 : 1);
                   setPanOffset({ x: 0, y: 0 });
                 }}
-                className="px-2 py-1 rounded text-[11px] font-mono text-mint-400 hover:bg-slate-700/60 font-semibold min-w-[50px] text-center"
+                className="px-1.5 py-0.5 rounded text-[11px] font-mono text-mint-400 hover:bg-slate-700/60 font-semibold min-w-[42px] text-center cursor-pointer transition-colors"
                 title="100% / Fit"
               >
                 {Math.round(zoomLevel * 100)}%

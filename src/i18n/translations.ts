@@ -207,6 +207,11 @@ export interface TranslationDictionary {
   shortcutEsc: string;
   shortcutZoom: string;
   shortcutReset: string;
+  loupeTitle: string;
+  loupeTooltip: string;
+  loupeZoomToggle: string;
+  loupeShortcutHint: string;
+  zoomFit: string;
   pdfProfileSelected: string;
   pdfExplanation: string;
   pdfPage1Preview: string;
@@ -600,6 +605,11 @@ export const translations: Record<Language, TranslationDictionary> = {
     shortcutEsc: 'Fermer',
     shortcutZoom: 'Zoomer',
     shortcutReset: 'Réinitialiser',
+    loupeTitle: 'Loupe A/B',
+    loupeTooltip: 'Loupe synchronisée (Touche L)',
+    loupeZoomToggle: 'Grossissement loupe',
+    loupeShortcutHint: 'L : Loupe • Espace : 200%/400% • Molette : Zoom',
+    zoomFit: 'Ajuster',
     pdfProfileSelected: 'Profil sélectionné :',
     pdfExplanation: 'Le texte, les polices et les tracés restent parfaitement nets et lisibles.',
     pdfPage1Preview: 'Aperçu Page 1',
@@ -988,6 +998,11 @@ export const translations: Record<Language, TranslationDictionary> = {
     shortcutEsc: 'Close',
     shortcutZoom: 'Zoom',
     shortcutReset: 'Reset',
+    loupeTitle: 'A/B Loupe',
+    loupeTooltip: 'Synchronized Loupe (Key L)',
+    loupeZoomToggle: 'Loupe magnification',
+    loupeShortcutHint: 'L: Loupe • Space: 200%/400% • Wheel: Zoom',
+    zoomFit: 'Fit',
     pdfProfileSelected: 'Selected profile:',
     pdfExplanation: 'Text, typography, and vectors remain crisp and fully readable.',
     pdfPage1Preview: 'Page 1 Preview',

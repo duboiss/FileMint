@@ -14,7 +14,9 @@ import {
   Move,
   Loader2,
   FileText,
+  Search,
 } from 'lucide-react';
+import { LoupeLens } from './LoupeLens';
 
 interface LargePreviewModalProps {
   isOpen: boolean;
@@ -73,6 +75,19 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
   const qualityRef = useRef(imageOptions.quality);
   qualityRef.current = imageOptions.quality;
 
+  // Loupe A/B 200% / 400%
+  const [isLoupeActive, setIsLoupeActive] = useState<boolean>(false);
+  const [loupeZoom, setLoupeZoom] = useState<2 | 4>(2);
+  const [loupeState, setLoupeState] = useState<{
+    clientX: number;
+    clientY: number;
+    normX: number;
+    normY: number;
+    imageRect: { width: number; height: number };
+  } | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const updateSplitPosition = (clientX: number, target: HTMLElement) => {
     const rect = target.getBoundingClientRect();
     if (rect.width <= 0) return;
@@ -105,21 +120,30 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
     }
   };
 
-  // Reset zoom and pan offset when opening
+  // Reset zoom, pan, and loupe when opening
   useEffect(() => {
     if (isOpen) {
       setZoomLevel(1);
       setPanOffset({ x: 0, y: 0 });
+      setIsLoupeActive(false);
+      setLoupeState(null);
     }
   }, [isOpen]);
 
-  // Keyboard shortcuts: Escape to close, +/- zoom, [/] quality, 0/r reset pan
+  // Keyboard shortcuts: Escape to close, L toggle loupe, Space toggle 200%/400%, +/- zoom, [/] quality, 0/r reset pan
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
+      } else if (e.key === 'l' || e.key === 'L') {
+        setIsLoupeActive((prev) => !prev);
+      } else if (e.key === ' ' || e.code === 'Space') {
+        if (isLoupeActive) {
+          e.preventDefault();
+          setLoupeZoom((z) => (z === 2 ? 4 : 2));
+        }
       } else if (e.key === '+' || e.key === '=') {
         setZoomLevel((z) => Math.min(4, +(z + 0.25).toFixed(2)));
       } else if (e.key === '-') {
@@ -140,12 +164,49 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, setImageOptions]);
+  }, [isOpen, onClose, setImageOptions, isLoupeActive]);
 
   if (!isOpen || !activeFile) return null;
 
+  // Cursor-centered wheel zoom
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    // If loupe is active, wheel toggles 200% / 400%
+    if (isLoupeActive) {
+      if (e.deltaY < 0) {
+        setLoupeZoom(4);
+      } else {
+        setLoupeZoom(2);
+      }
+      return;
+    }
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const cursorRelX = e.clientX - (rect.left + rect.width / 2);
+    const cursorRelY = e.clientY - (rect.top + rect.height / 2);
+
+    const delta = e.deltaY < 0 ? 0.25 : -0.25;
+    const currentZ = zoomLevel;
+    const nextZ = Math.max(0.25, Math.min(4, +(currentZ + delta).toFixed(2)));
+
+    if (nextZ === currentZ) return;
+
+    if (nextZ === 1) {
+      setZoomLevel(1);
+      setPanOffset({ x: 0, y: 0 });
+    } else {
+      const ratio = nextZ / currentZ;
+      const nextPanX = cursorRelX - (cursorRelX - panOffset.x) * ratio;
+      const nextPanY = cursorRelY - (cursorRelY - panOffset.y) * ratio;
+      setZoomLevel(nextZ);
+      setPanOffset({ x: Math.round(nextPanX), y: Math.round(nextPanY) });
+    }
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (zoomLevel <= 1) return;
+    if (isLoupeActive || zoomLevel <= 1) return;
     setIsDragging(true);
     dragStartRef.current = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
   };
@@ -160,6 +221,33 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
 
   const handleMouseUp = () => {
     setIsDragging(false);
+  };
+
+  const handleImagePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isLoupeActive) {
+      if (loupeState) setLoupeState(null);
+      return;
+    }
+
+    const target = e.currentTarget;
+    const rect = target.getBoundingClientRect();
+    const normX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const normY = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+    setLoupeState({
+      clientX: e.clientX,
+      clientY: e.clientY,
+      normX,
+      normY,
+      imageRect: {
+        width: rect.width,
+        height: rect.height,
+      },
+    });
+  };
+
+  const handleImagePointerLeave = () => {
+    setLoupeState(null);
   };
 
   return (
@@ -258,28 +346,113 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
 
             <div className="w-[1px] h-5 bg-slate-800" />
 
-            <div className="flex items-center gap-1 bg-slate-800/80 px-2 py-1 rounded-xl border border-slate-700/60">
+            {/* Loupe A/B 200% / 400% Toggle */}
+            <div className="flex items-center gap-1 bg-slate-800/80 p-0.5 rounded-xl border border-slate-700/60 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsLoupeActive(!isLoupeActive)}
+                className={`px-2 sm:px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+                  isLoupeActive
+                    ? 'bg-mint-500 text-slate-950 font-bold shadow-md shadow-mint-500/20'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                }`}
+                title={t.loupeTooltip}
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{t.loupeTitle}</span>
+              </button>
+
+              {isLoupeActive && (
+                <div className="flex items-center gap-0.5 pl-1 pr-0.5 border-l border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setLoupeZoom(2)}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                      loupeZoom === 2
+                        ? 'bg-mint-400 text-slate-950 shadow-xs'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    200%
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLoupeZoom(4)}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                      loupeZoom === 4
+                        ? 'bg-mint-400 text-slate-950 shadow-xs'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    400%
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="w-[1px] h-5 bg-slate-800" />
+
+            {/* Global Zoom with Presets */}
+            <div className="flex items-center gap-1 bg-slate-800/80 px-2 py-1 rounded-xl border border-slate-700/60 shrink-0">
               <button
                 onClick={() => setZoomLevel((z) => Math.max(0.25, +(z - 0.25).toFixed(2)))}
-                className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-300"
+                className="p-1 rounded-lg hover:bg-slate-700 text-slate-300 cursor-pointer"
                 title={`${t.zoomOut} (-)`}
               >
                 <ZoomOut className="w-3.5 h-3.5" />
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setZoomLevel(zoomLevel === 1 ? 2 : 1);
-                  setPanOffset({ x: 0, y: 0 });
-                }}
-                className="px-1.5 py-0.5 rounded text-[11px] font-mono text-mint-400 hover:bg-slate-700/60 font-semibold min-w-[42px] text-center cursor-pointer transition-colors"
-                title="100% / Fit"
-              >
-                {Math.round(zoomLevel * 100)}%
-              </button>
+
+              <div className="flex items-center gap-0.5 text-[11px] font-mono">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setZoomLevel(1);
+                    setPanOffset({ x: 0, y: 0 });
+                  }}
+                  className={`px-1.5 py-0.5 rounded font-semibold cursor-pointer transition-colors ${
+                    zoomLevel === 1
+                      ? 'bg-mint-500/20 text-mint-400'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                  }`}
+                  title={t.zoomFit}
+                >
+                  100%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setZoomLevel(2);
+                    setPanOffset({ x: 0, y: 0 });
+                  }}
+                  className={`px-1.5 py-0.5 rounded font-semibold cursor-pointer transition-colors ${
+                    zoomLevel === 2
+                      ? 'bg-mint-500/20 text-mint-400'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                  }`}
+                  title="200%"
+                >
+                  200%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setZoomLevel(4);
+                    setPanOffset({ x: 0, y: 0 });
+                  }}
+                  className={`px-1.5 py-0.5 rounded font-semibold cursor-pointer transition-colors ${
+                    zoomLevel === 4
+                      ? 'bg-mint-500/20 text-mint-400'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                  }`}
+                  title="400%"
+                >
+                  400%
+                </button>
+              </div>
+
               <button
                 onClick={() => setZoomLevel((z) => Math.min(4, +(z + 0.25).toFixed(2)))}
-                className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-300"
+                className="p-1 rounded-lg hover:bg-slate-700 text-slate-300 cursor-pointer"
                 title={`${t.zoomIn} (+)`}
               >
                 <ZoomIn className="w-3.5 h-3.5" />
@@ -289,7 +462,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                   setZoomLevel(1);
                   setPanOffset({ x: 0, y: 0 });
                 }}
-                className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200"
+                className="p-1 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 cursor-pointer"
                 title={`${t.resetZoom} (0)`}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -309,18 +482,35 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
         </div>
 
         <div
+          ref={containerRef}
+          onWheel={handleWheel}
           className={`flex-1 relative overflow-hidden flex items-center justify-center p-4 bg-slate-950/60 ${
-            zoomLevel > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'
+            isLoupeActive
+              ? 'cursor-crosshair'
+              : zoomLevel > 1
+              ? (isDragging ? 'cursor-grabbing' : 'cursor-grab')
+              : 'cursor-default'
           }`}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onMouseLeave={() => {
+            handleMouseUp();
+            handleImagePointerLeave();
+          }}
         >
-          {zoomLevel > 1 && (
+          {zoomLevel > 1 && !isLoupeActive && (
             <div className="absolute top-4 left-4 z-20 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/80 text-[11px] text-slate-300 flex items-center gap-1.5 backdrop-blur-sm pointer-events-none">
               <Move className="w-3.5 h-3.5 text-mint-400" />
               <span>{t.dragToPan}</span>
+            </div>
+          )}
+
+          {isLoupeActive && (
+            <div className="absolute top-4 left-4 z-20 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-mint-500/40 text-[11px] text-slate-200 flex items-center gap-2 backdrop-blur-sm pointer-events-none shadow-lg">
+              <span className="w-2 h-2 rounded-full bg-mint-400 animate-pulse" />
+              <span className="font-semibold text-mint-400">{t.loupeTitle} {loupeZoom * 100}%</span>
+              <span className="text-slate-400">• {t.loupeShortcutHint}</span>
             </div>
           )}
 
@@ -335,9 +525,13 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
               {effectiveViewMode === 'split' && (
                 <div
                   onPointerDown={handleSplitPointerDown}
-                  onPointerMove={handleSplitPointerMove}
+                  onPointerMove={(e) => {
+                    handleSplitPointerMove(e);
+                    handleImagePointerMove(e);
+                  }}
                   onPointerUp={handleSplitPointerUp}
                   onPointerCancel={() => setIsDraggingSplit(false)}
+                  onPointerLeave={handleImagePointerLeave}
                   className="relative inline-block border border-slate-800 rounded-2xl overflow-hidden shadow-2xl max-h-[75vh] max-w-[85vw] select-none cursor-ew-resize group bg-slate-950 touch-none"
                 >
                   {/* Badges for split comparison */}
@@ -407,7 +601,11 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
 
               {effectiveViewMode === 'sideBySide' && (
                 <div className="flex items-center gap-8 max-h-[75vh] max-w-[90vw]">
-                  <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
+                  <div
+                    onPointerMove={handleImagePointerMove}
+                    onPointerLeave={handleImagePointerLeave}
+                    className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl"
+                  >
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
                       {t.initial} ({activeFile.width}×{activeFile.height})
                     </span>
@@ -417,7 +615,11 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                       className="max-h-[68vh] max-w-[42vw] object-contain rounded-lg pointer-events-none"
                     />
                   </div>
-                  <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-mint-500/30 shadow-xl shadow-mint-500/5">
+                  <div
+                    onPointerMove={handleImagePointerMove}
+                    onPointerLeave={handleImagePointerLeave}
+                    className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-mint-500/30 shadow-xl shadow-mint-500/5"
+                  >
                     <span className="text-[11px] font-bold text-mint-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                       <Eye className="w-3.5 h-3.5" /> {t.result} ({currentPreview.new_width}×{currentPreview.new_height})
                     </span>
@@ -431,7 +633,11 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
               )}
 
               {effectiveViewMode === 'single' && (
-                <div className="p-2 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-2xl flex items-center justify-center">
+                <div
+                  onPointerMove={handleImagePointerMove}
+                  onPointerLeave={handleImagePointerLeave}
+                  className="p-2 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-2xl flex items-center justify-center"
+                >
                   <img
                     src={currentPreview.data_url}
                     alt={t.result}
@@ -445,6 +651,21 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
               <Loader2 className="w-4 h-4 animate-spin text-mint-500" />
               <span>{t.previewLoading}</span>
             </div>
+          )}
+
+          {/* Floating Synchronized A/B Loupe */}
+          {isLoupeActive && loupeState && currentPreview && (
+            <LoupeLens
+              clientX={loupeState.clientX}
+              clientY={loupeState.clientY}
+              normX={loupeState.normX}
+              normY={loupeState.normY}
+              imageRect={loupeState.imageRect}
+              originalSrc={currentPreview.original_data_url || currentPreview.data_url}
+              resultSrc={currentPreview.data_url}
+              hasChanges={hasChanges}
+              zoom={loupeZoom}
+            />
           )}
         </div>
 
@@ -646,6 +867,18 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                 0
               </kbd>{' '}
               {t.shortcutReset}
+            </span>
+            <span>
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+                L
+              </kbd>{' '}
+              {t.loupeTitle}
+            </span>
+            <span>
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+                {language === 'en' ? 'Space' : 'Espace'}
+              </kbd>{' '}
+              200%/400%
             </span>
           </div>
           <div>{t.privacyBadge}</div>

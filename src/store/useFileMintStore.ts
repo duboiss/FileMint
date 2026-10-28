@@ -622,17 +622,9 @@ const generateLocalBrowserPreview = (
 
   const activeColorFilter =
     imageOptions.color_filter || (imageOptions.grayscale ? 'grayscale' : 'none');
-  const hasFilter = activeColorFilter !== 'none';
 
   const areaRatio = (targetW * targetH) / (origW * origH);
   const isCompressionDisabled = imageOptions.compress === false;
-  const isNoTransform =
-    imageOptions.format === 'Original' &&
-    Object.keys(imageOptions.resize_mode)[0] === 'None' &&
-    (imageOptions.rotation || 0) === 0 &&
-    !imageOptions.flip_horizontal &&
-    !imageOptions.flip_vertical &&
-    !hasFilter;
 
   let estimatedBytes: number;
   let savedPercentage: number;
@@ -643,11 +635,28 @@ const generateLocalBrowserPreview = (
     savedPercentage = activeFile.sizeBytes > 0
       ? Math.max(0, Math.round(((activeFile.sizeBytes - estimatedBytes) / activeFile.sizeBytes) * 100))
       : 0;
-  } else if (isCompressionDisabled && isNoTransform) {
-    estimatedBytes = activeFile.sizeBytes;
-    savedPercentage = 0;
+  } else if (isCompressionDisabled) {
+    const isFormatOriginal = imageOptions.format === 'Original';
+    const formatCompressionFactor = isFormatOriginal
+      ? 1.0
+      : imageOptions.format === 'Avif'
+      ? 0.58
+      : imageOptions.format === 'Webp'
+      ? 0.70
+      : imageOptions.format === 'Png'
+      ? 0.90
+      : 0.80;
+
+    estimatedBytes = Math.max(
+      1024,
+      Math.round(activeFile.sizeBytes * areaRatio * formatCompressionFactor)
+    );
+    savedPercentage =
+      activeFile.sizeBytes > 0 && activeFile.sizeBytes > estimatedBytes
+        ? Math.max(0, Math.round(((activeFile.sizeBytes - estimatedBytes) / activeFile.sizeBytes) * 100))
+        : 0;
   } else {
-    const qualityFactor = isCompressionDisabled ? 1.0 : Math.max(0.1, imageOptions.quality / 100);
+    const qualityFactor = Math.max(0.1, imageOptions.quality / 100);
     const formatCompressionFactor =
       imageOptions.format === 'Avif'
         ? 0.48

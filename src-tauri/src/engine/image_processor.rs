@@ -855,17 +855,21 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
         if is_format_same && !has_pixel_transformations {
             (original_bytes, 0.0)
         } else {
-            let compression_ratio = match target_format {
-                ImageFormat::Avif => 0.58,
-                ImageFormat::WebP => 0.70,
-                ImageFormat::Png => 0.90,
-                ImageFormat::Jpeg => 0.80,
-                _ => 0.80,
+            let compression_ratio = if is_format_same {
+                1.0
+            } else {
+                match target_format {
+                    ImageFormat::Avif => 0.58,
+                    ImageFormat::WebP => 0.70,
+                    ImageFormat::Png => 0.90,
+                    ImageFormat::Jpeg => 0.80,
+                    _ => 0.80,
+                }
             };
             let est = ((original_bytes as f64) * area_ratio * compression_ratio)
                 .round()
                 .max(1024.0) as u64;
-            let saved = if original_bytes > 0 {
+            let saved = if original_bytes > 0 && original_bytes > est {
                 let diff = (original_bytes as f64) - (est as f64);
                 ((diff / (original_bytes as f64)) * 100.0).max(0.0) as f32
             } else {

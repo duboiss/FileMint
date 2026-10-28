@@ -204,32 +204,34 @@ export const SideBySidePreview: React.FC = () => {
     <div className="flex-1 flex flex-col bg-slate-100/50 dark:bg-slate-950/40 overflow-hidden relative select-none">
       {/* Streamlined, responsive toolbar */}
       <div className="h-12 px-4 sm:px-5 border-b border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 flex items-center justify-between gap-3 text-xs backdrop-blur-sm z-10 shrink-0">
-        {/* Left: Metadata comparison pill */}
+        {/* Left: Metadata comparison */}
         <div className="flex items-center gap-2 min-w-0">
-          <span
-            className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[120px] sm:max-w-[180px] cursor-help text-xs"
-            title={activeFile.path}
-          >
-            {activeFile.name}
-          </span>
-
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-200/50 dark:bg-slate-800/60 font-mono text-[11px] shrink-0">
-            <span className="text-slate-600 dark:text-slate-400">
-              {formatFileSize(activeFile.sizeBytes, language)}
+          <div className="min-w-0 flex flex-col justify-center">
+            <span
+              className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[140px] sm:max-w-[200px] md:max-w-xs cursor-help text-xs leading-tight"
+              title={activeFile.path}
+            >
+              {activeFile.name}
             </span>
-            {hasSizeChange && preview && (
-              <>
-                <ArrowRight className="w-3 h-3 text-slate-400" />
-                <span className="font-bold text-mint-600 dark:text-mint-400">
-                  {formatFileSize(preview.estimated_bytes, language)}
-                </span>
-                {preview.saved_percentage > 0 && (
-                  <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
-                    -{preview.saved_percentage.toFixed(0)}%
+
+            <div className="flex items-center gap-1.5 font-mono text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-none">
+              <span className="shrink-0 text-slate-600 dark:text-slate-400">
+                {formatFileSize(activeFile.sizeBytes, language)}
+              </span>
+              {hasSizeChange && preview && (
+                <>
+                  <ArrowRight className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                  <span className="shrink-0 font-bold text-mint-600 dark:text-mint-400">
+                    {formatFileSize(preview.estimated_bytes, language)}
                   </span>
-                )}
-              </>
-            )}
+                  {preview.saved_percentage > 0 && (
+                    <span className="shrink-0 px-1 py-0.2 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[9px]">
+                      -{preview.saved_percentage.toFixed(0)}%
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
           </div>
 
           {isPdf ? (

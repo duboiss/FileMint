@@ -264,16 +264,18 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
             <div className="p-1.5 rounded-lg bg-mint-500/10 text-mint-400 shrink-0">
               <Eye className="w-4 h-4" />
             </div>
-            <div className="min-w-0 flex-1 flex items-center gap-2">
-              <span className="font-bold text-sm text-slate-100 truncate max-w-[140px] sm:max-w-[200px] md:max-w-xs shrink-0 cursor-help" title={activeFile.path}>
+            <div className="min-w-0 flex-1 flex flex-col justify-center">
+              <span
+                className="font-bold text-sm text-slate-100 truncate cursor-help leading-tight"
+                title={activeFile.path}
+              >
                 {activeFile.name}
               </span>
-              <span className="text-slate-500 shrink-0">•</span>
-              <div className="flex items-center gap-1.5 min-w-0 truncate text-[11px] text-slate-400">
+              <div className="flex items-center gap-1.5 min-w-0 text-[11px] text-slate-400 mt-0.5 leading-none">
                 <span className="shrink-0 font-mono text-slate-300">
                   {formatFileSize(activeFile.sizeBytes, language)}
                   {isImage && activeFile.width && activeFile.height ? (
-                    <span className="hidden lg:inline text-slate-500 ml-1">({activeFile.width}×{activeFile.height})</span>
+                    <span className="hidden sm:inline text-slate-500 ml-1">({activeFile.width}×{activeFile.height})</span>
                   ) : !isImage ? (
                     <span className="text-mint-400 text-[10px] ml-1">({t.pdfPage1Preview})</span>
                   ) : null}
@@ -284,7 +286,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                     <span className="shrink-0 text-mint-400 font-mono font-bold">
                       {formatFileSize(currentPreview!.estimated_bytes, language)}
                       {isImage && currentPreview?.new_width && currentPreview?.new_height ? (
-                        <span className="hidden lg:inline text-mint-500/80 font-normal ml-1">({currentPreview.new_width}×{currentPreview.new_height})</span>
+                        <span className="hidden sm:inline text-mint-500/80 font-normal ml-1">({currentPreview.new_width}×{currentPreview.new_height})</span>
                       ) : null}
                     </span>
                     {currentPreview!.saved_percentage > 0 && (

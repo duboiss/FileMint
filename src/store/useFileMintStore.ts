@@ -2349,10 +2349,16 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           currentVersion: APP_VERSION,
         });
         if (info && info.has_update) {
+          const isDownloaded = Boolean(info.is_downloaded);
           set({
             updateInfo: info,
-            updateDownloaded: Boolean(info.is_downloaded),
+            updateDownloaded: isDownloaded,
           });
+
+          // Téléchargement automatique en arrière-plan si disponible et non encore téléchargé
+          if (!isDownloaded && info.download_url && info.asset_name && !get().updateDownloading) {
+            get().downloadUpdate();
+          }
         }
       } catch {
         // Silently ignore if offline

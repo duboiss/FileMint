@@ -1,15 +1,13 @@
 import React, { useMemo } from 'react';
 import { useFileMintStore, APP_VERSION } from '../store/useFileMintStore';
-import { Sparkles, Settings, RotateCcw, Loader2, AlertCircle, Download, ExternalLink } from 'lucide-react';
+import { Sparkles, Settings, RotateCcw, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const {
     setSettingsOpen,
     updateInfo,
-    updateDownloading,
     updateDownloaded,
     updateInstalling,
-    updateProgress,
     updateError,
     downloadUpdate,
     installAndRestart,
@@ -56,7 +54,7 @@ export const Header: React.FC = () => {
           </button>
         )}
 
-        {/* Update System in Header */}
+        {/* Update System in Header: silently downloads in background, only displays button once ready to restart */}
         {updateInfo?.has_update && (
           <>
             {updateDownloaded ? (
@@ -88,20 +86,6 @@ export const Header: React.FC = () => {
                   </span>
                 )}
               </button>
-            ) : updateDownloading ? (
-              <div
-                className="relative flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-xl bg-mint-500/10 text-mint-600 dark:text-mint-400 border border-mint-500/30 overflow-hidden select-none"
-                title={`${t.updateDownloading} (${updateProgress}%)`}
-              >
-                <div
-                  className="absolute inset-y-0 left-0 bg-mint-500/20 transition-all duration-200"
-                  style={{ width: `${updateProgress}%` }}
-                />
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-mint-500 shrink-0 relative z-10" />
-                <span className="relative z-10">
-                  {t.updateDownloading}... <strong className="font-mono">{updateProgress}%</strong>
-                </span>
-              </div>
             ) : updateError ? (
               <button
                 type="button"
@@ -112,25 +96,17 @@ export const Header: React.FC = () => {
                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                 <span>{t.updateRetry}</span>
               </button>
-            ) : (
+            ) : !updateInfo.download_url ? (
               <button
                 type="button"
                 onClick={() => downloadUpdate()}
                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-mint-500/15 text-mint-600 dark:text-mint-300 border border-mint-500/30 hover:bg-mint-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                title={
-                  updateInfo.download_url
-                    ? t.updateAction.replace('{version}', updateInfo.latest_version)
-                    : `${t.updateAction.replace('{version}', updateInfo.latest_version)} (${t.openDownloadPage})`
-                }
+                title={`${t.updateAction.replace('{version}', updateInfo.latest_version)} (${t.openDownloadPage})`}
               >
-                {updateInfo.download_url ? (
-                  <Download className="w-3.5 h-3.5 shrink-0 text-mint-500" />
-                ) : (
-                  <ExternalLink className="w-3.5 h-3.5 shrink-0 text-mint-500" />
-                )}
+                <ExternalLink className="w-3.5 h-3.5 shrink-0 text-mint-500" />
                 <span>{t.updateAction.replace('{version}', updateInfo.latest_version)}</span>
               </button>
-            )}
+            ) : null}
           </>
         )}
 

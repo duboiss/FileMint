@@ -84,8 +84,6 @@ export interface TranslationDictionary {
   filterBinarize: string;
   filterBinarizeDesc: string;
   resetManipulations: string;
-  retouchWeightNoteTitle: string;
-  retouchWeightNoteDesc: string;
   presetNone: string;
   presetNoneDesc: string;
   presetWeb: string;
@@ -502,8 +500,6 @@ export const translations: Record<Language, TranslationDictionary> = {
     filterBinarize: 'N&B Pur',
     filterBinarizeDesc: 'Seuillage 1-bit à fort contraste (noir et blanc stricts).',
     resetManipulations: 'Réinitialiser les retouches',
-    retouchWeightNoteTitle: 'Retouches & compression',
-    retouchWeightNoteDesc: 'Sans compression, les retouches conservent le poids d\'origine. Avec compression, le poids est ajusté selon vos réglages (identique quel que soit l\'angle ou l\'effet).',
     presetNone: 'Aucun',
     presetNoneDesc: 'Conserve le fichier d\'origine sans modification, redimensionnement ni compression.',
     presetWeb: 'Web',
@@ -913,8 +909,6 @@ export const translations: Record<Language, TranslationDictionary> = {
     filterBinarize: 'Pure B&W',
     filterBinarizeDesc: 'High-contrast 1-bit thresholding (strict black & white).',
     resetManipulations: 'Reset adjustments',
-    retouchWeightNoteTitle: 'Adjustments & compression',
-    retouchWeightNoteDesc: 'Without compression, adjustments preserve original file size. With compression, size is adjusted per your settings (identical for any angle or effect).',
     presetNone: 'None',
     presetNoneDesc: 'Preserves the original file without modification, resizing, or compression.',
     presetWeb: 'Web',

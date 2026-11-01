@@ -832,6 +832,19 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
         }
     }
 
+    let effective_filter = match options.color_filter {
+        ColorFilter::None if options.grayscale => ColorFilter::Grayscale,
+        filter => filter,
+    };
+
+    let filter_factor = match effective_filter {
+        ColorFilter::None => 1.0,
+        ColorFilter::Invert => 0.85,
+        ColorFilter::Grayscale => 0.78,
+        ColorFilter::Binarize => 0.55,
+        ColorFilter::Sepia => 0.95,
+    };
+
     // Estimate output size based on target pixel area and format ratio
     let area_ratio = ((target_w as f64) * (target_h as f64)) / ((orig_w as f64) * (orig_h as f64));
     let (estimated_bytes, saved_percentage) = if let Some(target_kb) = options.target_size_kb {
@@ -860,7 +873,7 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
         if is_format_same && !has_pixel_transformations {
             (original_bytes, 0.0)
         } else {
-            let compression_ratio = if is_format_same {
+            let base_ratio = if is_format_same {
                 1.0
             } else {
                 match target_format {
@@ -871,9 +884,10 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
                     _ => 0.80,
                 }
             };
+            let compression_ratio = base_ratio * filter_factor;
             let est = ((original_bytes as f64) * area_ratio * compression_ratio)
                 .round()
-                .max(1024.0) as u64;
+                .max(1.0) as u64;
             let saved = if original_bytes > 0 && original_bytes > est {
                 let diff = (original_bytes as f64) - (est as f64);
                 ((diff / (original_bytes as f64)) * 100.0).max(0.0) as f32
@@ -884,7 +898,7 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
         }
     } else {
         let q_ratio = (options.quality as f64) / 100.0;
-        let compression_ratio = match target_format {
+        let base_compression_ratio = match target_format {
             ImageFormat::Avif => 0.18 + q_ratio * 0.40,
             ImageFormat::WebP => 0.25 + q_ratio * 0.45,
             ImageFormat::Png => {
@@ -897,9 +911,10 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
             ImageFormat::Jpeg => 0.15 + q_ratio * 0.65,
             _ => 0.30 + q_ratio * 0.50,
         };
+        let compression_ratio = base_compression_ratio * filter_factor;
         let est = ((original_bytes as f64) * area_ratio * compression_ratio)
             .round()
-            .max(1024.0) as u64;
+            .max(1.0) as u64;
 
         let saved = if original_bytes > 0 {
             let diff = (original_bytes as f64) - (est as f64);
@@ -1155,5 +1170,33 @@ mod tests {
             "Output size {} exceeded target 25600 bytes",
             bytes.len()
         );
+    }
+
+    struct TempFileCleaner(std::path::PathBuf);
+    impl Drop for TempFileCleaner {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(&self.0);
+        }
+    }
+
+    #[test]
+    fn test_preview_filter_invert_reduces_estimated_weight() {
+        let unique_id = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let path = std::env::temp_dir().join(format!("filemint_test_invert_{}.png", unique_id));
+        let _cleaner = TempFileCleaner(path.clone());
+        let img = DynamicImage::new_rgb8(100, 100);
+        img.save(&path).unwrap();
+
+        let opts_invert = ImageTransformOptions {
+            color_filter: ColorFilter::Invert,
+            compress: false,
+            ..Default::default()
+        };
+        let preview_invert = generate_preview(&path, &opts_invert).unwrap();
+        assert!(preview_invert.estimated_bytes < preview_invert.original_bytes);
+        assert!(preview_invert.saved_percentage > 0.0);
     }
 }

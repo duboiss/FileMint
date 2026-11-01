@@ -623,6 +623,17 @@ const generateLocalBrowserPreview = (
   const activeColorFilter =
     imageOptions.color_filter || (imageOptions.grayscale ? 'grayscale' : 'none');
 
+  const filterFactor =
+    activeColorFilter === 'invert'
+      ? 0.85
+      : activeColorFilter === 'grayscale'
+      ? 0.78
+      : activeColorFilter === 'binarize'
+      ? 0.55
+      : activeColorFilter === 'sepia'
+      ? 0.95
+      : 1.0;
+
   const areaRatio = (targetW * targetH) / (origW * origH);
   const isCompressionDisabled = imageOptions.compress === false;
 
@@ -637,7 +648,14 @@ const generateLocalBrowserPreview = (
       : 0;
   } else if (isCompressionDisabled) {
     const isFormatOriginal = imageOptions.format === 'Original';
-    const formatCompressionFactor = isFormatOriginal
+    const hasPixelTransformations =
+      (imageOptions.rotation || 0) % 360 !== 0 ||
+      Boolean(imageOptions.flip_horizontal) ||
+      Boolean(imageOptions.flip_vertical) ||
+      activeColorFilter !== 'none' ||
+      !imageOptions.resize_mode.None;
+
+    const baseFormatFactor = isFormatOriginal
       ? 1.0
       : imageOptions.format === 'Avif'
       ? 0.58
@@ -647,9 +665,13 @@ const generateLocalBrowserPreview = (
       ? 0.90
       : 0.80;
 
+    const finalRatio = isFormatOriginal && !hasPixelTransformations
+      ? 1.0
+      : baseFormatFactor * filterFactor;
+
     estimatedBytes = Math.max(
-      1024,
-      Math.round(activeFile.sizeBytes * areaRatio * formatCompressionFactor)
+      1,
+      Math.round(activeFile.sizeBytes * areaRatio * finalRatio)
     );
     savedPercentage =
       activeFile.sizeBytes > 0 && activeFile.sizeBytes > estimatedBytes
@@ -669,8 +691,8 @@ const generateLocalBrowserPreview = (
         : 0.75;
 
     estimatedBytes = Math.max(
-      1024,
-      Math.round(activeFile.sizeBytes * areaRatio * qualityFactor * formatCompressionFactor)
+      1,
+      Math.round(activeFile.sizeBytes * areaRatio * qualityFactor * formatCompressionFactor * filterFactor)
     );
     savedPercentage = Math.max(
       0,

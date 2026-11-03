@@ -322,7 +322,9 @@ pub fn generate_pdf_preview(
             estimated_ratio
         };
         let effective_ratio = measured_ratio.clamp(0.05, 1.0);
-        ((original_bytes as f64) * effective_ratio).round().min(original_bytes as f64) as u64
+        ((original_bytes as f64) * effective_ratio)
+            .round()
+            .min(original_bytes as f64) as u64
     };
 
     let saved_percentage = if original_bytes > 0 && original_bytes > estimated_bytes {

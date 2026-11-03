@@ -380,8 +380,12 @@ pub fn calculate_target_dimensions(
         ResizeMode::None => (orig_w.min(MAX_DIMENSION), orig_h.min(MAX_DIMENSION)),
         ResizeMode::Percentage { percent } => {
             let factor = (*percent as f64) / 100.0;
-            let w = ((orig_w as f64) * factor).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
-            let h = ((orig_h as f64) * factor).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
+            let w = ((orig_w as f64) * factor)
+                .round()
+                .clamp(1.0, MAX_DIMENSION as f64) as u32;
+            let h = ((orig_h as f64) * factor)
+                .round()
+                .clamp(1.0, MAX_DIMENSION as f64) as u32;
             (w, h)
         }
         ResizeMode::Exact { width, height } => {
@@ -390,22 +394,38 @@ pub fn calculate_target_dimensions(
             if options.maintain_aspect_ratio {
                 let ratio = (orig_w as f64) / (orig_h as f64);
                 if bounded_w > 0 && bounded_h == 0 {
-                    let h = ((bounded_w as f64) / ratio).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
+                    let h = ((bounded_w as f64) / ratio)
+                        .round()
+                        .clamp(1.0, MAX_DIMENSION as f64) as u32;
                     (bounded_w, h)
                 } else if bounded_h > 0 && bounded_w == 0 {
-                    let w = ((bounded_h as f64) * ratio).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
+                    let w = ((bounded_h as f64) * ratio)
+                        .round()
+                        .clamp(1.0, MAX_DIMENSION as f64) as u32;
                     (w, bounded_h)
                 } else {
                     let factor_w = (bounded_w as f64) / (orig_w as f64);
                     let factor_h = (bounded_h as f64) / (orig_h as f64);
                     let factor = factor_w.min(factor_h);
-                    let target_w = ((orig_w as f64) * factor).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
-                    let target_h = ((orig_h as f64) * factor).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
+                    let target_w = ((orig_w as f64) * factor)
+                        .round()
+                        .clamp(1.0, MAX_DIMENSION as f64) as u32;
+                    let target_h = ((orig_h as f64) * factor)
+                        .round()
+                        .clamp(1.0, MAX_DIMENSION as f64) as u32;
                     (target_w, target_h)
                 }
             } else {
-                let w = if bounded_w > 0 { bounded_w } else { orig_w.min(MAX_DIMENSION) };
-                let h = if bounded_h > 0 { bounded_h } else { orig_h.min(MAX_DIMENSION) };
+                let w = if bounded_w > 0 {
+                    bounded_w
+                } else {
+                    orig_w.min(MAX_DIMENSION)
+                };
+                let h = if bounded_h > 0 {
+                    bounded_h
+                } else {
+                    orig_h.min(MAX_DIMENSION)
+                };
                 (w, h)
             }
         }
@@ -424,8 +444,12 @@ pub fn calculate_target_dimensions(
             if options.do_not_upscale && factor >= 1.0 {
                 return (orig_w.min(MAX_DIMENSION), orig_h.min(MAX_DIMENSION));
             }
-            let w = ((orig_w as f64) * factor).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
-            let h = ((orig_h as f64) * factor).round().clamp(1.0, MAX_DIMENSION as f64) as u32;
+            let w = ((orig_w as f64) * factor)
+                .round()
+                .clamp(1.0, MAX_DIMENSION as f64) as u32;
+            let h = ((orig_h as f64) * factor)
+                .round()
+                .clamp(1.0, MAX_DIMENSION as f64) as u32;
             (w, h)
         }
     }
@@ -1067,7 +1091,9 @@ mod tests {
     #[test]
     fn test_transformations_invert() {
         let mut img = DynamicImage::new_rgb8(1, 1);
-        img.as_mut_rgb8().unwrap().put_pixel(0, 0, Rgb([255, 100, 0]));
+        img.as_mut_rgb8()
+            .unwrap()
+            .put_pixel(0, 0, Rgb([255, 100, 0]));
 
         let opts_invert = ImageTransformOptions {
             color_filter: ColorFilter::Invert,
@@ -1084,9 +1110,13 @@ mod tests {
     fn test_transformations_binarize() {
         let mut img = DynamicImage::new_rgb8(2, 1);
         // High luminance pixel (>= 128)
-        img.as_mut_rgb8().unwrap().put_pixel(0, 0, Rgb([200, 200, 200]));
+        img.as_mut_rgb8()
+            .unwrap()
+            .put_pixel(0, 0, Rgb([200, 200, 200]));
         // Low luminance pixel (< 128)
-        img.as_mut_rgb8().unwrap().put_pixel(1, 0, Rgb([50, 50, 50]));
+        img.as_mut_rgb8()
+            .unwrap()
+            .put_pixel(1, 0, Rgb([50, 50, 50]));
 
         let opts_bin = ImageTransformOptions {
             color_filter: ColorFilter::Binarize,

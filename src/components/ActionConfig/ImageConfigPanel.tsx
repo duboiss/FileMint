@@ -1587,10 +1587,17 @@ export const ImageConfigPanel: React.FC = () => {
                     : 'border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
-                <div className="font-semibold text-xs flex items-center justify-between">
-                  <span>{fmt === 'Original' ? t.keepOriginal : fmt}</span>
+                <div className="font-semibold text-xs flex items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="truncate">{fmt === 'Original' ? t.keepOriginal : fmt}</span>
+                    {fmt === 'Original' && activeFile?.format && (
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-200/90 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 font-bold uppercase shrink-0">
+                        {activeFile.format}
+                      </span>
+                    )}
+                  </div>
                   {fmt === 'Avif' && (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-600 dark:text-purple-400 font-bold uppercase">
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-600 dark:text-purple-400 font-bold uppercase shrink-0">
                       AV1
                     </span>
                   )}
@@ -1600,7 +1607,10 @@ export const ImageConfigPanel: React.FC = () => {
                   {fmt === 'Avif' && t.avifDesc}
                   {fmt === 'Jpeg' && t.jpegDesc}
                   {fmt === 'Png' && t.pngDesc}
-                  {fmt === 'Original' && t.keepOriginalDesc}
+                  {fmt === 'Original' &&
+                    (activeFile?.format
+                      ? `${t.keepOriginalDesc} (${activeFile.format.toUpperCase()})`
+                      : t.keepOriginalDesc)}
                 </div>
               </button>
             ))}

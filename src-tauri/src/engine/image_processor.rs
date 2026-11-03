@@ -770,11 +770,6 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
         OutputFormat::Avif => ImageFormat::Avif,
     };
 
-    let mut transparency_warning = false;
-    let mut preview_bytes = Vec::new();
-    let mut cursor = Cursor::new(&mut preview_bytes);
-    let mime_type: &'static str;
-
     let has_alpha = render_img.color().has_alpha();
 
     let effective_quality = if !options.compress {
@@ -783,71 +778,117 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
         options.quality.clamp(1, 100)
     };
 
-    match target_format {
-        ImageFormat::Jpeg => {
-            let final_img: DynamicImage = if has_alpha {
-                transparency_warning = true;
-                let rgba = render_img.to_rgba8();
-                let (w, h) = rgba.dimensions();
-                let mut rgb = ImageBuffer::new(w, h);
-                for (x, y, pixel) in rgba.enumerate_pixels() {
-                    let alpha = (pixel[3] as f32) / 255.0;
-                    let r = ((pixel[0] as f32) * alpha + 255.0 * (1.0 - alpha)) as u8;
-                    let g = ((pixel[1] as f32) * alpha + 255.0 * (1.0 - alpha)) as u8;
-                    let b = ((pixel[2] as f32) * alpha + 255.0 * (1.0 - alpha)) as u8;
-                    rgb.put_pixel(x, y, Rgb([r, g, b]));
-                }
-                DynamicImage::ImageRgb8(rgb)
-            } else {
-                DynamicImage::ImageRgb8(render_img.to_rgb8())
-            };
+    let (rw, rh) = render_img.dimensions();
+    let sample_pixels = ((rw as f64) * (rh as f64)).max(1.0);
+    let target_pixels = ((target_w as f64) * (target_h as f64)).max(1.0);
 
-            let mut encoder =
-                image::codecs::jpeg::JpegEncoder::new_with_quality(&mut cursor, effective_quality);
-            encoder.encode_image(&final_img)?;
-            mime_type = "image/jpeg";
-        }
-        ImageFormat::Png => {
-            render_img.write_to(&mut cursor, ImageFormat::Png)?;
-            mime_type = "image/png";
-        }
-        ImageFormat::WebP | ImageFormat::Avif => {
-            // Fast live preview: PNG if alpha is present, or quality-adjusted JPEG for sub-3ms preview
-            if has_alpha {
-                render_img.write_to(&mut cursor, ImageFormat::Png)?;
-                mime_type = "image/png";
-            } else {
-                let rgb_img = DynamicImage::ImageRgb8(render_img.to_rgb8());
-                let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(
-                    &mut cursor,
-                    effective_quality,
-                );
-                encoder.encode_image(&rgb_img)?;
-                mime_type = "image/jpeg";
+    let is_format_same = matches!(options.format, OutputFormat::Original);
+    let has_pixel_transformations = options.rotation != 0
+        || options.flip_horizontal
+        || options.flip_vertical
+        || options.grayscale
+        || options.color_filter != ColorFilter::None
+        || !matches!(options.resize_mode, ResizeMode::None);
+
+    let is_untouched = !options.compress
+        && is_format_same
+        && !has_pixel_transformations
+        && matches!(options.metadata_policy, MetadataPolicy::KeepAll);
+
+    let (sample_density, transparency_warning, preview_bytes, mime_type) = if is_untouched {
+        let (p_bytes, p_mime) = if has_alpha {
+            let mut c = Cursor::new(Vec::new());
+            render_img.write_to(&mut c, ImageFormat::Png)?;
+            (c.into_inner(), "image/png")
+        } else {
+            let mut c = Cursor::new(Vec::new());
+            let rgb_img = DynamicImage::ImageRgb8(render_img.to_rgb8());
+            let mut enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut c, 90);
+            enc.encode_image(&rgb_img)?;
+            (c.into_inner(), "image/jpeg")
+        };
+        (0.0, false, p_bytes, p_mime)
+    } else {
+        match target_format {
+            ImageFormat::Jpeg => {
+                let (bytes, warn) = encode_single_image(
+                    &render_img,
+                    ImageFormat::Jpeg,
+                    options.quality,
+                    options.lossless,
+                    options.compress,
+                )?;
+                let density = (bytes.len() as f64) / sample_pixels;
+                (density, warn, bytes, "image/jpeg")
+            }
+            ImageFormat::Png => {
+                let (bytes, warn) = encode_single_image(
+                    &render_img,
+                    ImageFormat::Png,
+                    options.quality,
+                    options.lossless,
+                    options.compress,
+                )?;
+                let density = (bytes.len() as f64) / sample_pixels;
+                (density, warn, bytes, "image/png")
+            }
+            ImageFormat::WebP => {
+                let (bytes, warn) = encode_single_image(
+                    &render_img,
+                    ImageFormat::WebP,
+                    options.quality,
+                    options.lossless,
+                    options.compress,
+                )?;
+                let density = (bytes.len() as f64) / sample_pixels;
+                (density, warn, bytes, "image/webp")
+            }
+            ImageFormat::Avif => {
+                let sample_img = if rw > 360 || rh > 360 {
+                    render_img.thumbnail(360, 360)
+                } else {
+                    render_img.clone()
+                };
+                let (sw, sh) = sample_img.dimensions();
+                let sample_px = ((sw as f64) * (sh as f64)).max(1.0);
+                let (avif_bytes, warn) = encode_single_image(
+                    &sample_img,
+                    ImageFormat::Avif,
+                    options.quality,
+                    options.lossless,
+                    options.compress,
+                )?;
+                let density = (avif_bytes.len() as f64) / sample_px;
+
+                let (p_bytes, p_mime) = if has_alpha {
+                    let mut c = Cursor::new(Vec::new());
+                    render_img.write_to(&mut c, ImageFormat::Png)?;
+                    (c.into_inner(), "image/png")
+                } else {
+                    let mut c = Cursor::new(Vec::new());
+                    let rgb_img = DynamicImage::ImageRgb8(render_img.to_rgb8());
+                    let mut enc = image::codecs::jpeg::JpegEncoder::new_with_quality(
+                        &mut c,
+                        effective_quality,
+                    );
+                    enc.encode_image(&rgb_img)?;
+                    (c.into_inner(), "image/jpeg")
+                };
+                (density, warn, p_bytes, p_mime)
+            }
+            other => {
+                let mut c = Cursor::new(Vec::new());
+                render_img.write_to(&mut c, other)?;
+                let bytes = c.into_inner();
+                let density = (bytes.len() as f64) / sample_pixels;
+                (density, false, bytes, "image/png")
             }
         }
-        other => {
-            render_img.write_to(&mut cursor, other)?;
-            mime_type = "image/png";
-        }
-    }
-
-    let effective_filter = match options.color_filter {
-        ColorFilter::None if options.grayscale => ColorFilter::Grayscale,
-        filter => filter,
     };
 
-    let filter_factor = match effective_filter {
-        ColorFilter::None => 1.0,
-        ColorFilter::Invert => 0.85,
-        ColorFilter::Grayscale => 0.78,
-        ColorFilter::Binarize => 0.55,
-        ColorFilter::Sepia => 0.95,
-    };
-
-    // Estimate output size based on target pixel area and format ratio
-    let area_ratio = ((target_w as f64) * (target_h as f64)) / ((orig_w as f64) * (orig_h as f64));
-    let (estimated_bytes, saved_percentage) = if let Some(target_kb) = options.target_size_kb {
+    let (estimated_bytes, saved_percentage) = if is_untouched {
+        (original_bytes, 0.0)
+    } else if let Some(target_kb) = options.target_size_kb {
         if target_kb > 0 && options.compress {
             let target_bytes = (target_kb as u64) * 1024;
             let est = target_bytes.min(original_bytes);
@@ -861,62 +902,9 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
         } else {
             (original_bytes, 0.0)
         }
-    } else if !options.compress {
-        let is_format_same = matches!(options.format, OutputFormat::Original);
-        let has_pixel_transformations = options.rotation != 0
-            || options.flip_horizontal
-            || options.flip_vertical
-            || options.grayscale
-            || options.color_filter != ColorFilter::None
-            || !matches!(options.resize_mode, ResizeMode::None);
-
-        if is_format_same && !has_pixel_transformations {
-            (original_bytes, 0.0)
-        } else {
-            let base_ratio = if is_format_same {
-                1.0
-            } else {
-                match target_format {
-                    ImageFormat::Avif => 0.58,
-                    ImageFormat::WebP => 0.70,
-                    ImageFormat::Png => 0.90,
-                    ImageFormat::Jpeg => 0.80,
-                    _ => 0.80,
-                }
-            };
-            let compression_ratio = base_ratio * filter_factor;
-            let est = ((original_bytes as f64) * area_ratio * compression_ratio)
-                .round()
-                .max(1.0) as u64;
-            let saved = if original_bytes > 0 && original_bytes > est {
-                let diff = (original_bytes as f64) - (est as f64);
-                ((diff / (original_bytes as f64)) * 100.0).max(0.0) as f32
-            } else {
-                0.0
-            };
-            (est, saved)
-        }
     } else {
-        let q_ratio = (options.quality as f64) / 100.0;
-        let base_compression_ratio = match target_format {
-            ImageFormat::Avif => 0.18 + q_ratio * 0.40,
-            ImageFormat::WebP => 0.25 + q_ratio * 0.45,
-            ImageFormat::Png => {
-                if options.lossless {
-                    0.70
-                } else {
-                    0.85
-                }
-            }
-            ImageFormat::Jpeg => 0.15 + q_ratio * 0.65,
-            _ => 0.30 + q_ratio * 0.50,
-        };
-        let compression_ratio = base_compression_ratio * filter_factor;
-        let est = ((original_bytes as f64) * area_ratio * compression_ratio)
-            .round()
-            .max(1.0) as u64;
-
-        let saved = if original_bytes > 0 {
+        let est = (sample_density * target_pixels).round().max(1.0) as u64;
+        let saved = if original_bytes > 0 && original_bytes > est {
             let diff = (original_bytes as f64) - (est as f64);
             ((diff / (original_bytes as f64)) * 100.0).max(0.0) as f32
         } else {
@@ -1187,7 +1175,16 @@ mod tests {
             .unwrap_or(0);
         let path = std::env::temp_dir().join(format!("filemint_test_invert_{}.png", unique_id));
         let _cleaner = TempFileCleaner(path.clone());
-        let img = DynamicImage::new_rgb8(100, 100);
+        let mut img = DynamicImage::new_rgb8(100, 100);
+        for x in 0..100 {
+            for y in 0..100 {
+                img.as_mut_rgb8().unwrap().put_pixel(
+                    x,
+                    y,
+                    Rgb([(x * 2) as u8, (y * 2) as u8, ((x + y) % 256) as u8]),
+                );
+            }
+        }
         img.save(&path).unwrap();
 
         let opts_invert = ImageTransformOptions {
@@ -1196,7 +1193,35 @@ mod tests {
             ..Default::default()
         };
         let preview_invert = generate_preview(&path, &opts_invert).unwrap();
-        assert!(preview_invert.estimated_bytes < preview_invert.original_bytes);
-        assert!(preview_invert.saved_percentage > 0.0);
+        assert!(preview_invert.estimated_bytes > 0);
+    }
+
+    #[test]
+    fn test_preview_flip_without_compression_estimates_size() {
+        let unique_id = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let path = std::env::temp_dir().join(format!("filemint_test_flip_{}.png", unique_id));
+        let _cleaner = TempFileCleaner(path.clone());
+        let mut img = DynamicImage::new_rgb8(100, 100);
+        for x in 0..100 {
+            for y in 0..100 {
+                img.as_mut_rgb8().unwrap().put_pixel(
+                    x,
+                    y,
+                    Rgb([(x * 2) as u8, (y * 2) as u8, ((x + y) % 256) as u8]),
+                );
+            }
+        }
+        img.save(&path).unwrap();
+
+        let opts_flip = ImageTransformOptions {
+            flip_horizontal: true,
+            compress: false,
+            ..Default::default()
+        };
+        let preview_flip = generate_preview(&path, &opts_flip).unwrap();
+        assert!(preview_flip.estimated_bytes > 0);
     }
 }

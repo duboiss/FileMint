@@ -152,7 +152,10 @@ export const SideBySidePreview: React.FC = () => {
               <div className="text-[10px] text-slate-400 uppercase font-semibold">
                 {t.estimatedWeight}
               </div>
-              <div className="text-xs font-mono font-bold text-mint-500 mt-0.5">
+              <div
+                className="text-xs font-mono font-bold text-mint-500 mt-0.5 cursor-help"
+                title={t.estimatedSizeTooltip}
+              >
                 ~{formatFileSize(estimatedFinal, language)}
               </div>
             </div>
@@ -160,8 +163,11 @@ export const SideBySidePreview: React.FC = () => {
               <div className="text-[10px] text-slate-400 uppercase font-semibold">
                 {t.savings}
               </div>
-              <div className="text-xs font-mono font-bold text-emerald-500 mt-0.5">
-                -{estimatedPercent}%
+              <div
+                className="text-xs font-mono font-bold text-emerald-500 mt-0.5 cursor-help"
+                title={t.estimatedSizeTooltip}
+              >
+                ~-{estimatedPercent}%
               </div>
             </div>
           </div>
@@ -226,12 +232,18 @@ export const SideBySidePreview: React.FC = () => {
               {hasSizeChange && preview && (
                 <>
                   <ArrowRight className="w-2.5 h-2.5 text-slate-400 shrink-0" />
-                  <span className="shrink-0 font-bold text-mint-600 dark:text-mint-400">
-                    {formatFileSize(preview.estimated_bytes, language)}
+                  <span
+                    className="shrink-0 font-bold text-mint-600 dark:text-mint-400 cursor-help"
+                    title={t.estimatedSizeTooltip}
+                  >
+                    ~{formatFileSize(preview.estimated_bytes, language)}
                   </span>
                   {preview.saved_percentage > 0 && (
-                    <span className="shrink-0 px-1 py-0.2 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[9px]">
-                      -{preview.saved_percentage.toFixed(0)}%
+                    <span
+                      className="shrink-0 px-1 py-0.2 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[9px] cursor-help"
+                      title={t.estimatedSizeTooltip}
+                    >
+                      ~-{preview.saved_percentage.toFixed(0)}%
                     </span>
                   )}
                 </>

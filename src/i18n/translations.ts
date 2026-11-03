@@ -230,6 +230,7 @@ export interface TranslationDictionary {
   viewDocumentDetails: string;
   initialWeight: string;
   estimatedWeight: string;
+  estimatedSizeTooltip: string;
   savings: string;
 
   // PDF Advanced Tools (Merge & Split)
@@ -644,6 +645,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     viewDocumentDetails: 'Détails du document',
     initialWeight: 'Poids initial',
     estimatedWeight: 'Poids estimé',
+    estimatedSizeTooltip: 'Valeur indicative approximative (estimée en direct)',
     savings: 'Économie',
 
     tabPdfCompress: 'Compresser',
@@ -1053,6 +1055,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     viewDocumentDetails: 'Document details',
     initialWeight: 'Initial size',
     estimatedWeight: 'Estimated size',
+    estimatedSizeTooltip: 'Approximate indicative value (live estimate)',
     savings: 'Savings',
 
     tabPdfCompress: 'Compress',

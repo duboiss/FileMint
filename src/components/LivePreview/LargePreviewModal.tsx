@@ -283,15 +283,21 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                 {Boolean(currentPreview?.estimated_bytes && currentPreview.estimated_bytes !== activeFile.sizeBytes) && (
                   <>
                     <ArrowRight className="w-3 h-3 text-slate-500 shrink-0" />
-                    <span className="shrink-0 text-mint-400 font-mono font-bold">
-                      {formatFileSize(currentPreview!.estimated_bytes, language)}
+                    <span
+                      className="shrink-0 text-mint-400 font-mono font-bold cursor-help"
+                      title={t.estimatedSizeTooltip}
+                    >
+                      ~{formatFileSize(currentPreview!.estimated_bytes, language)}
                       {isImage && currentPreview?.new_width && currentPreview?.new_height ? (
                         <span className="hidden sm:inline text-mint-500/80 font-normal ml-1">({currentPreview.new_width}×{currentPreview.new_height})</span>
                       ) : null}
                     </span>
                     {currentPreview!.saved_percentage > 0 && (
-                      <span className="shrink-0 px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px]">
-                        -{currentPreview!.saved_percentage.toFixed(0)}%
+                      <span
+                        className="shrink-0 px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px] cursor-help"
+                        title={t.estimatedSizeTooltip}
+                      >
+                        ~-{currentPreview!.saved_percentage.toFixed(0)}%
                       </span>
                     )}
                   </>
@@ -829,12 +835,18 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
             ) : currentPreview ? (
               <div className="flex items-center gap-2 font-mono text-xs">
                 <span className="text-slate-400">{t.result}</span>
-                <strong className="text-mint-400">
-                  {formatFileSize(currentPreview.estimated_bytes, language)}
+                <strong
+                  className="text-mint-400 cursor-help"
+                  title={t.estimatedSizeTooltip}
+                >
+                  ~{formatFileSize(currentPreview.estimated_bytes, language)}
                 </strong>
                 {currentPreview.saved_percentage > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px]">
-                    -{currentPreview.saved_percentage.toFixed(0)}%
+                  <span
+                    className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px] cursor-help"
+                    title={t.estimatedSizeTooltip}
+                  >
+                    ~-{currentPreview.saved_percentage.toFixed(0)}%
                   </span>
                 )}
               </div>

@@ -656,14 +656,14 @@ const generateLocalBrowserPreview = (
       !imageOptions.resize_mode.None;
 
     const baseFormatFactor = isFormatOriginal
-      ? 1.0
+      ? (hasPixelTransformations ? 0.78 : 1.0)
       : imageOptions.format === 'Avif'
-      ? 0.58
+      ? 0.42
       : imageOptions.format === 'Webp'
-      ? 0.70
+      ? 0.60
       : imageOptions.format === 'Png'
-      ? 0.90
-      : 0.80;
+      ? 0.85
+      : 0.75;
 
     const finalRatio = isFormatOriginal && !hasPixelTransformations
       ? 1.0
@@ -681,14 +681,14 @@ const generateLocalBrowserPreview = (
     const qualityFactor = Math.max(0.1, imageOptions.quality / 100);
     const formatCompressionFactor =
       imageOptions.format === 'Avif'
-        ? 0.48
+        ? 0.42
         : imageOptions.format === 'Webp'
-        ? 0.65
+        ? 0.55
         : imageOptions.format === 'Png'
         ? imageOptions.lossless
-          ? 0.85
-          : 0.95
-        : 0.75;
+          ? 0.80
+          : 0.90
+        : 0.70;
 
     estimatedBytes = Math.max(
       1,

@@ -316,7 +316,13 @@ pub fn generate_pdf_preview(
     let estimated_bytes = if let Some(target_kb) = options.target_size_kb {
         std::cmp::min(original_bytes, (target_kb as u64) * 1024)
     } else {
-        ((original_bytes as f64) * estimated_ratio).round() as u64
+        let measured_ratio = if !orig_page_bytes.is_empty() {
+            (compressed_page_bytes.len() as f64) / (orig_page_bytes.len() as f64)
+        } else {
+            estimated_ratio
+        };
+        let effective_ratio = measured_ratio.clamp(0.05, 1.0);
+        ((original_bytes as f64) * effective_ratio).round().min(original_bytes as f64) as u64
     };
 
     let saved_percentage = if original_bytes > 0 && original_bytes > estimated_bytes {

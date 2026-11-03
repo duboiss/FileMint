@@ -104,14 +104,20 @@ export const SideBySidePreview: React.FC = () => {
   if (isPdf && (showPdfDocDetails || (!preview?.data_url && !previewLoading))) {
     const isTargetSize = Boolean(pdfOptions.target_size_kb && pdfOptions.target_size_kb > 0);
     const targetBytes = (pdfOptions.target_size_kb || 0) * 1024;
-    const estimatedPercent = isTargetSize
-      ? (activeFile.sizeBytes > 0 && activeFile.sizeBytes > targetBytes
-          ? Math.round(((activeFile.sizeBytes - targetBytes) / activeFile.sizeBytes) * 100)
-          : 0)
-      : (pdfOptions.profile === 'Compact' ? 65 : pdfOptions.profile === 'Balanced' ? 45 : 25);
-    const estimatedFinal = isTargetSize
+    const hasLiveEstimation = Boolean(preview && preview.estimated_bytes > 0);
+    const estimatedFinal = hasLiveEstimation
+      ? preview!.estimated_bytes
+      : isTargetSize
       ? Math.min(activeFile.sizeBytes, targetBytes)
-      : Math.round(activeFile.sizeBytes * (1 - estimatedPercent / 100));
+      : Math.round(
+          activeFile.sizeBytes *
+            (pdfOptions.profile === 'Compact' ? 0.35 : pdfOptions.profile === 'Balanced' ? 0.55 : 0.75)
+        );
+    const estimatedPercent = hasLiveEstimation
+      ? Math.round(preview!.saved_percentage)
+      : activeFile.sizeBytes > 0 && activeFile.sizeBytes > estimatedFinal
+      ? Math.round(((activeFile.sizeBytes - estimatedFinal) / activeFile.sizeBytes) * 100)
+      : 0;
 
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-8 bg-slate-100/50 dark:bg-slate-950/40 select-none">

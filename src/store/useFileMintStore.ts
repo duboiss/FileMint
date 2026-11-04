@@ -164,8 +164,53 @@ export const getDefaultProfiles = (dict?: TranslationDictionary): CustomProfile[
   },
 ];
 
-export const hasActiveImageChanges = (options: ImageTransformOptions): boolean => {
-  const isResizeActive = Object.keys(options.resize_mode)[0] !== 'None';
+export const hasActiveImageChanges = (
+  options: ImageTransformOptions,
+  fileOrFiles?: FileItem | FileItem[]
+): boolean => {
+  let isResizeActive = false;
+  const resizeKey = Object.keys(options.resize_mode)[0];
+
+  if (resizeKey === 'Percentage') {
+    isResizeActive = options.resize_mode.Percentage?.percent !== 100;
+  } else if (resizeKey === 'Exact') {
+    const exact = options.resize_mode.Exact;
+    if (fileOrFiles) {
+      const files = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+      const imageFiles = files.filter((f) => f.fileType !== 'pdf' && f.width && f.height);
+      if (imageFiles.length > 0) {
+        // Active if any image's dimensions actually differ from exact target
+        isResizeActive = imageFiles.some(
+          (f) =>
+            (exact?.width && exact.width !== f.width) ||
+            (exact?.height && exact.height !== f.height)
+        );
+      } else {
+        isResizeActive = Boolean(exact?.width || exact?.height);
+      }
+    } else {
+      isResizeActive = Boolean(exact?.width || exact?.height);
+    }
+  } else if (resizeKey === 'MaxBounds') {
+    const maxBounds = options.resize_mode.MaxBounds;
+    if (fileOrFiles) {
+      const files = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+      const imageFiles = files.filter((f) => f.fileType !== 'pdf' && f.width && f.height);
+      if (imageFiles.length > 0) {
+        // Active if any image actually exceeds the max bounds
+        isResizeActive = imageFiles.some((f) => {
+          const mw = maxBounds?.max_width || 0;
+          const mh = maxBounds?.max_height || 0;
+          return (mw > 0 && f.width! > mw) || (mh > 0 && f.height! > mh);
+        });
+      } else {
+        isResizeActive = Boolean(maxBounds?.max_width || maxBounds?.max_height);
+      }
+    } else {
+      isResizeActive = Boolean(maxBounds?.max_width || maxBounds?.max_height);
+    }
+  }
+
   const isFormatActive = options.format !== 'Original';
   const isCompressionActive = options.compress !== false;
   const isManipulationsActive =

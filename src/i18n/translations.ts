@@ -207,6 +207,9 @@ export interface TranslationDictionary {
   viewSingle: string;
   noChangesToCompare: string;
   noChangesToPerform: string;
+  noChangesHelp: string;
+  optimizeWithQualityPreset: string;
+  compressionExplanationNote: string;
   originalFileNoChanges: string;
   enlarge: string;
   clickToEnlarge: string;
@@ -622,6 +625,9 @@ export const translations: Record<Language, TranslationDictionary> = {
     viewSingle: 'Résultat seul',
     noChangesToCompare: 'Aucun changement à comparer',
     noChangesToPerform: 'Aucun changement à effectuer',
+    noChangesHelp: 'Aucun changement sélectionné : activez la compression ou appliquez un profil pour lancer le traitement.',
+    optimizeWithQualityPreset: 'Optimiser (Profil Qualité)',
+    compressionExplanationNote: 'Même sans redimensionner, FileMint allège vos fichiers en reconstruisant la structure interne (tables d’encodage optimisées et nettoyage des métadonnées superflues).',
     originalFileNoChanges: "Fichier d'origine (aucun changement)",
     enlarge: 'Agrandir',
     clickToEnlarge: 'Cliquer pour afficher en grand',
@@ -1032,6 +1038,9 @@ export const translations: Record<Language, TranslationDictionary> = {
     viewSingle: 'Result only',
     noChangesToCompare: 'No changes to compare',
     noChangesToPerform: 'No changes to perform',
+    noChangesHelp: 'No changes selected: enable compression or apply a profile to start processing.',
+    optimizeWithQualityPreset: 'Optimize (Quality Profile)',
+    compressionExplanationNote: 'Even without resizing, FileMint reduces file size by optimizing internal structure (encoding tables and stripping unnecessary metadata).',
     originalFileNoChanges: 'Original file (no changes)',
     enlarge: 'Enlarge',
     clickToEnlarge: 'Click to view full screen',

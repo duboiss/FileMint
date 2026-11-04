@@ -131,6 +131,7 @@ export const DestinationPicker: React.FC = () => {
     preview,
     language,
     t,
+    applyCustomProfile,
   } = useFileMintStore();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [confirmOverwriteModal, setConfirmOverwriteModal] = useState(false);
@@ -170,7 +171,7 @@ export const DestinationPicker: React.FC = () => {
   } else {
     canLaunch =
       files.length > 0 &&
-      (files.some((f) => f.fileType === 'pdf') || hasActiveImageChanges(imageOptions));
+      (files.some((f) => f.fileType === 'pdf') || hasActiveImageChanges(imageOptions, files));
     launchButtonLabel = `${t.launchBatch} (${files.length})`;
     launchButtonIcon = Play;
   }
@@ -310,6 +311,18 @@ export const DestinationPicker: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {!canLaunch && files.length > 0 && pdfToolMode === 'compress' && !files.some((f) => f.fileType === 'pdf') && (
+            <button
+              type="button"
+              onClick={() => applyCustomProfile('preset_quality')}
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-mint-500/10 hover:bg-mint-500/20 text-mint-600 dark:text-mint-400 font-semibold text-xs transition-all cursor-pointer border border-mint-500/30 hover:scale-[1.02] active:scale-[0.98]"
+              title={t.optimizeWithQualityPreset}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-mint-500" />
+              <span>{t.optimizeWithQualityPreset}</span>
+            </button>
+          )}
+
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
             className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2.5 sm:px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/40 transition-colors cursor-pointer shrink-0"
@@ -327,7 +340,7 @@ export const DestinationPicker: React.FC = () => {
                 ? 'bg-slate-200/80 dark:bg-slate-800 text-slate-400 dark:text-slate-500 opacity-60 cursor-not-allowed shadow-none'
                 : 'bg-mint-500 hover:bg-mint-600 text-slate-950 shadow-mint-500/20 hover:scale-[1.02] active:scale-[0.98] cursor-pointer'
             }`}
-            title={!canLaunch ? t.noChangesToPerform : undefined}
+            title={!canLaunch ? (files.length > 0 ? t.noChangesHelp : t.noChangesToPerform) : undefined}
           >
             {React.createElement(launchButtonIcon, {
               className: `w-4 h-4 ${!canLaunch ? 'text-slate-400' : 'text-slate-950'} ${

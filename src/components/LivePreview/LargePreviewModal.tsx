@@ -45,7 +45,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
   const currentPreview = storePreview || propPreview;
 
   const isImage = activeFile?.fileType !== 'pdf';
-  const hasChanges = !isImage || hasActiveImageChanges(imageOptions);
+  const hasChanges = !isImage || hasActiveImageChanges(imageOptions, activeFile || undefined);
   const isCompressionActive = isImage && imageOptions.compress !== false;
   const isTargetSizeMode = Boolean(imageOptions.target_size_kb && imageOptions.target_size_kb > 0);
   const isLossless = Boolean(imageOptions.lossless);

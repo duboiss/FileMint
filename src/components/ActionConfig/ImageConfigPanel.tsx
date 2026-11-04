@@ -26,6 +26,7 @@ import {
   Camera,
   Target,
   ArrowRight,
+  Info,
 } from 'lucide-react';
 
 const MIN_DIMENSION = 1;
@@ -1213,6 +1214,12 @@ export const ImageConfigPanel: React.FC = () => {
                 }`}
               />
             </button>
+          </div>
+
+          {/* Informative note explaining structural optimization */}
+          <div className="p-3 rounded-2xl bg-slate-100/70 dark:bg-slate-800/30 border border-slate-200/60 dark:border-slate-800/60 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-mint-500 shrink-0 mt-0.5" />
+            <span>{t.compressionExplanationNote}</span>
           </div>
 
           {imageOptions.compress !== false && (

@@ -217,27 +217,42 @@ impl BatchRunner {
                     _ => false,
                 };
 
+                let (orig_w, orig_h) = image::ImageReader::open(input_path)
+                    .ok()
+                    .and_then(|r| r.into_dimensions().ok())
+                    .or_else(|| {
+                        image_processor::load_dynamic_image(input_path)
+                            .ok()
+                            .map(|(img, _)| img.dimensions())
+                    })
+                    .unwrap_or((0, 0));
+
+                let is_resizing = match options.resize_mode {
+                    image_processor::ResizeMode::None => false,
+                    image_processor::ResizeMode::Percentage { percent } => percent != 100,
+                    _ => {
+                        if orig_w > 0 && orig_h > 0 {
+                            let (target_w, target_h) = image_processor::calculate_target_dimensions(
+                                orig_w, orig_h, options,
+                            );
+                            target_w != orig_w || target_h != orig_h
+                        } else {
+                            !matches!(options.resize_mode, image_processor::ResizeMode::None)
+                        }
+                    }
+                };
+
                 let has_pixel_transformations = options.rotation != 0
                     || options.flip_horizontal
                     || options.flip_vertical
                     || options.grayscale
                     || options.color_filter != image_processor::ColorFilter::None
-                    || !matches!(options.resize_mode, image_processor::ResizeMode::None);
+                    || is_resizing;
 
                 // Fast path: when compression is disabled and no pixel transforms or format conversions are needed,
                 // keep original bytes intact (bit-exact) with zero re-encoding artifacts.
                 if !options.compress && is_format_same && !has_pixel_transformations {
                     let mut raw_bytes = std::fs::read(input_path)?;
-                    let (orig_w, orig_h) = image::ImageReader::open(input_path)
-                        .ok()
-                        .and_then(|r| r.into_dimensions().ok())
-                        .or_else(|| {
-                            image_processor::load_dynamic_image(input_path)
-                                .ok()
-                                .map(|(img, _)| img.dimensions())
-                        })
-                        .unwrap_or((0, 0));
-
                     let naming_ctx = file_manager::NamingContext {
                         width: Some(orig_w),
                         height: Some(orig_h),

@@ -807,12 +807,18 @@ pub fn generate_preview(path: &Path, options: &ImageTransformOptions) -> Result<
     let target_pixels = ((target_w as f64) * (target_h as f64)).max(1.0);
 
     let is_format_same = matches!(options.format, OutputFormat::Original);
+    let is_resizing = match options.resize_mode {
+        ResizeMode::None => false,
+        ResizeMode::Percentage { percent } => percent != 100,
+        _ => target_w != eff_orig_w || target_h != eff_orig_h,
+    };
+
     let has_pixel_transformations = options.rotation != 0
         || options.flip_horizontal
         || options.flip_vertical
         || options.grayscale
         || options.color_filter != ColorFilter::None
-        || !matches!(options.resize_mode, ResizeMode::None);
+        || is_resizing;
 
     let is_untouched = !options.compress
         && is_format_same
@@ -1253,5 +1259,36 @@ mod tests {
         };
         let preview_flip = generate_preview(&path, &opts_flip).unwrap();
         assert!(preview_flip.estimated_bytes > 0);
+    }
+
+    #[test]
+    fn test_preview_100_percent_without_compression_is_untouched() {
+        let unique_id = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let path = std::env::temp_dir().join(format!("filemint_test_100pct_{}.png", unique_id));
+        let _cleaner = TempFileCleaner(path.clone());
+        let mut img = DynamicImage::new_rgb8(80, 80);
+        for x in 0..80 {
+            for y in 0..80 {
+                img.as_mut_rgb8().unwrap().put_pixel(
+                    x,
+                    y,
+                    Rgb([(x * 2) as u8, (y * 2) as u8, ((x + y) % 256) as u8]),
+                );
+            }
+        }
+        img.save(&path).unwrap();
+
+        let opts_100 = ImageTransformOptions {
+            resize_mode: ResizeMode::Percentage { percent: 100 },
+            compress: false,
+            ..Default::default()
+        };
+        let preview = generate_preview(&path, &opts_100).unwrap();
+        assert_eq!(preview.saved_percentage, 0.0);
+        let orig_len = std::fs::metadata(&path).unwrap().len();
+        assert_eq!(preview.estimated_bytes, orig_len);
     }
 }

@@ -93,7 +93,7 @@ export const SideBySidePreview: React.FC = () => {
     return <PdfPageGrid />;
   }
 
-  const hasChanges = isPdf || hasActiveImageChanges(imageOptions);
+  const hasChanges = isPdf || hasActiveImageChanges(imageOptions, activeFile);
   const hasSizeChange = Boolean(
     preview &&
     preview.estimated_bytes &&

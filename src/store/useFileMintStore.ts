@@ -2026,6 +2026,31 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         } catch (err) {
           console.error("Erreur lors de la génération de la prévisualisation PDF :", err);
           if (reqId === previewRequestId) {
+            // Attempt direct visual render of Page 1 from raw PDF file bytes via pdfjsLib
+            try {
+              const raw = await invoke<number[] | Uint8Array>('load_pdf_bytes', { path: activeFile.path });
+              const bytes = raw instanceof Uint8Array ? raw : new Uint8Array(raw);
+              const directPage = await renderPdfPage1(bytes);
+              set({
+                preview: {
+                  original_data_url: directPage.dataUrl,
+                  data_url: directPage.dataUrl,
+                  original_bytes: activeFile.sizeBytes,
+                  estimated_bytes: activeFile.sizeBytes,
+                  saved_percentage: 0,
+                  original_width: directPage.width,
+                  original_height: directPage.height,
+                  new_width: directPage.width,
+                  new_height: directPage.height,
+                  transparency_loss_warning: false,
+                },
+                previewLoading: false,
+              });
+              return;
+            } catch (directErr) {
+              console.error("Échec du rendu direct PDF :", directErr);
+            }
+
             const fallbackSvg = createPdfPlaceholderSvg(activeFile.name, 'Document PDF');
             set({
               preview: {

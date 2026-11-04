@@ -128,18 +128,23 @@ fn compress_doc_internal(
     Ok((output_bytes, image_count_optimized))
 }
 
+fn ensure_document_decrypted(doc: &mut Document) -> Result<()> {
+    if doc.is_encrypted() && doc.decrypt(b"").is_err() {
+        return Err(anyhow!("Le document PDF est protégé par mot de passe."));
+    }
+    Ok(())
+}
+
 pub fn compress_pdf(
     input_path: &Path,
     output_path: &Path,
     options: &PdfCompressionOptions,
 ) -> Result<PdfResultInfo> {
     let original_bytes = std::fs::metadata(input_path)?.len();
-    let doc = Document::load(input_path)
+    let mut doc = Document::load(input_path)
         .map_err(|e| anyhow!("Impossible de lire le document PDF : {}", e))?;
 
-    if doc.is_encrypted() {
-        return Err(anyhow!("Le document PDF est protégé par mot de passe."));
-    }
+    ensure_document_decrypted(&mut doc)?;
 
     let pages_count = doc.get_pages().len() as u32;
 
@@ -260,12 +265,10 @@ pub fn generate_pdf_preview(
     options: &PdfCompressionOptions,
 ) -> Result<PdfPreviewResponse> {
     let original_bytes = std::fs::metadata(input_path)?.len();
-    let doc = Document::load(input_path)
+    let mut doc = Document::load(input_path)
         .map_err(|e| anyhow!("Impossible de lire le document PDF : {}", e))?;
 
-    if doc.is_encrypted() {
-        return Err(anyhow!("Le document PDF est protégé par mot de passe."));
-    }
+    ensure_document_decrypted(&mut doc)?;
 
     let total_pages = doc.get_pages().len() as u32;
     if total_pages == 0 {
@@ -364,7 +367,8 @@ pub struct PdfDocumentInfo {
 
 pub fn get_pdf_info(path: &Path) -> Result<PdfDocumentInfo> {
     let file_size_bytes = std::fs::metadata(path)?.len();
-    let doc = Document::load(path)?;
+    let mut doc = Document::load(path)?;
+    let _ = ensure_document_decrypted(&mut doc);
     let total_pages = doc.get_pages().len() as u32;
 
     Ok(PdfDocumentInfo {
@@ -418,12 +422,8 @@ pub fn merge_pdfs(input_paths: &[PathBuf], output_path: &Path) -> Result<PdfResu
         let mut doc = Document::load(path)
             .map_err(|e| anyhow!("Erreur lors de la lecture de {:?} : {}", path, e))?;
 
-        if doc.is_encrypted() {
-            return Err(anyhow!(
-                "Le document {:?} est protégé par mot de passe.",
-                path
-            ));
-        }
+        ensure_document_decrypted(&mut doc)
+            .map_err(|_| anyhow!("Le document {:?} est protégé par mot de passe.", path))?;
 
         doc.renumber_objects();
         let pages = doc.get_pages();
@@ -512,9 +512,7 @@ pub fn extract_pdf_pages(
     let mut doc = Document::load(input_path)
         .map_err(|e| anyhow!("Impossible de lire le document PDF : {}", e))?;
 
-    if doc.is_encrypted() {
-        return Err(anyhow!("Le document PDF est protégé par mot de passe."));
-    }
+    ensure_document_decrypted(&mut doc)?;
 
     let total_pages = doc.get_pages().len() as u32;
 
@@ -572,12 +570,10 @@ pub fn split_pdf_all(
     output_dir: &Path,
     base_name: &str,
 ) -> Result<Vec<PathBuf>> {
-    let doc = Document::load(input_path)
+    let mut doc = Document::load(input_path)
         .map_err(|e| anyhow!("Impossible de lire le document PDF : {}", e))?;
 
-    if doc.is_encrypted() {
-        return Err(anyhow!("Le document PDF est protégé par mot de passe."));
-    }
+    ensure_document_decrypted(&mut doc)?;
 
     let total_pages = doc.get_pages().len() as u32;
     if total_pages == 0 {

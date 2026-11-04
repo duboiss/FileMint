@@ -172,28 +172,25 @@ export const SideBySidePreview: React.FC = () => {
             </div>
           </div>
 
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
-            {isTargetSize ? (
-              <>
-                <span className="font-semibold text-mint-600 dark:text-mint-400">
-                  {t.targetSizeTitle} : ≤ {(pdfOptions.target_size_kb || 0) >= 1024
-                    ? `${((pdfOptions.target_size_kb || 0) / 1024).toFixed(
-                        (pdfOptions.target_size_kb || 0) % 1024 === 0 ? 0 : 1
-                      )} ${language === 'en' ? 'MB' : 'Mo'}`
-                    : `${pdfOptions.target_size_kb} ${language === 'en' ? 'KB' : 'Ko'}`}
-                </span>
-                . {t.pdfTargetSizeDesc}
-              </>
-            ) : (
-              <>
-                {t.pdfProfileSelected}{' '}
-                <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  {getPdfProfileLabel(pdfOptions.profile)}
-                </span>
-                . {t.pdfExplanation}
-              </>
-            )}
-          </p>
+          <div className="mb-4 flex flex-col items-center justify-center text-center gap-1.5 w-full">
+            <div className="text-xs flex items-center justify-center gap-1.5 font-medium">
+              <span className="text-slate-500 dark:text-slate-400">
+                {isTargetSize ? `${t.targetSizeTitle} :` : t.pdfProfileSelected}
+              </span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[11px] border border-slate-200/80 dark:border-slate-700/80">
+                {isTargetSize
+                  ? `≤ ${(pdfOptions.target_size_kb || 0) >= 1024
+                      ? `${((pdfOptions.target_size_kb || 0) / 1024).toFixed(
+                          (pdfOptions.target_size_kb || 0) % 1024 === 0 ? 0 : 1
+                        )} ${language === 'en' ? 'MB' : 'Mo'}`
+                      : `${pdfOptions.target_size_kb} ${language === 'en' ? 'KB' : 'Ko'}`}`
+                  : getPdfProfileLabel(pdfOptions.profile)}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-md">
+              {isTargetSize ? t.pdfTargetSizeDesc : t.pdfExplanation}
+            </p>
+          </div>
 
           {preview?.data_url && (
             <button

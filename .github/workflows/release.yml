@@ -84,4 +84,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release edit ${{ github.ref_name }} --draft=false
+          for i in 1 2 3 4 5; do
+            echo "Attempt $i: publishing release ${{ github.ref_name }}..."
+            if gh release edit "${{ github.ref_name }}" --draft=false; then
+              echo "Release published successfully!"
+              exit 0
+            fi
+            echo "Attempt $i failed (transient GitHub API error). Retrying in 10s..."
+            sleep 10
+          done
+          echo "Failed to publish release after 5 attempts."
+          exit 1

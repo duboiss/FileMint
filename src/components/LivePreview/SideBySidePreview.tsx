@@ -167,7 +167,7 @@ export const SideBySidePreview: React.FC = () => {
                 className="text-xs font-mono font-bold text-emerald-500 mt-0.5 cursor-help"
                 title={t.estimatedSizeTooltip}
               >
-                ~-{estimatedPercent}%
+                -{estimatedPercent}%
               </div>
             </div>
           </div>
@@ -243,7 +243,7 @@ export const SideBySidePreview: React.FC = () => {
                       className="shrink-0 px-1 py-0.2 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[9px] cursor-help"
                       title={t.estimatedSizeTooltip}
                     >
-                      ~-{preview.saved_percentage.toFixed(0)}%
+                      -{preview.saved_percentage.toFixed(0)}%
                     </span>
                   )}
                 </>

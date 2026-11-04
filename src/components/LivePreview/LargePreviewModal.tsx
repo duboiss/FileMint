@@ -297,7 +297,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                         className="shrink-0 px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px] cursor-help"
                         title={t.estimatedSizeTooltip}
                       >
-                        ~-{currentPreview!.saved_percentage.toFixed(0)}%
+                        -{currentPreview!.saved_percentage.toFixed(0)}%
                       </span>
                     )}
                   </>
@@ -846,7 +846,7 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                     className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px] cursor-help"
                     title={t.estimatedSizeTooltip}
                   >
-                    ~-{currentPreview.saved_percentage.toFixed(0)}%
+                    -{currentPreview.saved_percentage.toFixed(0)}%
                   </span>
                 )}
               </div>

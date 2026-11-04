@@ -146,7 +146,6 @@ export const PdfConfigPanel: React.FC = () => {
                   : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
               }`}
             >
-              <FileText className="w-3.5 h-3.5 text-red-500" />
               <span>{t.pdfPresetProfiles}</span>
             </button>
             <button
@@ -158,11 +157,10 @@ export const PdfConfigPanel: React.FC = () => {
               }
               className={`py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                 Boolean(pdfOptions.target_size_kb)
-                  ? 'bg-white dark:bg-slate-900 text-mint-600 dark:text-mint-400 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 font-bold'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 font-bold'
                   : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
               }`}
             >
-              <Target className="w-3.5 h-3.5 text-mint-500" />
               <span>{t.compressionModeTargetSize}</span>
             </button>
           </div>
@@ -274,7 +272,7 @@ export const PdfConfigPanel: React.FC = () => {
             /* Preset profiles list */
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                <FileText className="w-3.5 h-3.5 text-red-500" />
+                <FileText className="w-3.5 h-3.5 text-mint-500" />
                 <span>{t.pdfProfileTitle}</span>
               </div>
 

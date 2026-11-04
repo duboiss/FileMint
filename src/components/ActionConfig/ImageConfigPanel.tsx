@@ -361,7 +361,7 @@ export const ImageConfigPanel: React.FC = () => {
               onClick={() => setActiveTab(tab.id as ImageConfigTab)}
               className={`flex-auto py-2 px-2 rounded-xl transition-all relative flex items-center justify-center cursor-pointer select-none ${
                 isActive
-                  ? 'bg-white dark:bg-slate-900 text-mint-600 dark:text-mint-400 font-bold shadow-sm shadow-slate-900/10 dark:shadow-black/40 border border-slate-200/90 dark:border-slate-700/90 ring-1 ring-mint-500/20'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold shadow-sm shadow-slate-900/10 dark:shadow-black/40 border border-slate-200/90 dark:border-slate-700/90 ring-1 ring-slate-200 dark:ring-slate-800'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/50 dark:hover:bg-slate-700/40 font-medium'
               }`}
             >
@@ -1235,7 +1235,6 @@ export const ImageConfigPanel: React.FC = () => {
                       : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
                 >
-                  <Sliders className="w-3.5 h-3.5 text-mint-500" />
                   <span>{t.compressionModeQuality}</span>
                 </button>
                 <button
@@ -1248,11 +1247,10 @@ export const ImageConfigPanel: React.FC = () => {
                   }
                   className={`py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     Boolean(imageOptions.target_size_kb)
-                      ? 'bg-white dark:bg-slate-900 text-mint-600 dark:text-mint-400 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 font-bold'
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 font-bold'
                       : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
                 >
-                  <Target className="w-3.5 h-3.5 text-mint-500" />
                   <span>{t.compressionModeTargetSize}</span>
                 </button>
               </div>

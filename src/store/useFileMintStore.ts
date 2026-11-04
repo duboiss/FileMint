@@ -34,6 +34,7 @@ import {
 import packageJson from '../../package.json';
 import {
   renderPdfPage1,
+  type RenderedPdfPage,
   parsePageRange,
   formatPageRange,
   base64ToUint8Array,
@@ -454,6 +455,37 @@ const getInitialUpdateCheckEnabled = (): boolean => {
     }
   } catch {}
   return true;
+};
+
+const getInitialAutoSwitchToFile = (): boolean => {
+  try {
+    const saved = localStorage.getItem('filemint_auto_switch_to_file');
+    if (saved !== null) {
+      return saved === 'true';
+    }
+  } catch {}
+  return true;
+};
+
+const createPdfPlaceholderSvg = (title: string, subtitle: string) => {
+  const safeTitle = title.replace(/[<>&"]/g, '');
+  const safeSubtitle = subtitle.replace(/[<>&"]/g, '');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="850" viewBox="0 0 600 850">
+    <rect width="600" height="850" fill="#ffffff" rx="16"/>
+    <rect x="60" y="70" width="480" height="40" rx="8" fill="#f1f5f9"/>
+    <rect x="60" y="140" width="360" height="20" rx="6" fill="#e2e8f0"/>
+    <rect x="60" y="180" width="480" height="14" rx="4" fill="#f8fafc"/>
+    <rect x="60" y="210" width="480" height="14" rx="4" fill="#f8fafc"/>
+    <rect x="60" y="240" width="440" height="14" rx="4" fill="#f8fafc"/>
+    <rect x="60" y="270" width="480" height="14" rx="4" fill="#f8fafc"/>
+    <rect x="60" y="320" width="480" height="240" rx="12" fill="#e2e8f0"/>
+    <text x="300" y="440" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#64748b" text-anchor="middle">${safeTitle}</text>
+    <text x="300" y="475" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">${safeSubtitle}</text>
+    <rect x="60" y="600" width="480" height="14" rx="4" fill="#f8fafc"/>
+    <rect x="60" y="630" width="400" height="14" rx="4" fill="#f8fafc"/>
+    <rect x="60" y="660" width="450" height="14" rx="4" fill="#f8fafc"/>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 };
 
 const getInitialLanguageData = (): { language: Language; showWelcome: boolean } => {
@@ -947,6 +979,7 @@ interface FileMintState {
 
   settingsOpen: boolean;
   updateCheckEnabled: boolean;
+  autoSwitchToFile: boolean;
   updateInfo: UpdateInfo | null;
   updateDownloading: boolean;
   updateDownloaded: boolean;
@@ -963,6 +996,7 @@ interface FileMintState {
   setScreen: (screen: 'home' | 'config' | 'results') => void;
   setSettingsOpen: (open: boolean) => void;
   setUpdateCheckEnabled: (enabled: boolean) => void;
+  setAutoSwitchToFile: (enabled: boolean) => void;
   setTheme: (theme: ThemeMode) => void;
   setDefaultImageTab: (tab: ImageConfigTab) => void;
   setDefaultImagePreset: (presetId: string) => void;
@@ -1090,6 +1124,7 @@ export const persistConfigToDisk = () => {
         default_tab: state.defaultImageTab,
         default_preset: state.defaultImagePreset,
         update_check: state.updateCheckEnabled,
+        auto_switch_to_file: state.autoSwitchToFile,
         lifetime_saved_bytes: state.lifetimeSavedBytes,
         lifetime_files_count: state.lifetimeFilesCount,
         custom_profiles: state.customProfiles,
@@ -1396,6 +1431,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
 
     settingsOpen: false,
     updateCheckEnabled: getInitialUpdateCheckEnabled(),
+    autoSwitchToFile: getInitialAutoSwitchToFile(),
     updateInfo: null,
     updateDownloading: false,
     updateDownloaded: false,
@@ -1435,6 +1471,13 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         localStorage.setItem('filemint_update_check', String(enabled));
       } catch {}
       set({ updateCheckEnabled: enabled });
+      persistConfigToDisk();
+    },
+    setAutoSwitchToFile: (enabled: boolean) => {
+      try {
+        localStorage.setItem('filemint_auto_switch_to_file', String(enabled));
+      } catch {}
+      set({ autoSwitchToFile: enabled });
       persistConfigToDisk();
     },
     setTheme: (theme: ThemeMode) => {
@@ -1512,6 +1555,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         const currentFiles = get().files;
         const existingPaths = new Set(currentFiles.map((f) => f.path));
         const filteredNew = newFiles.filter((f) => !existingPaths.has(f.path));
+        if (filteredNew.length === 0) return;
 
         const isFirstUpload = currentFiles.length === 0;
         const defaultPresetId = get().defaultImagePreset;
@@ -1526,11 +1570,21 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           ...pdfPaths.filter((p) => !existingOrder.includes(p)),
         ];
 
+        const prevIndex = get().activePreviewIndex;
+        const autoSwitch = get().autoSwitchToFile;
+        const newActiveIndex = isFirstUpload
+          ? 0
+          : autoSwitch
+          ? updated.length - 1
+          : Math.min(prevIndex, updated.length - 1);
+
+        const activeIndexChanged = isFirstUpload || newActiveIndex !== prevIndex;
+
         set({
           files: updated,
           pdfMergeOrder: newOrder,
           screen: 'config',
-          activePreviewIndex: 0,
+          activePreviewIndex: newActiveIndex,
           ...(isFirstUpload && defaultProfile
             ? {
                 selectedImagePreset: defaultProfile.id,
@@ -1540,7 +1594,9 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
             : {}),
         });
 
-        await get().refreshPreview();
+        if (activeIndexChanged || !get().preview) {
+          await get().refreshPreview();
+        }
       } catch (err) {
         console.warn('Fallback aperçu Web suite à :', err);
         get().addDemoFiles();
@@ -1897,14 +1953,15 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
             : Math.round(activeFile.sizeBytes * (1 - estimatedPercent / 100));
 
           if (reqId === previewRequestId) {
+            const previewSvg = createPdfPlaceholderSvg(activeFile.name, 'Aperçu Page 1 (Simulé)');
             set({
               preview: {
-                data_url: '',
-                original_data_url: '',
-                original_width: 800,
-                original_height: 1100,
-                new_width: 800,
-                new_height: 1100,
+                data_url: previewSvg,
+                original_data_url: previewSvg,
+                original_width: 600,
+                original_height: 850,
+                new_width: 600,
+                new_height: 850,
                 original_bytes: activeFile.sizeBytes,
                 estimated_bytes: estimatedFinal,
                 saved_percentage: estimatedPercent,
@@ -1925,10 +1982,20 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           const origBytes = base64ToUint8Array(res.original_page_pdf_base64);
           const compBytes = base64ToUint8Array(res.compressed_page_pdf_base64);
 
-          const [origPage, compPage] = await Promise.all([
-            renderPdfPage1(origBytes),
-            renderPdfPage1(compBytes),
-          ]);
+          let origPage: RenderedPdfPage;
+          try {
+            origPage = await renderPdfPage1(origBytes);
+          } catch (e) {
+            console.warn("Échec renderPdfPage1(origBytes) :", e);
+            throw e;
+          }
+
+          let compPage: RenderedPdfPage;
+          try {
+            compPage = await renderPdfPage1(compBytes);
+          } catch {
+            compPage = origPage;
+          }
 
           if (reqId === previewRequestId) {
             const currentSelected = get().selectedPdfPages;
@@ -1959,7 +2026,22 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
         } catch (err) {
           console.error("Erreur lors de la génération de la prévisualisation PDF :", err);
           if (reqId === previewRequestId) {
-            set({ preview: null, previewLoading: false });
+            const fallbackSvg = createPdfPlaceholderSvg(activeFile.name, 'Document PDF');
+            set({
+              preview: {
+                original_data_url: fallbackSvg,
+                data_url: fallbackSvg,
+                original_bytes: activeFile.sizeBytes,
+                estimated_bytes: activeFile.sizeBytes,
+                saved_percentage: 0,
+                original_width: 600,
+                original_height: 850,
+                new_width: 600,
+                new_height: 850,
+                transparency_loss_warning: false,
+              },
+              previewLoading: false,
+            });
           }
         }
         return;
@@ -2719,6 +2801,14 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
             updates.updateCheckEnabled = diskConfig.update_check;
             try {
               localStorage.setItem('filemint_update_check', String(diskConfig.update_check));
+            } catch {}
+          }
+
+          // Auto-switch to newly added file toggle
+          if (typeof diskConfig.auto_switch_to_file === 'boolean') {
+            updates.autoSwitchToFile = diskConfig.auto_switch_to_file;
+            try {
+              localStorage.setItem('filemint_auto_switch_to_file', String(diskConfig.auto_switch_to_file));
             } catch {}
           }
 

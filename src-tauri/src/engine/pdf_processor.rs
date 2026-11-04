@@ -250,8 +250,8 @@ fn extract_page_one_doc(mut doc: Document) -> Result<Document> {
     if page_count > 1 {
         let to_delete: Vec<u32> = (2..=page_count).collect();
         doc.delete_pages(&to_delete);
-        doc.prune_objects();
     }
+    doc.prune_objects();
     Ok(doc)
 }
 
@@ -272,10 +272,18 @@ pub fn generate_pdf_preview(
         return Err(anyhow!("Le document PDF ne contient aucune page valide."));
     }
 
-    // Extract Page 1 for original rendering
-    let mut orig_page_doc = extract_page_one_doc(doc)?;
-    let mut orig_page_bytes = Vec::new();
-    orig_page_doc.save_to(&mut orig_page_bytes)?;
+    // Extract Page 1 for original rendering:
+    // If single page, read raw bytes directly from disk to preserve 100% fidelity without re-serialization.
+    let (orig_page_bytes, doc_to_compress) = if total_pages == 1 {
+        let raw = std::fs::read(input_path)?;
+        (raw, doc)
+    } else {
+        let mut orig_doc = extract_page_one_doc(doc)?;
+        let mut bytes = Vec::new();
+        orig_doc.save_to(&mut bytes)?;
+        let comp_doc = orig_doc.clone();
+        (bytes, comp_doc)
+    };
 
     let (target_jpeg_quality, target_max_dim, estimated_ratio) =
         if let Some(target_kb) = options.target_size_kb {
@@ -305,13 +313,16 @@ pub fn generate_pdf_preview(
             }
         };
 
-    let (compressed_page_bytes, _) = compress_doc_internal(
-        orig_page_doc,
+    let compressed_page_bytes = match compress_doc_internal(
+        doc_to_compress,
         target_jpeg_quality,
         target_max_dim,
         options.recompress_images,
         options.optimize_structure,
-    )?;
+    ) {
+        Ok((bytes, _)) => bytes,
+        Err(_) => orig_page_bytes.clone(),
+    };
 
     let estimated_bytes = if let Some(target_kb) = options.target_size_kb {
         std::cmp::min(original_bytes, (target_kb as u64) * 1024)

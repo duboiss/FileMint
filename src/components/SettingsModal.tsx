@@ -51,6 +51,8 @@ export const SettingsModal: React.FC = () => {
     importCustomProfiles,
     destinationConfig,
     setDestinationConfig,
+    autoSwitchToFile,
+    setAutoSwitchToFile,
     language,
     setLanguage,
     theme,
@@ -448,6 +450,31 @@ export const SettingsModal: React.FC = () => {
                     <span>{t.themeDark}</span>
                   </button>
                 </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 py-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 rounded-lg bg-mint-500/10 text-mint-500 flex items-center justify-center shrink-0">
+                    <MousePointer className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0 pr-2">
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs block">
+                      {t.autoSwitchToFileLabel}
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate" title={t.autoSwitchToFileDesc}>
+                      {t.autoSwitchToFileDesc}
+                    </span>
+                  </div>
+                </div>
+
+                <label className="flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={autoSwitchToFile}
+                    onChange={(e) => setAutoSwitchToFile(e.target.checked)}
+                    className="w-4 h-4 rounded text-mint-500 accent-mint-500 cursor-pointer"
+                  />
+                </label>
               </div>
 
               {isTauriEnv() && (

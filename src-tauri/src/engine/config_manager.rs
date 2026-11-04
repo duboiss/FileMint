@@ -14,6 +14,7 @@ pub struct AppConfig {
     pub default_tab: Option<String>,
     pub default_preset: Option<String>,
     pub update_check: Option<bool>,
+    pub auto_switch_to_file: Option<bool>,
     pub lifetime_saved_bytes: Option<u64>,
     pub lifetime_files_count: Option<u64>,
     pub custom_profiles: Option<serde_json::Value>,

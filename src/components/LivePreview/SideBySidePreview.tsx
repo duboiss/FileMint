@@ -6,10 +6,8 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
-  FileText,
   Maximize2,
   Shield,
-  Sparkles,
   Columns,
   SplitSquareVertical,
 } from 'lucide-react';
@@ -35,7 +33,6 @@ export const SideBySidePreview: React.FC = () => {
   const [splitPos, setSplitPos] = useState<number>(50);
   const [isLargeModalOpen, setIsLargeModalOpen] = useState(false);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
-  const [showPdfDocDetails, setShowPdfDocDetails] = useState(false);
 
   const updateSplitPosition = (clientX: number, target: HTMLElement) => {
     const rect = target.getBoundingClientRect();
@@ -99,113 +96,6 @@ export const SideBySidePreview: React.FC = () => {
     preview.estimated_bytes &&
     preview.estimated_bytes !== activeFile.sizeBytes
   );
-
-  // Specific rendering for PDF documents when user toggles details or when visual preview is unavailable
-  if (isPdf && (showPdfDocDetails || (!preview?.data_url && !previewLoading))) {
-    const isTargetSize = Boolean(pdfOptions.target_size_kb && pdfOptions.target_size_kb > 0);
-    const targetBytes = (pdfOptions.target_size_kb || 0) * 1024;
-    const hasLiveEstimation = Boolean(preview && preview.estimated_bytes > 0);
-    const estimatedFinal = hasLiveEstimation
-      ? preview!.estimated_bytes
-      : isTargetSize
-      ? Math.min(activeFile.sizeBytes, targetBytes)
-      : Math.round(
-          activeFile.sizeBytes *
-            (pdfOptions.profile === 'Compact' ? 0.35 : pdfOptions.profile === 'Balanced' ? 0.55 : 0.75)
-        );
-    const estimatedPercent = hasLiveEstimation
-      ? Math.round(preview!.saved_percentage)
-      : activeFile.sizeBytes > 0 && activeFile.sizeBytes > estimatedFinal
-      ? Math.round(((activeFile.sizeBytes - estimatedFinal) / activeFile.sizeBytes) * 100)
-      : 0;
-
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-8 bg-slate-100/50 dark:bg-slate-950/40 select-none">
-        <div className="max-w-lg md:max-w-xl w-full p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col items-center text-center">
-          <div className="h-16 w-16 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center mb-4">
-            <FileText className="w-8 h-8" />
-          </div>
-
-          <h3
-            className="font-bold text-base text-slate-800 dark:text-slate-100 mb-1 max-w-full truncate cursor-help"
-            title={activeFile.path}
-          >
-            {activeFile.name}
-          </h3>
-          <p
-            className="text-xs text-slate-400 mb-6 font-mono text-[11px] truncate max-w-full px-2"
-            title={activeFile.path}
-          >
-            {activeFile.path}
-          </p>
-
-          <div className="w-full grid grid-cols-3 gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-center mb-6">
-            <div>
-              <div className="text-[10px] text-slate-400 uppercase font-semibold">
-                {t.initialWeight}
-              </div>
-              <div className="text-xs font-mono font-bold text-slate-700 dark:text-slate-200 mt-0.5">
-                {formatFileSize(activeFile.sizeBytes, language)}
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] text-slate-400 uppercase font-semibold">
-                {t.estimatedWeight}
-              </div>
-              <div
-                className="text-xs font-mono font-bold text-mint-500 mt-0.5 cursor-help"
-                title={t.estimatedSizeTooltip}
-              >
-                ~{formatFileSize(estimatedFinal, language)}
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] text-slate-400 uppercase font-semibold">
-                {t.savings}
-              </div>
-              <div
-                className="text-xs font-mono font-bold text-emerald-500 mt-0.5 cursor-help"
-                title={t.estimatedSizeTooltip}
-              >
-                -{estimatedPercent}%
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-4 flex flex-col items-center justify-center text-center gap-1.5 w-full">
-            <div className="text-xs flex items-center justify-center gap-1.5 font-medium">
-              <span className="text-slate-500 dark:text-slate-400">
-                {isTargetSize ? `${t.targetSizeTitle} :` : t.pdfProfileSelected}
-              </span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[11px] border border-slate-200/80 dark:border-slate-700/80">
-                {isTargetSize
-                  ? `≤ ${(pdfOptions.target_size_kb || 0) >= 1024
-                      ? `${((pdfOptions.target_size_kb || 0) / 1024).toFixed(
-                          (pdfOptions.target_size_kb || 0) % 1024 === 0 ? 0 : 1
-                        )} ${language === 'en' ? 'MB' : 'Mo'}`
-                      : `${pdfOptions.target_size_kb} ${language === 'en' ? 'KB' : 'Ko'}`}`
-                  : getPdfProfileLabel(pdfOptions.profile)}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-md">
-              {isTargetSize ? t.pdfTargetSizeDesc : t.pdfExplanation}
-            </p>
-          </div>
-
-          {preview?.data_url && (
-            <button
-              type="button"
-              onClick={() => setShowPdfDocDetails(false)}
-              className="mt-2 px-4 py-2 rounded-2xl bg-mint-500 hover:bg-mint-400 text-slate-950 font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] transition-all"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{t.viewVisualPreview} ({t.pdfPage1Preview})</span>
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   // Dynamic preview rendering (Images and PDF Page 1)
   return (
@@ -370,16 +260,6 @@ export const SideBySidePreview: React.FC = () => {
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
-
-          {isPdf && (
-            <button
-              onClick={() => setShowPdfDocDetails(true)}
-              className="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer transition-colors"
-              title={t.viewDocumentDetails}
-            >
-              <FileText className="w-3.5 h-3.5 text-mint-500" />
-            </button>
-          )}
 
           <div className="w-[1px] h-4 bg-slate-300 dark:bg-slate-700 mx-0.5" />
 

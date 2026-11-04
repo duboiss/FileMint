@@ -334,6 +334,8 @@ export interface TranslationDictionary {
   appearance: string;
   themeDarkLabel: string;
   themeLightLabel: string;
+  autoSwitchToFileLabel: string;
+  autoSwitchToFileDesc: string;
   languageSection: string;
   defaultTabSection: string;
   defaultPresetSection: string;
@@ -748,6 +750,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     appearance: 'Apparence & Thème',
     themeDarkLabel: 'Thème Sombre',
     themeLightLabel: 'Thème Clair',
+    autoSwitchToFileLabel: 'Basculer automatiquement sur le fichier ajouté',
+    autoSwitchToFileDesc: 'Affiche immédiatement l’aperçu du dernier fichier importé dans la liste.',
     languageSection: 'Langue de l\'application',
     defaultTabSection: 'Onglet par défaut au chargement d\'image',
     defaultPresetSection: 'Profil image appliqué par défaut',
@@ -1161,6 +1165,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     appearance: 'Appearance & Theme',
     themeDarkLabel: 'Dark Theme',
     themeLightLabel: 'Light Theme',
+    autoSwitchToFileLabel: 'Automatically switch to newly added files',
+    autoSwitchToFileDesc: 'Immediately shows the preview of the latest file added to the list.',
     languageSection: 'Application Language',
     defaultTabSection: 'Default tab on image upload',
     defaultPresetSection: 'Default image profile',

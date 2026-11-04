@@ -208,6 +208,7 @@ export interface AppConfig {
   default_tab?: string | null;
   default_preset?: string | null;
   update_check?: boolean | null;
+  auto_switch_to_file?: boolean | null;
   lifetime_saved_bytes?: number | null;
   lifetime_files_count?: number | null;
   custom_profiles?: CustomProfile[] | null;

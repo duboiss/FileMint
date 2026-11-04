@@ -54,16 +54,20 @@
 ## 🚀 Key Features
 
 ### 🖼️ Image Optimization & Conversion
-- **Smart Sizing & Effects:** Pixel dimensions, percentages, max bounds, rotation (90°/180°/270°), flips, and color effects (Grayscale, Sepia, Invert, Pure B&W thresholding).
+- **Smart Sizing & Semantic Geometry:** Pixel dimensions, percentages, max bounds with aspect ratio sync, rotations (90°/180°/270°), flips, and color effects (Grayscale, Sepia, Invert, Pure B&W thresholding). Intelligent semantic detection recognizes 100% and matching original dimensions as non-resizing.
+- **Live Empirical Weight Estimation:** Real-time in-memory encoding in Rust provides responsive, empirical size forecasts (`~413.5 KB [-58%]`) with informative hover tooltips.
 - **Target Size Mode (Max KB/MB):** Set a strict file ceiling (200 KB, 500 KB, 1 MB, 2 MB, 5 MB, or custom). FileMint automatically determines optimal quality and Lanczos downscaling via binary search.
-- **Quality & Lossless:** Continuous slider (10–100), quick presets (Light, Balanced, Max), lossless PNG/WebP, or bypass compression toggle for bit-exact conversions.
+- **Quality & Lossless:** Continuous slider (10–100), quick presets (None, Web, Quality, Light), lossless PNG/WebP, or bypass compression toggle for bit-exact conversions.
+- **Custom Profiles (Import / Export):** Save personal workflows, export presets to JSON, and import them across machines.
 - **Privacy Sanitization:** Selective GPS stripping (keeps camera settings) or complete EXIF scrub.
 - **Formats:** JPEG, PNG (with alpha), WebP, AVIF, BMP, GIF, and TIFF.
 
-### 📄 PDF Document Compression
+### 📄 Comprehensive PDF Suite (Compress, Merge, Split)
 - **3 Compression Profiles:** *Readable* (~200–250 DPI), *Balanced* (~150 DPI), and *Compact* (~100 DPI).
 - **Target Size Optimization:** Fit PDFs under upload thresholds for government or career portals.
-- **Structural Optimization:** FlateDecode recompression and object cleanup without altering selectable text or links.
+- **Structural Optimization:** FlateDecode recompression and object cleanup without altering selectable text or vector typography.
+- **PDF Merge:** Merge multiple PDF files into a single ordered document with custom naming and real-time page count.
+- **PDF Split & Page Extraction:** Visual interactive page thumbnail grid, custom page ranges (e.g. `1, 3-5`), and one-click split-all or single-document extraction.
 
 ### 📂 Automatic Watch Folders
 - **Multi-Folder Background Monitoring:** Configure unlimited watched folders running concurrently in the background.

@@ -54,16 +54,20 @@
 ## 🚀 Fonctionnalités Clés
 
 ### 🖼️ Optimisation & Conversion d'Images
-- **Dimensions & Retouche :** Pixels, pourcentages, limitation maximale (*Max bounds*), rotations (90°/180°/270°), miroirs et noir & blanc.
+- **Dimensions & Géométrie Intelligente :** Pixels, pourcentages, limitation maximale (*Max bounds*) avec synchronisation du ratio, rotations (90°/180°/270°), miroirs et effets de couleur (Niveaux de gris, Sépia, Négatif / Inversé, Noir & Blanc pur seuillé). La détection sémantique reconnaît intelligemment 100% et les dimensions d'origine.
+- **Estimation Empirique en Direct :** Calcul en temps réel par encodage en mémoire sous Rust fournissant une prévision précise du poids (`~413.5 Ko [-58%]`) avec infobulle explicative au survol.
 - **Mode Taille Cible (Ko / Mo max) :** Fixez un plafond strict (200 Ko, 500 Ko, 1 Mo, 2 Mo, 5 Mo, sur-mesure). FileMint détermine la qualité optimale et le sous-échantillonnage Lanczos par dichotomie.
-- **Qualité & Sans perte :** Curseur 10–100, préréglages (Léger, Équilibré, Max), mode lossless (PNG/WebP), ou débrayage complet de la compression.
+- **Qualité & Sans perte :** Curseur 10–100, préréglages rapides (Aucun, Web, Qualité, Léger), mode sans perte (PNG/WebP), ou débrayage complet de la compression pour les conversions bit-à-bit.
+- **Profils Personnalisés (Import / Export) :** Sauvegardez vos propres préréglages, exportez-les au format JSON et importez-les d'une machine à l'autre.
 - **Vie privée & Métadonnées :** Suppression sélective des coordonnées GPS ou nettoyage EXIF intégral.
 - **Formats :** JPEG, PNG (avec transparence), WebP, AVIF, BMP, GIF et TIFF.
 
-### 📄 Compression de Documents PDF
+### 📄 Suite Complète PDF (Compression, Fusion, Découpage)
 - **3 Profils Dédiés :** *Lisible* (~200–250 DPI), *Équilibré* (~150 DPI) et *Compact* (~100 DPI).
 - **Compression par Taille Cible :** Respectez les limites de poids imposées par les portails administratifs et courriels.
-- **Optimisation Structurelle :** Recompression FlateDecode et nettoyage d'objets sans altérer les textes sélectionnables ni les liens.
+- **Optimisation Structurelle :** Recompression FlateDecode et nettoyage d'objets sans altérer les textes sélectionnables ni les liens vectoriels.
+- **Fusion de PDF :** Combinez plusieurs documents PDF en un fichier unique ordonné avec nommage personnalisé et décompte des pages en direct.
+- **Découpage & Extraction de Pages :** Grille visuelle de vignettes des pages, sélection par plages (ex: `1, 3-5`), extraction dans un PDF dédié ou découpage de toutes les pages en fichiers distincts.
 
 ### 📂 Dossiers de Surveillance Automatique
 - **Surveillance Multi-Dossiers :** Configurez autant de dossiers surveillés que vous le souhaitez, avec exécution asynchrone indépendante en arrière-plan.

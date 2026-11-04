@@ -59,7 +59,7 @@ export const App: React.FC = () => {
           }
         })
         .catch((err) => console.warn('Error reading initial CLI files:', err));
-    } else if (typeof window !== 'undefined' && import.meta.env.DEV) {
+    } else if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const demo = params.get('demo');
       const langParam = params.get('lang');

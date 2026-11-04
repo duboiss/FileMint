@@ -39,7 +39,7 @@ const server = http.createServer((req, res) => {
   const isContained =
     !relativeFromDist.startsWith('..') &&
     !path.isAbsolute(relativeFromDist) &&
-    resolvedPath.startsWith(DIST_DIR);
+    (resolvedPath === DIST_DIR || resolvedPath.startsWith(DIST_DIR + path.sep));
 
   let targetFile = path.join(DIST_DIR, 'index.html');
   if (isContained && fs.existsSync(resolvedPath)) {

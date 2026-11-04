@@ -58,6 +58,15 @@ Before submitting a pull request, ensure all checks pass:
    ```bash
    cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
    ```
+5. **CodeQL & Security Standards**:
+   All JavaScript/TypeScript code is statically analyzed by GitHub CodeQL (`security-extended`, `security-and-quality`). Avoid useless variable assignments, uncontained path operations, or unsanitized DOM manipulations.
+
+6. **Documentation & Screenshots**:
+   When introducing UI changes, capture fresh screenshots for documentation using:
+   ```bash
+   npm run build
+   node scripts/capture_screenshots.cjs
+   ```
 
 ---
 

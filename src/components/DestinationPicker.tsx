@@ -152,8 +152,8 @@ export const DestinationPicker: React.FC = () => {
   const pdfFiles = files.filter((f) => f.fileType === 'pdf');
 
   let canLaunch = false;
-  let launchButtonLabel = `${t.launchBatch} (${files.length})`;
-  let launchButtonIcon = Play;
+  let launchButtonLabel: string;
+  let launchButtonIcon: typeof Play;
 
   if (isPdfActive && pdfToolMode === 'merge') {
     canLaunch = pdfFiles.length >= 2;

@@ -94,6 +94,12 @@ Téléchargez la dernière version sur la page [**GitHub Releases**](https://git
 
 > [!TIP]
 > **Avertissement Windows SmartScreen :** En tant que logiciel open source sans certificat payant d'entreprise, Windows peut afficher un écran bleu au premier lancement. Cliquez sur **« Informations complémentaires »** puis **« Exécuter quand même »**.
+>
+> **Avertissement macOS Gatekeeper (Message « L'application est endommagée ») :** En l'absence de certificat payant Apple Developer ID, macOS place l'application téléchargée en quarantaine et peut afficher *"FileMint.app est endommagé et ne peut pas être ouvert"*. Pour la débloquer, ouvrez le Terminal et exécutez simplement :
+> ```bash
+> xattr -cr /Applications/FileMint.app
+> ```
+> Puis relancez FileMint normalement.
 
 ---
 

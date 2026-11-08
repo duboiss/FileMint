@@ -94,6 +94,12 @@ Visit [**GitHub Releases**](https://github.com/duboiss/FileMint/releases) to dow
 
 > [!TIP]
 > **Windows SmartScreen Notice:** As open-source software without an expensive enterprise certificate, Windows may show a standard SmartScreen prompt on first run. Click **"More info"** then **"Run anyway"**.
+>
+> **macOS Gatekeeper Notice ("App is damaged" message):** As FileMint is free and open-source without an expensive Apple Developer ID signature, macOS quarantines downloaded apps. If macOS displays *"FileMint.app is damaged and can't be opened"*, open Terminal and run:
+> ```bash
+> xattr -cr /Applications/FileMint.app
+> ```
+> Then launch FileMint normally.
 
 ---
 

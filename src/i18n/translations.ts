@@ -356,6 +356,21 @@ export interface TranslationDictionary {
   contextMenuWelcomeSubtitle: string;
   contextMenuReadyTitle: string;
   contextMenuReadyDesc: string;
+  osBadgeWindows: string;
+  osBadgeMac: string;
+  osBadgeLinux: string;
+  macOSIntegrationTitle: string;
+  macOSIntegrationDesc: string;
+  macOSDockFeature: string;
+  macOSWatchFolderFeature: string;
+  macOSGatekeeperTip: string;
+  macOSCopyCommand: string;
+  macOSCopied: string;
+  linuxIntegrationTitle: string;
+  linuxIntegrationDesc: string;
+  linuxDesktopFeature: string;
+  linuxWatchFolderFeature: string;
+  linuxCliFeature: string;
   watchFolderSection: string;
   watchFolderDesc: string;
   watchFoldersSection: string;
@@ -772,6 +787,21 @@ export const translations: Record<Language, TranslationDictionary> = {
     contextMenuWelcomeSubtitle: 'Accédez directement à FileMint au clic droit dans l\'Explorateur.',
     contextMenuReadyTitle: 'Menu contextuel Windows prêt !',
     contextMenuReadyDesc: 'FileMint est désormais accessible d\'un clic droit sur vos images et PDF.',
+    osBadgeWindows: 'Windows',
+    osBadgeMac: 'macOS',
+    osBadgeLinux: 'Linux',
+    macOSIntegrationTitle: 'Intégration macOS',
+    macOSIntegrationDesc: 'FileMint s\'intègre harmonieusement à l\'environnement macOS.',
+    macOSDockFeature: 'Glissez-déposez vos fichiers directement sur l\'icône du Dock ou sur la fenêtre.',
+    macOSWatchFolderFeature: 'Dossiers surveillés (FSEvents) pour compresser automatiquement vos dépôts.',
+    macOSGatekeeperTip: 'Astuce : si macOS affiche « FileMint est endommagé » après une mise à jour, exécutez la commande de déblocage.',
+    macOSCopyCommand: 'Copier la commande',
+    macOSCopied: 'Commande copiée !',
+    linuxIntegrationTitle: 'Intégration Linux',
+    linuxIntegrationDesc: 'FileMint s\'intègre aux environnements de bureau X11 et Wayland.',
+    linuxDesktopFeature: 'Glissez-déposez vos fichiers directement dans l\'application.',
+    linuxWatchFolderFeature: 'Dossiers surveillés natifs (inotify) pour optimiser vos dossiers en tâche de fond.',
+    linuxCliFeature: 'Support des arguments en ligne de commande pour vos flux de travail et scripts.',
     watchFolderSection: 'Dossiers de surveillance automatique',
     watchFolderDesc: 'Compresse silencieusement en arrière-plan vos fichiers (images ou PDF) déposés dans vos dossiers surveillés.',
     watchFoldersSection: 'Dossiers de surveillance automatique',
@@ -1187,6 +1217,21 @@ export const translations: Record<Language, TranslationDictionary> = {
     contextMenuWelcomeSubtitle: 'Access FileMint directly via right-click in Explorer.',
     contextMenuReadyTitle: 'Windows context menu ready!',
     contextMenuReadyDesc: 'FileMint is now accessible via right-click on your images and PDFs.',
+    osBadgeWindows: 'Windows',
+    osBadgeMac: 'macOS',
+    osBadgeLinux: 'Linux',
+    macOSIntegrationTitle: 'macOS Integration',
+    macOSIntegrationDesc: 'FileMint seamlessly integrates with your macOS desktop.',
+    macOSDockFeature: 'Drag & drop your files directly onto the Dock icon or window.',
+    macOSWatchFolderFeature: 'Native watch folders (FSEvents) to automatically optimize dropped files.',
+    macOSGatekeeperTip: 'Tip: if macOS shows "FileMint is damaged" upon updating, run the quarantine fix command.',
+    macOSCopyCommand: 'Copy command',
+    macOSCopied: 'Command copied!',
+    linuxIntegrationTitle: 'Linux Integration',
+    linuxIntegrationDesc: 'FileMint integrates smoothly with X11 and Wayland desktop environments.',
+    linuxDesktopFeature: 'Drag & drop files directly into the application window.',
+    linuxWatchFolderFeature: 'Native watch folders (inotify) to optimize files in background.',
+    linuxCliFeature: 'Command-line argument support for your scripts and workflows.',
     watchFolderSection: 'Automatic Watch Folders',
     watchFolderDesc: 'Silently optimizes in the background any file (image or PDF) dropped into your watched folders.',
     watchFoldersSection: 'Automatic Watch Folders',

@@ -68,6 +68,7 @@ pub fn run() {
             commands::set_watch_folder_rules,
             commands::get_app_config,
             commands::save_app_config,
+            commands::get_platform_os,
         ])
         .setup(|_app| {
             // Start named pipe IPC server to receive subsequent CLI / context menu files

@@ -29,11 +29,14 @@ import {
   Trash2,
   Loader2,
   RotateCcw,
+  Sparkles,
+  Copy,
 } from 'lucide-react';
 import { save as saveDialog, open as openDialog } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { CustomProfile, ImageConfigTab, ContextMenuMode } from '../types';
 import { getSystemLanguage } from '../i18n/translations';
+import { getPlatformOS } from '../utils/platform';
 
 export const SettingsModal: React.FC = () => {
   const {
@@ -69,7 +72,17 @@ export const SettingsModal: React.FC = () => {
   } = useFileMintStore();
 
   const isDev = Boolean(import.meta.env.DEV);
+  const platform = getPlatformOS();
+  const [copiedGatekeeper, setCopiedGatekeeper] = useState(false);
   const [confirmResetStats, setConfirmResetStats] = useState(false);
+
+  const handleCopyGatekeeperCommand = async () => {
+    try {
+      await navigator.clipboard.writeText('xattr -cr /Applications/FileMint.app');
+      setCopiedGatekeeper(true);
+      setTimeout(() => setCopiedGatekeeper(false), 2500);
+    } catch {}
+  };
   const activeWatchCount = useMemo(
     () => watchFolders.filter((f) => f.enabled && f.watch_path).length,
     [watchFolders]
@@ -478,61 +491,127 @@ export const SettingsModal: React.FC = () => {
               </div>
 
               {isTauriEnv() && (
-                <div className="pt-2.5 space-y-1.5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-7 h-7 rounded-lg bg-mint-500/10 text-mint-500 flex items-center justify-center shrink-0">
-                        <MousePointer className="w-3.5 h-3.5" />
+                platform === 'windows' ? (
+                  <div className="pt-2.5 space-y-1.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-lg bg-mint-500/10 text-mint-500 flex items-center justify-center shrink-0">
+                          <MousePointer className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs block">
+                            {t.contextMenuLabel}
+                          </span>
+                          {contextMenuLoading && (
+                            <Loader2 className="w-3 h-3 animate-spin text-mint-500 shrink-0" />
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs block">
-                          {t.contextMenuLabel}
+
+                      <div className="relative shrink-0">
+                        <select
+                          disabled={contextMenuLoading}
+                          value={!contextMenuEnabled || contextMenuMode === 'disabled' ? 'disabled' : contextMenuMode}
+                          onChange={(e) => setContextMenuMode(e.target.value as ContextMenuMode)}
+                          className="py-1.5 pl-3 pr-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-mint-500 transition-colors cursor-pointer appearance-none shadow-xs"
+                        >
+                          <option value="modern">
+                            {t.contextMenuModern}
+                          </option>
+                          <option value="classic">
+                            {t.contextMenuClassic}
+                          </option>
+                          <option value="disabled">
+                            {t.contextMenuDisabled}
+                          </option>
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
+                            <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pl-9 space-y-0.5 text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
+                      <p>
+                        {(!contextMenuEnabled || contextMenuMode === 'disabled') && t.contextMenuDisabledDesc}
+                        {contextMenuEnabled && contextMenuMode === 'modern' && t.contextMenuModernDesc}
+                        {contextMenuEnabled && contextMenuMode === 'classic' && t.contextMenuClassicDesc}
+                      </p>
+
+                      {contextMenuEnabled && contextMenuMode !== 'disabled' && (
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 italic block">
+                          {t.contextMenuRefreshNotice}
                         </span>
-                        {contextMenuLoading && (
-                          <Loader2 className="w-3 h-3 animate-spin text-mint-500 shrink-0" />
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="relative shrink-0">
-                      <select
-                        disabled={contextMenuLoading}
-                        value={!contextMenuEnabled || contextMenuMode === 'disabled' ? 'disabled' : contextMenuMode}
-                        onChange={(e) => setContextMenuMode(e.target.value as ContextMenuMode)}
-                        className="py-1.5 pl-3 pr-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-mint-500 transition-colors cursor-pointer appearance-none shadow-xs"
-                      >
-                        <option value="modern">
-                          {t.contextMenuModern}
-                        </option>
-                        <option value="classic">
-                          {t.contextMenuClassic}
-                        </option>
-                        <option value="disabled">
-                          {t.contextMenuDisabled}
-                        </option>
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
-                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
-                          <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                        </svg>
-                      </div>
+                      )}
                     </div>
                   </div>
-
-                  <div className="pl-9 space-y-0.5 text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
-                    <p>
-                      {(!contextMenuEnabled || contextMenuMode === 'disabled') && t.contextMenuDisabledDesc}
-                      {contextMenuEnabled && contextMenuMode === 'modern' && t.contextMenuModernDesc}
-                      {contextMenuEnabled && contextMenuMode === 'classic' && t.contextMenuClassicDesc}
-                    </p>
-
-                    {contextMenuEnabled && contextMenuMode !== 'disabled' && (
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 italic block">
-                        {t.contextMenuRefreshNotice}
+                ) : platform === 'macos' ? (
+                  <div className="pt-2.5 space-y-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-mint-500/10 text-mint-500 flex items-center justify-center shrink-0">
+                        <Sparkles className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
+                        {t.macOSIntegrationTitle}
                       </span>
-                    )}
+                    </div>
+
+                    <div className="pl-9 space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+                      <p>{t.macOSIntegrationDesc}</p>
+                      <ul className="list-disc list-inside space-y-0.5 text-slate-500 dark:text-slate-400">
+                        <li>{t.macOSDockFeature}</li>
+                        <li>{t.macOSWatchFolderFeature}</li>
+                      </ul>
+                      <div className="pt-1.5 flex items-center justify-between gap-2 border-t border-slate-200/50 dark:border-slate-700/50">
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                          {t.macOSGatekeeperTip}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleCopyGatekeeperCommand}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-[10px] font-mono text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shrink-0"
+                          title="xattr -cr /Applications/FileMint.app"
+                        >
+                          {copiedGatekeeper ? (
+                            <>
+                              <Check className="w-3 h-3 text-mint-500" />
+                              <span className="text-mint-600 dark:text-mint-400 font-sans">
+                                {t.macOSCopied}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              <span>{t.macOSCopyCommand}</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="pt-2.5 space-y-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-mint-500/10 text-mint-500 flex items-center justify-center shrink-0">
+                        <Sparkles className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
+                        {t.linuxIntegrationTitle}
+                      </span>
+                    </div>
+
+                    <div className="pl-9 space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+                      <p>{t.linuxIntegrationDesc}</p>
+                      <ul className="list-disc list-inside space-y-0.5 text-slate-500 dark:text-slate-400">
+                        <li>{t.linuxDesktopFeature}</li>
+                        <li>{t.linuxWatchFolderFeature}</li>
+                        <li>{t.linuxCliFeature}</li>
+                      </ul>
+                    </div>
+                  </div>
+                )
               )}
             </div>
           </div>

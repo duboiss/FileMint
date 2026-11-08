@@ -332,3 +332,8 @@ pub fn get_app_config() -> AppConfig {
 pub fn save_app_config(config: AppConfig) -> Result<(), String> {
     config_manager::save_config(&config)
 }
+
+#[tauri::command]
+pub fn get_platform_os() -> String {
+    std::env::consts::OS.to_string()
+}

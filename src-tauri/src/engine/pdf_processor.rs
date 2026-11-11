@@ -70,6 +70,39 @@ fn get_stream_image_bytes(stream: &lopdf::Stream) -> Option<std::borrow::Cow<'_,
     None
 }
 
+fn is_image_pure_grayscale(img: &image::DynamicImage) -> bool {
+    match img {
+        image::DynamicImage::ImageLuma8(_) | image::DynamicImage::ImageLuma16(_) => true,
+        image::DynamicImage::ImageRgb8(rgb) => {
+            let (chunks, _) = rgb.as_raw().as_chunks::<3>();
+            if chunks.is_empty() {
+                return false;
+            }
+            let step = (chunks.len() / 50).clamp(1, 100);
+            for chunk in chunks.iter().step_by(step) {
+                if chunk[0] != chunk[1] || chunk[1] != chunk[2] {
+                    return false;
+                }
+            }
+            true
+        }
+        image::DynamicImage::ImageRgba8(rgba) => {
+            let (chunks, _) = rgba.as_raw().as_chunks::<4>();
+            if chunks.is_empty() {
+                return false;
+            }
+            let step = (chunks.len() / 50).clamp(1, 100);
+            for chunk in chunks.iter().step_by(step) {
+                if chunk[0] != chunk[1] || chunk[1] != chunk[2] {
+                    return false;
+                }
+            }
+            true
+        }
+        _ => false,
+    }
+}
+
 fn compress_doc_internal(
     mut doc: Document,
     target_jpeg_quality: u8,
@@ -90,15 +123,40 @@ fn compress_doc_internal(
                     .is_ok_and(|val| val.as_name().is_ok_and(|name| name == b"Image"));
 
                 if is_image {
+                    let has_smask =
+                        stream.dict.get(b"SMask").is_ok() || stream.dict.get(b"Mask").is_ok();
+                    let orig_is_gray = stream
+                        .dict
+                        .get(b"ColorSpace")
+                        .is_ok_and(|cs| cs.as_name().is_ok_and(|n| n == b"DeviceGray"));
+
                     if let Some(image_data) = get_stream_image_bytes(stream) {
                         if let Ok(dynamic_img) = image::load_from_memory(&image_data) {
                             let (orig_w, orig_h) = (dynamic_img.width(), dynamic_img.height());
-                            let should_resize = orig_w > target_max_dim || orig_h > target_max_dim;
+                            // Do not alter spatial dimensions if image relies on an SMask transparency mask
+                            let should_resize =
+                                !has_smask && (orig_w > target_max_dim || orig_h > target_max_dim);
 
-                            let final_img = if should_resize {
+                            let resized_img = if should_resize {
                                 dynamic_img.thumbnail(target_max_dim, target_max_dim)
                             } else {
                                 dynamic_img
+                            };
+
+                            let is_grayscale = orig_is_gray
+                                || resized_img.color() == image::ColorType::L8
+                                || is_image_pure_grayscale(&resized_img);
+
+                            let (final_img, colorspace_name) = if is_grayscale {
+                                (
+                                    image::DynamicImage::ImageLuma8(resized_img.to_luma8()),
+                                    b"DeviceGray".as_slice(),
+                                )
+                            } else {
+                                (
+                                    image::DynamicImage::ImageRgb8(resized_img.to_rgb8()),
+                                    b"DeviceRGB".as_slice(),
+                                )
                             };
 
                             let mut recompressed_bytes = Vec::new();
@@ -123,7 +181,8 @@ fn compress_doc_internal(
                                     .set("Height", Object::Integer(final_img.height() as i64));
                                 stream
                                     .dict
-                                    .set("ColorSpace", Object::Name(b"DeviceRGB".to_vec()));
+                                    .set("ColorSpace", Object::Name(colorspace_name.to_vec()));
+                                stream.dict.set("BitsPerComponent", Object::Integer(8));
                                 image_count_optimized += 1;
                             }
                         }
@@ -134,6 +193,14 @@ fn compress_doc_internal(
     }
 
     if optimize_structure {
+        // Strip embedded page thumbnails (/Thumb) so they get garbage-collected by prune_objects
+        let page_ids: Vec<lopdf::ObjectId> = doc.get_pages().values().cloned().collect();
+        for page_id in page_ids {
+            if let Ok(Object::Dictionary(ref mut dict)) = doc.get_object_mut(page_id) {
+                dict.remove(b"Thumb");
+            }
+        }
+
         doc.prune_objects();
         if recompress_flate {
             doc.compress();
@@ -1011,5 +1078,249 @@ startxref
             result.compressed_bytes < result.original_bytes,
             "Output should be smaller than input!"
         );
+    }
+
+    #[test]
+    fn test_compress_pdf_grayscale_devicegray() {
+        let img = image::GrayImage::from_fn(250, 250, |x, y| image::Luma([((x + y) % 256) as u8]));
+        let mut jpeg_data = Vec::new();
+        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jpeg_data, 95)
+            .encode_image(&img)
+            .unwrap();
+
+        let mut doc = Document::with_version("1.5");
+        let pages_id = doc.new_object_id();
+        let page_id = doc.new_object_id();
+        let image_id = doc.new_object_id();
+
+        let mut image_dict = lopdf::Dictionary::new();
+        image_dict.set("Type", Object::Name(b"XObject".to_vec()));
+        image_dict.set("Subtype", Object::Name(b"Image".to_vec()));
+        image_dict.set("Width", Object::Integer(250));
+        image_dict.set("Height", Object::Integer(250));
+        image_dict.set("ColorSpace", Object::Name(b"DeviceGray".to_vec()));
+        image_dict.set("BitsPerComponent", Object::Integer(8));
+        image_dict.set("Filter", Object::Name(b"DCTDecode".to_vec()));
+        let image_stream = lopdf::Stream::new(image_dict, jpeg_data);
+        doc.objects.insert(image_id, Object::Stream(image_stream));
+
+        let mut xobjects = lopdf::Dictionary::new();
+        xobjects.set("ImGray", Object::Reference(image_id));
+        let mut resources = lopdf::Dictionary::new();
+        resources.set("XObject", Object::Dictionary(xobjects));
+
+        let mut page_dict = lopdf::Dictionary::new();
+        page_dict.set("Type", Object::Name(b"Page".to_vec()));
+        page_dict.set("Parent", Object::Reference(pages_id));
+        page_dict.set("Resources", Object::Dictionary(resources));
+        page_dict.set(
+            "MediaBox",
+            Object::Array(vec![
+                Object::Integer(0),
+                Object::Integer(0),
+                Object::Integer(500),
+                Object::Integer(500),
+            ]),
+        );
+        doc.objects.insert(page_id, Object::Dictionary(page_dict));
+
+        let mut pages_dict = lopdf::Dictionary::new();
+        pages_dict.set("Type", Object::Name(b"Pages".to_vec()));
+        pages_dict.set("Kids", Object::Array(vec![Object::Reference(page_id)]));
+        pages_dict.set("Count", Object::Integer(1));
+        doc.objects.insert(pages_id, Object::Dictionary(pages_dict));
+
+        let mut catalog = lopdf::Dictionary::new();
+        catalog.set("Type", Object::Name(b"Catalog".to_vec()));
+        catalog.set("Pages", Object::Reference(pages_id));
+        let catalog_id = doc.add_object(Object::Dictionary(catalog));
+        doc.trailer.set("Root", Object::Reference(catalog_id));
+
+        let temp_in = std::env::temp_dir().join(format!(
+            "test_gray_in_{}.pdf",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let temp_out = std::env::temp_dir().join(format!(
+            "test_gray_out_{}.pdf",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let _c1 = TempFileCleaner(temp_in.clone());
+        let _c2 = TempFileCleaner(temp_out.clone());
+
+        doc.save(&temp_in).unwrap();
+
+        let options = PdfCompressionOptions {
+            profile: PdfCompressionProfile::Compact,
+            optimize_structure: true,
+            recompress_images: true,
+            target_size_kb: None,
+        };
+
+        let result = compress_pdf(&temp_in, &temp_out, &options).unwrap();
+        assert!(result.image_count_optimized >= 1);
+
+        // Verify output preserves DeviceGray
+        let reloaded = Document::load(&temp_out).unwrap();
+        let out_img = reloaded
+            .objects
+            .get(&image_id)
+            .unwrap()
+            .as_stream()
+            .unwrap();
+        let cs = out_img.dict.get(b"ColorSpace").unwrap().as_name().unwrap();
+        assert_eq!(cs, b"DeviceGray");
+    }
+
+    #[test]
+    fn test_strip_page_thumbnails() {
+        let (temp_path, _cleaner) = create_temp_sample_pdf();
+        let mut doc = Document::load(&temp_path).unwrap();
+
+        // Add a fake thumbnail object
+        let thumb_id = doc.new_object_id();
+        let thumb_stream = lopdf::Stream::new(lopdf::Dictionary::new(), vec![1, 2, 3, 4]);
+        doc.objects.insert(thumb_id, Object::Stream(thumb_stream));
+
+        let page_id = doc.get_pages().into_values().next().unwrap();
+        if let Ok(Object::Dictionary(ref mut dict)) = doc.get_object_mut(page_id) {
+            dict.set("Thumb", Object::Reference(thumb_id));
+        }
+
+        let temp_with_thumb = std::env::temp_dir().join(format!(
+            "test_thumb_in_{}.pdf",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let temp_stripped = std::env::temp_dir().join(format!(
+            "test_thumb_out_{}.pdf",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let _c1 = TempFileCleaner(temp_with_thumb.clone());
+        let _c2 = TempFileCleaner(temp_stripped.clone());
+
+        doc.save(&temp_with_thumb).unwrap();
+
+        let options = PdfCompressionOptions {
+            profile: PdfCompressionProfile::Balanced,
+            optimize_structure: true,
+            recompress_images: false,
+            target_size_kb: None,
+        };
+
+        compress_pdf(&temp_with_thumb, &temp_stripped, &options).unwrap();
+
+        let reloaded = Document::load(&temp_stripped).unwrap();
+        let reloaded_page = reloaded.get_pages().into_values().next().unwrap();
+        let page_dict = reloaded
+            .get_object(reloaded_page)
+            .unwrap()
+            .as_dict()
+            .unwrap();
+        assert!(
+            page_dict.get(b"Thumb").is_err(),
+            "Thumb key should be removed from Page dictionary"
+        );
+        assert!(
+            reloaded.objects.get(&thumb_id).is_none(),
+            "Thumb stream object should be pruned"
+        );
+    }
+
+    #[test]
+    fn test_smask_dimensions_preserved() {
+        let img = image::RgbImage::from_fn(400, 400, |x, y| {
+            image::Rgb([(x % 256) as u8, (y % 256) as u8, 200])
+        });
+        let mut jpeg_data = Vec::new();
+        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jpeg_data, 95)
+            .encode_image(&img)
+            .unwrap();
+
+        let mut doc = Document::with_version("1.5");
+        let pages_id = doc.new_object_id();
+        let page_id = doc.new_object_id();
+        let image_id = doc.new_object_id();
+        let smask_id = doc.new_object_id();
+
+        // Create fake SMask
+        let mut smask_dict = lopdf::Dictionary::new();
+        smask_dict.set("Type", Object::Name(b"XObject".to_vec()));
+        smask_dict.set("Subtype", Object::Name(b"Image".to_vec()));
+        smask_dict.set("Width", Object::Integer(400));
+        smask_dict.set("Height", Object::Integer(400));
+        smask_dict.set("ColorSpace", Object::Name(b"DeviceGray".to_vec()));
+        let smask_stream = lopdf::Stream::new(smask_dict, vec![255; 400 * 400]);
+        doc.objects.insert(smask_id, Object::Stream(smask_stream));
+
+        let mut image_dict = lopdf::Dictionary::new();
+        image_dict.set("Type", Object::Name(b"XObject".to_vec()));
+        image_dict.set("Subtype", Object::Name(b"Image".to_vec()));
+        image_dict.set("Width", Object::Integer(400));
+        image_dict.set("Height", Object::Integer(400));
+        image_dict.set("ColorSpace", Object::Name(b"DeviceRGB".to_vec()));
+        image_dict.set("Filter", Object::Name(b"DCTDecode".to_vec()));
+        image_dict.set("SMask", Object::Reference(smask_id));
+        let image_stream = lopdf::Stream::new(image_dict, jpeg_data);
+        doc.objects.insert(image_id, Object::Stream(image_stream));
+
+        let mut xobjects = lopdf::Dictionary::new();
+        xobjects.set("ImSmask", Object::Reference(image_id));
+        let mut resources = lopdf::Dictionary::new();
+        resources.set("XObject", Object::Dictionary(xobjects));
+
+        let mut page_dict = lopdf::Dictionary::new();
+        page_dict.set("Type", Object::Name(b"Page".to_vec()));
+        page_dict.set("Parent", Object::Reference(pages_id));
+        page_dict.set("Resources", Object::Dictionary(resources));
+        page_dict.set(
+            "MediaBox",
+            Object::Array(vec![
+                Object::Integer(0),
+                Object::Integer(0),
+                Object::Integer(600),
+                Object::Integer(800),
+            ]),
+        );
+        doc.objects.insert(page_id, Object::Dictionary(page_dict));
+
+        let mut pages_dict = lopdf::Dictionary::new();
+        pages_dict.set("Type", Object::Name(b"Pages".to_vec()));
+        pages_dict.set("Kids", Object::Array(vec![Object::Reference(page_id)]));
+        pages_dict.set("Count", Object::Integer(1));
+        doc.objects.insert(pages_id, Object::Dictionary(pages_dict));
+
+        let mut catalog = lopdf::Dictionary::new();
+        catalog.set("Type", Object::Name(b"Catalog".to_vec()));
+        catalog.set("Pages", Object::Reference(pages_id));
+        let catalog_id = doc.add_object(Object::Dictionary(catalog));
+        doc.trailer.set("Root", Object::Reference(catalog_id));
+
+        // target_max_dim = 200, smaller than 400x400
+        let (out_bytes, opt_count) = compress_doc_internal(doc, 50, 200, true, true, true).unwrap();
+        assert!(opt_count >= 1);
+
+        let reloaded = Document::load_mem(&out_bytes).unwrap();
+        let img_stream = reloaded
+            .objects
+            .get(&image_id)
+            .unwrap()
+            .as_stream()
+            .unwrap();
+        let w = img_stream.dict.get(b"Width").unwrap().as_i64().unwrap();
+        let h = img_stream.dict.get(b"Height").unwrap().as_i64().unwrap();
+        // Dimensions must be preserved at 400x400 to maintain SMask alignment!
+        assert_eq!(w, 400);
+        assert_eq!(h, 400);
     }
 }

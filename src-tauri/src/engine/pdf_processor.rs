@@ -43,12 +43,40 @@ pub struct PdfResultInfo {
     pub image_count_optimized: u32,
 }
 
+fn get_stream_image_bytes(stream: &lopdf::Stream) -> Option<std::borrow::Cow<'_, [u8]>> {
+    // 1. Try standard decompression (handles FlateDecode, LZWDecode, ASCII85, etc.)
+    if let Ok(decompressed) = stream.decompressed_content() {
+        return Some(std::borrow::Cow::Owned(decompressed));
+    }
+
+    // 2. If lopdf fails on DCTDecode (JPEG) or unhandled filter:
+    // In PDF, DCTDecode streams contain raw JPEG bytes directly in `stream.content`.
+    let is_dct = stream
+        .dict
+        .get(b"Filter")
+        .is_ok_and(|filter_obj| match filter_obj {
+            Object::Name(name) => name == b"DCTDecode",
+            Object::Array(arr) => arr
+                .iter()
+                .any(|item| item.as_name().is_ok_and(|n| n == b"DCTDecode")),
+            _ => false,
+        })
+        || stream.content.starts_with(&[0xFF, 0xD8]);
+
+    if is_dct && !stream.content.is_empty() {
+        return Some(std::borrow::Cow::Borrowed(&stream.content));
+    }
+
+    None
+}
+
 fn compress_doc_internal(
     mut doc: Document,
     target_jpeg_quality: u8,
     target_max_dim: u32,
     recompress_images: bool,
     optimize_structure: bool,
+    recompress_flate: bool,
 ) -> Result<(Vec<u8>, u32)> {
     let mut image_count_optimized = 0;
 
@@ -62,53 +90,41 @@ fn compress_doc_internal(
                     .is_ok_and(|val| val.as_name().is_ok_and(|name| name == b"Image"));
 
                 if is_image {
-                    if let Ok(decompressed_data) = stream.decompressed_content() {
-                        let width = stream
-                            .dict
-                            .get(b"Width")
-                            .and_then(|w| w.as_i64())
-                            .unwrap_or(0) as u32;
-                        let height = stream
-                            .dict
-                            .get(b"Height")
-                            .and_then(|h| h.as_i64())
-                            .unwrap_or(0) as u32;
+                    if let Some(image_data) = get_stream_image_bytes(stream) {
+                        if let Ok(dynamic_img) = image::load_from_memory(&image_data) {
+                            let (orig_w, orig_h) = (dynamic_img.width(), dynamic_img.height());
+                            let should_resize = orig_w > target_max_dim || orig_h > target_max_dim;
 
-                        if width > 0 && height > 0 {
-                            if let Ok(dynamic_img) = image::load_from_memory(&decompressed_data) {
-                                let (orig_w, orig_h) = (dynamic_img.width(), dynamic_img.height());
-                                let should_resize =
-                                    orig_w > target_max_dim || orig_h > target_max_dim;
+                            let final_img = if should_resize {
+                                dynamic_img.thumbnail(target_max_dim, target_max_dim)
+                            } else {
+                                dynamic_img
+                            };
 
-                                let final_img = if should_resize {
-                                    dynamic_img.thumbnail(target_max_dim, target_max_dim)
-                                } else {
-                                    dynamic_img
-                                };
+                            let mut recompressed_bytes = Vec::new();
+                            let mut cursor = Cursor::new(&mut recompressed_bytes);
+                            let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(
+                                &mut cursor,
+                                target_jpeg_quality,
+                            );
 
-                                let mut recompressed_bytes = Vec::new();
-                                let mut cursor = Cursor::new(&mut recompressed_bytes);
-                                let mut encoder =
-                                    image::codecs::jpeg::JpegEncoder::new_with_quality(
-                                        &mut cursor,
-                                        target_jpeg_quality,
-                                    );
-
-                                if encoder.encode_image(&final_img).is_ok()
-                                    && recompressed_bytes.len() < stream.content.len()
-                                {
-                                    stream.set_plain_content(recompressed_bytes);
-                                    stream
-                                        .dict
-                                        .set("Filter", Object::Name(b"DCTDecode".to_vec()));
-                                    stream
-                                        .dict
-                                        .set("Width", Object::Integer(final_img.width() as i64));
-                                    stream
-                                        .dict
-                                        .set("Height", Object::Integer(final_img.height() as i64));
-                                    image_count_optimized += 1;
-                                }
+                            if encoder.encode_image(&final_img).is_ok()
+                                && recompressed_bytes.len() < stream.content.len()
+                            {
+                                stream.set_plain_content(recompressed_bytes);
+                                stream
+                                    .dict
+                                    .set("Filter", Object::Name(b"DCTDecode".to_vec()));
+                                stream
+                                    .dict
+                                    .set("Width", Object::Integer(final_img.width() as i64));
+                                stream
+                                    .dict
+                                    .set("Height", Object::Integer(final_img.height() as i64));
+                                stream
+                                    .dict
+                                    .set("ColorSpace", Object::Name(b"DeviceRGB".to_vec()));
+                                image_count_optimized += 1;
                             }
                         }
                     }
@@ -119,7 +135,9 @@ fn compress_doc_internal(
 
     if optimize_structure {
         doc.prune_objects();
-        doc.compress();
+        if recompress_flate {
+            doc.compress();
+        }
     }
 
     let mut output_bytes = Vec::new();
@@ -152,8 +170,14 @@ pub fn compress_pdf(
         let target_bytes = (target_kb as u64) * 1024;
 
         // Step 1: Check if structure-only compression satisfies target size
-        let (light_bytes, _) =
-            compress_doc_internal(doc.clone(), 85, 2400, false, options.optimize_structure)?;
+        let (light_bytes, _) = compress_doc_internal(
+            doc.clone(),
+            85,
+            2400,
+            false,
+            options.optimize_structure,
+            true,
+        )?;
 
         if (light_bytes.len() as u64) <= target_bytes {
             (light_bytes, 0)
@@ -181,6 +205,7 @@ pub fn compress_pdf(
                     dim,
                     options.recompress_images,
                     options.optimize_structure,
+                    true,
                 ) {
                     let len = tier_buf.len() as u64;
                     if len <= target_bytes {
@@ -218,6 +243,7 @@ pub fn compress_pdf(
             target_max_dim,
             options.recompress_images,
             options.optimize_structure,
+            true,
         )?
     };
 
@@ -316,26 +342,48 @@ pub fn generate_pdf_preview(
             }
         };
 
-    let compressed_page_bytes = match compress_doc_internal(
+    let (compressed_page_bytes, image_count_optimized) = match compress_doc_internal(
         doc_to_compress,
         target_jpeg_quality,
         target_max_dim,
         options.recompress_images,
         options.optimize_structure,
+        false,
     ) {
-        Ok((bytes, _)) => bytes,
-        Err(_) => orig_page_bytes.clone(),
+        Ok((bytes, count)) => (bytes, count),
+        Err(_) => (orig_page_bytes.clone(), 0),
+    };
+
+    let effective_ratio = if let Some(target_kb) = options.target_size_kb {
+        let target_bytes = (target_kb as u64) * 1024;
+        if original_bytes > 0 {
+            ((target_bytes as f64) / (original_bytes as f64)).min(1.0)
+        } else {
+            1.0
+        }
+    } else if total_pages == 1 {
+        if !orig_page_bytes.is_empty() {
+            ((compressed_page_bytes.len() as f64) / (orig_page_bytes.len() as f64)).clamp(0.05, 1.0)
+        } else {
+            estimated_ratio
+        }
+    } else {
+        // Multi-page document:
+        // If Page 1 had compressible images and reduced in size, use its measured ratio.
+        // Otherwise (cover/text page without images), use the profile expected ratio.
+        if image_count_optimized > 0
+            && !orig_page_bytes.is_empty()
+            && compressed_page_bytes.len() < orig_page_bytes.len()
+        {
+            ((compressed_page_bytes.len() as f64) / (orig_page_bytes.len() as f64)).clamp(0.05, 1.0)
+        } else {
+            estimated_ratio
+        }
     };
 
     let estimated_bytes = if let Some(target_kb) = options.target_size_kb {
         std::cmp::min(original_bytes, (target_kb as u64) * 1024)
     } else {
-        let measured_ratio = if !orig_page_bytes.is_empty() {
-            (compressed_page_bytes.len() as f64) / (orig_page_bytes.len() as f64)
-        } else {
-            estimated_ratio
-        };
-        let effective_ratio = measured_ratio.clamp(0.05, 1.0);
         ((original_bytes as f64) * effective_ratio)
             .round()
             .min(original_bytes as f64) as u64
@@ -859,5 +907,109 @@ startxref
         let info = get_pdf_info(&temp_path).unwrap();
         assert_eq!(info.total_pages, 1);
         assert!(info.file_size_bytes > 0);
+    }
+
+    #[test]
+    fn test_compress_pdf_with_dct_images() {
+        let img = image::RgbImage::from_fn(300, 300, |x, y| {
+            image::Rgb([(x % 256) as u8, (y % 256) as u8, 128])
+        });
+        let mut jpeg_data = Vec::new();
+        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jpeg_data, 95)
+            .encode_image(&img)
+            .unwrap();
+
+        let mut doc = Document::with_version("1.5");
+        let pages_id = doc.new_object_id();
+        let page_id = doc.new_object_id();
+        let content_id = doc.new_object_id();
+        let image_id = doc.new_object_id();
+
+        let mut image_dict = lopdf::Dictionary::new();
+        image_dict.set("Type", Object::Name(b"XObject".to_vec()));
+        image_dict.set("Subtype", Object::Name(b"Image".to_vec()));
+        image_dict.set("Width", Object::Integer(300));
+        image_dict.set("Height", Object::Integer(300));
+        image_dict.set("ColorSpace", Object::Name(b"DeviceRGB".to_vec()));
+        image_dict.set("BitsPerComponent", Object::Integer(8));
+        image_dict.set("Filter", Object::Name(b"DCTDecode".to_vec()));
+        let image_stream = lopdf::Stream::new(image_dict, jpeg_data);
+        doc.objects.insert(image_id, Object::Stream(image_stream));
+
+        let content_stream = lopdf::Stream::new(
+            lopdf::Dictionary::new(),
+            b"q 300 0 0 300 0 0 cm /Im1 Do Q".to_vec(),
+        );
+        doc.objects
+            .insert(content_id, Object::Stream(content_stream));
+
+        let mut xobjects = lopdf::Dictionary::new();
+        xobjects.set("Im1", Object::Reference(image_id));
+        let mut resources = lopdf::Dictionary::new();
+        resources.set("XObject", Object::Dictionary(xobjects));
+
+        let mut page_dict = lopdf::Dictionary::new();
+        page_dict.set("Type", Object::Name(b"Page".to_vec()));
+        page_dict.set("Parent", Object::Reference(pages_id));
+        page_dict.set("Contents", Object::Reference(content_id));
+        page_dict.set("Resources", Object::Dictionary(resources));
+        page_dict.set(
+            "MediaBox",
+            Object::Array(vec![
+                Object::Integer(0),
+                Object::Integer(0),
+                Object::Integer(600),
+                Object::Integer(800),
+            ]),
+        );
+        doc.objects.insert(page_id, Object::Dictionary(page_dict));
+
+        let mut pages_dict = lopdf::Dictionary::new();
+        pages_dict.set("Type", Object::Name(b"Pages".to_vec()));
+        pages_dict.set("Kids", Object::Array(vec![Object::Reference(page_id)]));
+        pages_dict.set("Count", Object::Integer(1));
+        doc.objects.insert(pages_id, Object::Dictionary(pages_dict));
+
+        let mut catalog = lopdf::Dictionary::new();
+        catalog.set("Type", Object::Name(b"Catalog".to_vec()));
+        catalog.set("Pages", Object::Reference(pages_id));
+        let catalog_id = doc.add_object(Object::Dictionary(catalog));
+        doc.trailer.set("Root", Object::Reference(catalog_id));
+
+        let temp_in = std::env::temp_dir().join(format!(
+            "test_pdf_dct_in_{}.pdf",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let temp_out = std::env::temp_dir().join(format!(
+            "test_pdf_dct_out_{}.pdf",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let _c1 = TempFileCleaner(temp_in.clone());
+        let _c2 = TempFileCleaner(temp_out.clone());
+
+        doc.save(&temp_in).unwrap();
+
+        let options = PdfCompressionOptions {
+            profile: PdfCompressionProfile::Compact,
+            optimize_structure: true,
+            recompress_images: true,
+            target_size_kb: None,
+        };
+
+        let result = compress_pdf(&temp_in, &temp_out, &options).unwrap();
+        assert!(
+            result.image_count_optimized >= 1,
+            "Image should have been optimized!"
+        );
+        assert!(
+            result.compressed_bytes < result.original_bytes,
+            "Output should be smaller than input!"
+        );
     }
 }

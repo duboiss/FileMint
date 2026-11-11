@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { PreviewResult, FileItem } from '../../types';
 import { useFileMintStore, formatFileSize, hasActiveImageChanges } from '../../store/useFileMintStore';
 import {
@@ -50,6 +50,35 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
   const isTargetSizeMode = Boolean(imageOptions.target_size_kb && imageOptions.target_size_kb > 0);
   const isLossless = Boolean(imageOptions.lossless);
   const canAdjustQuality = isCompressionActive && !isTargetSizeMode && !isLossless;
+
+  const pdfEstimate = useMemo(() => {
+    if (isImage || !activeFile) return null;
+    if (pdfOptions.target_size_kb && pdfOptions.target_size_kb > 0) {
+      const targetBytes = pdfOptions.target_size_kb * 1024;
+      const est = Math.min(activeFile.sizeBytes, targetBytes);
+      const pct = activeFile.sizeBytes > 0
+        ? Math.max(0, Math.round(((activeFile.sizeBytes - est) / activeFile.sizeBytes) * 100))
+        : 0;
+      return { bytes: est, percent: pct };
+    }
+    const ratio = pdfOptions.profile === 'Compact' ? 0.35 : pdfOptions.profile === 'Balanced' ? 0.55 : 0.75;
+    const est = Math.round(activeFile.sizeBytes * ratio);
+    const pct = Math.round((1 - ratio) * 100);
+    return { bytes: est, percent: pct };
+  }, [isImage, activeFile, pdfOptions]);
+
+  const estimatedBytes = currentPreview?.estimated_bytes ?? pdfEstimate?.bytes;
+  const savedPercentage = currentPreview?.saved_percentage !== undefined && currentPreview?.estimated_bytes !== undefined
+    ? currentPreview.saved_percentage
+    : pdfEstimate?.percent;
+
+  const showEstimatedSize = Boolean(
+    estimatedBytes !== undefined &&
+    (!isImage
+      ? true
+      : (Boolean(currentPreview?.estimated_bytes && currentPreview.estimated_bytes !== activeFile?.sizeBytes) ||
+         Boolean(imageOptions.target_size_kb && imageOptions.compress !== false)))
+  );
 
   const getPdfProfileLabel = (profile: string) => {
     switch (profile) {
@@ -280,25 +309,36 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                     <span className="text-mint-400 text-[10px] ml-1">({t.pdfPage1Preview})</span>
                   ) : null}
                 </span>
-                {Boolean(currentPreview?.estimated_bytes && currentPreview.estimated_bytes !== activeFile.sizeBytes) && (
+                {showEstimatedSize && estimatedBytes !== undefined && (
                   <>
                     <ArrowRight className="w-3 h-3 text-slate-500 shrink-0" />
                     <span
                       className="shrink-0 text-mint-400 font-mono font-bold cursor-help"
                       title={t.estimatedSizeTooltip}
                     >
-                      ~{formatFileSize(currentPreview!.estimated_bytes, language)}
+                      ~{formatFileSize(estimatedBytes, language)}
                       {isImage && currentPreview?.new_width && currentPreview?.new_height ? (
                         <span className="hidden sm:inline text-mint-500/80 font-normal ml-1">({currentPreview.new_width}×{currentPreview.new_height})</span>
                       ) : null}
                     </span>
-                    {currentPreview!.saved_percentage > 0 && (
+                    {savedPercentage !== undefined && savedPercentage > 0 && (
                       <span
                         className="shrink-0 px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px] cursor-help"
                         title={t.estimatedSizeTooltip}
                       >
-                        -{currentPreview!.saved_percentage.toFixed(0)}%
+                        -{savedPercentage.toFixed(0)}%
                       </span>
+                    )}
+                    {savedPercentage !== undefined && savedPercentage === 0 && (
+                      <span
+                        className="shrink-0 px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400 font-medium text-[10px] cursor-help"
+                        title={t.estimatedSizeTooltip}
+                      >
+                        0%
+                      </span>
+                    )}
+                    {previewLoading && (
+                      <Loader2 className="w-3 h-3 animate-spin text-mint-400 shrink-0" />
                     )}
                   </>
                 )}
@@ -832,21 +872,29 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span className="text-[11px]">{t.previewLoading}</span>
               </div>
-            ) : currentPreview ? (
+            ) : showEstimatedSize && estimatedBytes !== undefined ? (
               <div className="flex items-center gap-2 font-mono text-xs">
                 <span className="text-slate-400">{t.result}</span>
                 <strong
                   className="text-mint-400 cursor-help"
                   title={t.estimatedSizeTooltip}
                 >
-                  ~{formatFileSize(currentPreview.estimated_bytes, language)}
+                  ~{formatFileSize(estimatedBytes, language)}
                 </strong>
-                {currentPreview.saved_percentage > 0 && (
+                {savedPercentage !== undefined && savedPercentage > 0 && (
                   <span
                     className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px] cursor-help"
                     title={t.estimatedSizeTooltip}
                   >
-                    -{currentPreview.saved_percentage.toFixed(0)}%
+                    -{savedPercentage.toFixed(0)}%
+                  </span>
+                )}
+                {savedPercentage !== undefined && savedPercentage === 0 && (
+                  <span
+                    className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-medium text-[10px] cursor-help"
+                    title={t.estimatedSizeTooltip}
+                  >
+                    0%
                   </span>
                 )}
               </div>

@@ -97,6 +97,35 @@ export const SideBySidePreview: React.FC = () => {
     preview.estimated_bytes !== activeFile.sizeBytes
   );
 
+  // Fast preliminary estimate for PDFs to guarantee instant visual feedback in the header
+  const pdfEstimate = React.useMemo(() => {
+    if (!isPdf || pdfToolMode !== 'compress') return null;
+    if (pdfOptions.target_size_kb && pdfOptions.target_size_kb > 0) {
+      const targetBytes = pdfOptions.target_size_kb * 1024;
+      const est = Math.min(activeFile.sizeBytes, targetBytes);
+      const pct = activeFile.sizeBytes > 0
+        ? Math.max(0, Math.round(((activeFile.sizeBytes - est) / activeFile.sizeBytes) * 100))
+        : 0;
+      return { bytes: est, percent: pct };
+    }
+    const ratio = pdfOptions.profile === 'Compact' ? 0.35 : pdfOptions.profile === 'Balanced' ? 0.55 : 0.75;
+    const est = Math.round(activeFile.sizeBytes * ratio);
+    const pct = Math.round((1 - ratio) * 100);
+    return { bytes: est, percent: pct };
+  }, [isPdf, pdfToolMode, pdfOptions, activeFile.sizeBytes]);
+
+  const estimatedBytes = preview?.estimated_bytes ?? pdfEstimate?.bytes;
+  const savedPercentage = preview?.saved_percentage !== undefined && preview?.estimated_bytes !== undefined
+    ? preview.saved_percentage
+    : pdfEstimate?.percent;
+
+  const showEstimatedSize = Boolean(
+    estimatedBytes !== undefined &&
+    (isPdf
+      ? pdfToolMode === 'compress'
+      : (hasSizeChange || Boolean(imageOptions.target_size_kb && imageOptions.compress !== false)))
+  );
+
   // Dynamic preview rendering (Images and PDF Page 1)
   return (
     <div className="flex-1 flex flex-col bg-slate-100/50 dark:bg-slate-950/40 overflow-hidden relative select-none">
@@ -116,22 +145,33 @@ export const SideBySidePreview: React.FC = () => {
               <span className="shrink-0 text-slate-600 dark:text-slate-400">
                 {formatFileSize(activeFile.sizeBytes, language)}
               </span>
-              {hasSizeChange && preview && (
+              {showEstimatedSize && estimatedBytes !== undefined && (
                 <>
                   <ArrowRight className="w-2.5 h-2.5 text-slate-400 shrink-0" />
                   <span
                     className="shrink-0 font-bold text-mint-600 dark:text-mint-400 cursor-help"
                     title={t.estimatedSizeTooltip}
                   >
-                    ~{formatFileSize(preview.estimated_bytes, language)}
+                    ~{formatFileSize(estimatedBytes, language)}
                   </span>
-                  {preview.saved_percentage > 0 && (
+                  {savedPercentage !== undefined && savedPercentage > 0 && (
                     <span
                       className="shrink-0 px-1 py-0.2 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[9px] cursor-help"
                       title={t.estimatedSizeTooltip}
                     >
-                      -{preview.saved_percentage.toFixed(0)}%
+                      -{savedPercentage.toFixed(0)}%
                     </span>
+                  )}
+                  {savedPercentage !== undefined && savedPercentage === 0 && (
+                    <span
+                      className="shrink-0 px-1 py-0.2 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-medium text-[9px] cursor-help"
+                      title={t.estimatedSizeTooltip}
+                    >
+                      0%
+                    </span>
+                  )}
+                  {previewLoading && (
+                    <Loader2 className="w-2.5 h-2.5 animate-spin text-mint-500 shrink-0" />
                   )}
                 </>
               )}

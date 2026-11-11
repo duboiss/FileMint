@@ -236,20 +236,10 @@ pub fn compress_pdf(
     let (final_bytes, image_count_optimized) = if let Some(target_kb) = options.target_size_kb {
         let target_bytes = (target_kb as u64) * 1024;
 
-        // Step 1: Check if structure-only compression satisfies target size
-        let (light_bytes, _) = compress_doc_internal(
-            doc.clone(),
-            85,
-            2400,
-            false,
-            options.optimize_structure,
-            true,
-        )?;
-
-        if (light_bytes.len() as u64) <= target_bytes {
-            (light_bytes, 0)
+        // Fast-path: If the file is already within the target size, run a single structure optimization pass.
+        if original_bytes <= target_bytes {
+            compress_doc_internal(doc, 85, 2400, false, options.optimize_structure, true)?
         } else {
-            // Binary search across progressive tiers to minimize Document clones and re-encodings
             let tiers = [
                 (85u8, 2000u32),
                 (70u8, 1500u32),
@@ -258,43 +248,87 @@ pub fn compress_pdf(
                 (25u8, 650u32),
             ];
 
-            let mut best_buf = light_bytes;
-            let mut best_opt_count = 0;
-            let mut low = 0;
-            let mut high = tiers.len() - 1;
-
-            while low <= high {
-                let mid = (low + high) / 2;
-                let (q, dim) = tiers[mid];
-                if let Ok((tier_buf, count)) = compress_doc_internal(
+            // If target is very close to original (>= 90%), test if structure-only compression suffices
+            let structure_only_suffices = if target_bytes >= (original_bytes * 9 / 10) {
+                if let Ok((light_bytes, _)) = compress_doc_internal(
                     doc.clone(),
-                    q,
-                    dim,
-                    options.recompress_images,
+                    85,
+                    2400,
+                    false,
                     options.optimize_structure,
                     true,
                 ) {
-                    let len = tier_buf.len() as u64;
-                    if len <= target_bytes {
-                        best_buf = tier_buf;
-                        best_opt_count = count;
-                        if mid == 0 {
-                            break;
-                        }
-                        high = mid - 1;
+                    if (light_bytes.len() as u64) <= target_bytes {
+                        Some(light_bytes)
                     } else {
-                        if tier_buf.len() < best_buf.len() {
-                            best_buf = tier_buf;
-                            best_opt_count = count;
-                        }
-                        low = mid + 1;
+                        None
                     }
                 } else {
-                    break;
+                    None
                 }
-            }
+            } else {
+                None
+            };
 
-            (best_buf, best_opt_count)
+            if let Some(light_bytes) = structure_only_suffices {
+                (light_bytes, 0)
+            } else {
+                // Binary search across progressive tiers using ultra-fast probes (recompress_flate = false)
+                let mut best_tier_index: Option<usize> = None;
+                let mut low = 0;
+                let mut high = tiers.len() - 1;
+
+                while low <= high {
+                    let mid = (low + high) / 2;
+                    let (q, dim) = tiers[mid];
+
+                    if let Ok((tier_buf, count)) = compress_doc_internal(
+                        doc.clone(),
+                        q,
+                        dim,
+                        options.recompress_images,
+                        options.optimize_structure,
+                        false, // Fast probe without full Zlib Flate recompression
+                    ) {
+                        let len = tier_buf.len() as u64;
+
+                        // If no images could be optimized at all, further image quality tiers won't help
+                        if count == 0 {
+                            break;
+                        }
+
+                        if len <= target_bytes {
+                            best_tier_index = Some(mid);
+                            if mid == 0 {
+                                break;
+                            }
+                            high = mid - 1;
+                        } else {
+                            if best_tier_index.is_none() {
+                                best_tier_index = Some(mid);
+                            }
+                            low = mid + 1;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                // Apply full final compression (with recompress_flate = true) once on the selected winning tier
+                let (final_q, final_dim) = match best_tier_index {
+                    Some(idx) => tiers[idx],
+                    None => (tiers.last().unwrap().0, tiers.last().unwrap().1),
+                };
+
+                compress_doc_internal(
+                    doc,
+                    final_q,
+                    final_dim,
+                    options.recompress_images,
+                    options.optimize_structure,
+                    true, // Single final full Flate pass
+                )?
+            }
         }
     } else {
         // Standard profile-based compression
@@ -1322,5 +1356,33 @@ startxref
         // Dimensions must be preserved at 400x400 to maintain SMask alignment!
         assert_eq!(w, 400);
         assert_eq!(h, 400);
+    }
+
+    #[test]
+    fn test_pdf_target_size_mode_fast() {
+        let (temp_path, _cleaner) = create_temp_sample_pdf();
+        let original_size = std::fs::metadata(&temp_path).unwrap().len();
+
+        let temp_out = std::env::temp_dir().join(format!(
+            "test_target_size_out_{}.pdf",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let _c = TempFileCleaner(temp_out.clone());
+
+        // Target size smaller than original
+        let target_kb = (original_size / 2 / 1024).max(1) as u32;
+        let options = PdfCompressionOptions {
+            profile: PdfCompressionProfile::Balanced,
+            optimize_structure: true,
+            recompress_images: true,
+            target_size_kb: Some(target_kb),
+        };
+
+        let result = compress_pdf(&temp_path, &temp_out, &options).unwrap();
+        assert!(result.compressed_bytes > 0);
+        assert!(std::fs::metadata(&temp_out).unwrap().len() > 0);
     }
 }

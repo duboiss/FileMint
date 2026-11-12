@@ -182,9 +182,11 @@ pub async fn get_pdf_info(path: String) -> Result<pdf_processor::PdfDocumentInfo
 }
 
 #[tauri::command]
-pub async fn load_pdf_bytes(path: String) -> Result<Vec<u8>, String> {
+pub async fn load_pdf_bytes(path: String) -> Result<tauri::ipc::Response, String> {
     tokio::task::spawn_blocking(move || {
-        std::fs::read(&path).map_err(|e| format!("Impossible de lire le document PDF : {}", e))
+        let bytes = std::fs::read(&path)
+            .map_err(|e| format!("Impossible de lire le document PDF : {}", e))?;
+        Ok(tauri::ipc::Response::new(bytes))
     })
     .await
     .map_err(|e| e.to_string())?

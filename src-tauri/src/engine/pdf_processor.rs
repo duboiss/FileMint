@@ -49,8 +49,32 @@ fn get_stream_image_bytes(stream: &lopdf::Stream) -> Option<std::borrow::Cow<'_,
         return Some(std::borrow::Cow::Owned(decompressed));
     }
 
-    // 2. If lopdf fails on DCTDecode (JPEG) or unhandled filter:
-    // In PDF, DCTDecode streams contain raw JPEG bytes directly in `stream.content`.
+    // 2. Check if stream is multi-filtered with FlateDecode + DCTDecode:
+    // In many CAD/architectural or Adobe PDFs, a JPEG stream is also wrapped in FlateDecode.
+    // lopdf's decompressed_content() fails on DCTDecode, so we manually inflate the zlib wrapper.
+    let has_flate = stream
+        .dict
+        .get(b"Filter")
+        .is_ok_and(|filter_obj| match filter_obj {
+            Object::Name(name) => name == b"FlateDecode",
+            Object::Array(arr) => arr
+                .iter()
+                .any(|item| item.as_name().is_ok_and(|n| n == b"FlateDecode")),
+            _ => false,
+        })
+        || (stream.content.len() >= 2 && stream.content[0] == 0x78);
+
+    if has_flate && !stream.content.is_empty() {
+        use flate2::read::ZlibDecoder;
+        use std::io::Read;
+        let mut z = ZlibDecoder::new(&stream.content[..]);
+        let mut deflated = Vec::new();
+        if z.read_to_end(&mut deflated).is_ok() && !deflated.is_empty() {
+            return Some(std::borrow::Cow::Owned(deflated));
+        }
+    }
+
+    // 3. Raw DCTDecode (JPEG directly in stream.content):
     let is_dct = stream
         .dict
         .get(b"Filter")
@@ -708,9 +732,21 @@ pub fn generate_pdf_preview(
         0.0
     };
 
+    let compressed_page_pdf_base64 = if image_count_optimized > 0
+        && !compressed_page_bytes.is_empty()
+        && compressed_page_bytes.len() < orig_page_bytes.len()
+    {
+        BASE64.encode(&compressed_page_bytes)
+    } else if orig_page_bytes.len() <= 512 * 1024 {
+        BASE64.encode(&orig_page_bytes)
+    } else {
+        // Large page without compressible images: skip duplicate multi-megabyte IPC payload
+        String::new()
+    };
+
     Ok(PdfPreviewResponse {
         original_page_pdf_base64: BASE64.encode(&orig_page_bytes),
-        compressed_page_pdf_base64: BASE64.encode(&compressed_page_bytes),
+        compressed_page_pdf_base64,
         original_bytes,
         estimated_bytes,
         saved_percentage,
@@ -1718,5 +1754,29 @@ startxref
             stream.dict.get(b"Filter").unwrap().as_name().unwrap(),
             b"DCTDecode"
         );
+    }
+
+    #[test]
+    fn test_diagnose_plan1() {
+        let path = Path::new(r"C:\Users\Steven\Downloads\plan 1.pdf");
+        if !path.exists() {
+            println!("plan 1.pdf not found");
+            return;
+        }
+
+        let doc = load_pdf_document(path).unwrap();
+        assert_eq!(doc.get_pages().len(), 2);
+
+        let opts = PdfCompressionOptions::default();
+        let prev = generate_pdf_preview(path, &opts).unwrap();
+        assert_eq!(prev.total_pages, 2);
+        assert!(prev.original_bytes > 0);
+        assert!(!prev.original_page_pdf_base64.is_empty());
+
+        let temp_out = std::env::temp_dir().join("plan1_out_balanced.pdf");
+        let _c = TempFileCleaner(temp_out.clone());
+        let res = compress_pdf(path, &temp_out, &opts).unwrap();
+        assert!(res.compressed_bytes < res.original_bytes);
+        assert!(res.image_count_optimized > 0);
     }
 }

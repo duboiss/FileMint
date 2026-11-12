@@ -37,11 +37,11 @@ export function base64ToUint8Array(base64: string): Uint8Array {
 
 /**
  * Renders page 1 of a PDF (from Uint8Array or ArrayBuffer) onto an offscreen canvas and returns a data URL.
- * Max width is capped at 1000px for instant rendering performance and low memory consumption.
+ * Max dimension is capped at 750px for fast, responsive rendering performance and minimal memory consumption.
  */
 export async function renderPdfPage1(
   pdfData: Uint8Array | ArrayBuffer,
-  maxDimension = 1000
+  maxDimension = 750
 ): Promise<RenderedPdfPage> {
   return renderPdfPage(pdfData, 1, maxDimension);
 }
@@ -55,6 +55,8 @@ export async function loadPdfDocument(
   const loadingTask = pdfjsLib.getDocument({
     data: pdfData,
     useSystemFonts: true,
+    verbosity: 0,
+    stopAtErrors: true,
   });
   return loadingTask.promise;
 }
@@ -70,6 +72,7 @@ export async function renderPdfPageFromDoc(
   const targetPage = Math.max(1, Math.min(pageNum, pdfDoc.numPages));
   let page: pdfjsLib.PDFPageProxy | null = null;
   const canvas = document.createElement('canvas');
+  let context: CanvasRenderingContext2D | null = null;
 
   try {
     page = await pdfDoc.getPage(targetPage);
@@ -82,7 +85,7 @@ export async function renderPdfPageFromDoc(
     canvas.width = Math.round(viewport.width);
     canvas.height = Math.round(viewport.height);
 
-    const context = canvas.getContext('2d', { alpha: false });
+    context = canvas.getContext('2d', { alpha: false, willReadFrequently: false });
     if (!context) {
       throw new Error('Canvas 2D context not available');
     }
@@ -94,6 +97,7 @@ export async function renderPdfPageFromDoc(
       canvasContext: context,
       viewport,
       canvas,
+      renderIntent: 'display',
     };
 
     await page.render(renderContext).promise;
@@ -112,8 +116,11 @@ export async function renderPdfPageFromDoc(
         // ignore
       }
     }
-    canvas.width = 0;
-    canvas.height = 0;
+    if (context) {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    canvas.width = 1;
+    canvas.height = 1;
   }
 }
 
@@ -126,6 +133,8 @@ export async function getPdfPageCount(
   const loadingTask = pdfjsLib.getDocument({
     data: pdfData,
     useSystemFonts: true,
+    verbosity: 0,
+    stopAtErrors: true,
   });
   let pdfDoc: pdfjsLib.PDFDocumentProxy | null = null;
   try {
@@ -151,16 +160,19 @@ export async function getPdfPageCount(
 export async function renderPdfPage(
   pdfData: Uint8Array | ArrayBuffer,
   pageNum: number,
-  maxDimension = 600
+  maxDimension = 750
 ): Promise<RenderedPdfPage> {
   const loadingTask = pdfjsLib.getDocument({
     data: pdfData,
     useSystemFonts: true,
+    verbosity: 0,
+    stopAtErrors: true,
   });
 
   let pdfDoc: pdfjsLib.PDFDocumentProxy | null = null;
   let page: pdfjsLib.PDFPageProxy | null = null;
   const canvas = document.createElement('canvas');
+  let context: CanvasRenderingContext2D | null = null;
 
   try {
     pdfDoc = await loadingTask.promise;
@@ -175,7 +187,7 @@ export async function renderPdfPage(
     canvas.width = Math.round(viewport.width);
     canvas.height = Math.round(viewport.height);
 
-    const context = canvas.getContext('2d', { alpha: false });
+    context = canvas.getContext('2d', { alpha: false, willReadFrequently: false });
     if (!context) {
       throw new Error('Canvas 2D context not available');
     }
@@ -188,6 +200,7 @@ export async function renderPdfPage(
       canvasContext: context,
       viewport,
       canvas,
+      renderIntent: 'display',
     };
 
     await page.render(renderContext).promise;
@@ -207,8 +220,11 @@ export async function renderPdfPage(
         // ignore
       }
     }
-    canvas.width = 0;
-    canvas.height = 0;
+    if (context) {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    canvas.width = 1;
+    canvas.height = 1;
 
     if (pdfDoc) {
       try {

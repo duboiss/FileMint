@@ -1980,7 +1980,6 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           });
 
           const origBytes = base64ToUint8Array(res.original_page_pdf_base64);
-          const compBytes = base64ToUint8Array(res.compressed_page_pdf_base64);
 
           let origPage: RenderedPdfPage;
           try {
@@ -1991,9 +1990,19 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           }
 
           let compPage: RenderedPdfPage;
-          try {
-            compPage = await renderPdfPage1(compBytes);
-          } catch {
+          if (
+            res.compressed_page_pdf_base64 &&
+            res.compressed_page_pdf_base64.length > 0 &&
+            res.compressed_page_pdf_base64 !== res.original_page_pdf_base64 &&
+            res.saved_percentage > 1.0
+          ) {
+            try {
+              const compBytes = base64ToUint8Array(res.compressed_page_pdf_base64);
+              compPage = await renderPdfPage1(compBytes);
+            } catch {
+              compPage = origPage;
+            }
+          } else {
             compPage = origPage;
           }
 

@@ -61,11 +61,8 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
         : 0;
       return { bytes: est, percent: pct };
     }
-    const ratio = pdfOptions.profile === 'Compact' ? 0.35 : pdfOptions.profile === 'Balanced' ? 0.55 : 0.75;
-    const est = Math.round(activeFile.sizeBytes * ratio);
-    const pct = Math.round((1 - ratio) * 100);
-    return { bytes: est, percent: pct };
-  }, [isImage, activeFile, pdfOptions]);
+    return null;
+  }, [isImage, activeFile, pdfOptions.target_size_kb]);
 
   const estimatedBytes = currentPreview?.estimated_bytes ?? pdfEstimate?.bytes;
   const savedPercentage = currentPreview?.saved_percentage !== undefined && currentPreview?.estimated_bytes !== undefined

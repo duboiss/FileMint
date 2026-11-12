@@ -1367,7 +1367,7 @@ dependencies = [
 
 [[package]]
 name = "filemint"
-version = "1.7.51"
+version = "1.7.52"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -1398,7 +1398,7 @@ dependencies = [
 
 [[package]]
 name = "filemint-shell-ext"
-version = "1.7.51"
+version = "1.7.52"
 dependencies = [
  "serde_json",
  "windows 0.58.0",

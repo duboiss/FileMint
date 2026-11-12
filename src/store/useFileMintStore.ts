@@ -697,21 +697,6 @@ const generateLocalBrowserPreview = (
     targetH = Math.min(16384, Math.max(1, imageOptions.resize_mode.Exact.height || origH));
   }
 
-  const activeColorFilter =
-    imageOptions.color_filter || (imageOptions.grayscale ? 'grayscale' : 'none');
-
-  const filterFactor =
-    activeColorFilter === 'invert'
-      ? 0.85
-      : activeColorFilter === 'grayscale'
-      ? 0.78
-      : activeColorFilter === 'binarize'
-      ? 0.55
-      : activeColorFilter === 'sepia'
-      ? 0.95
-      : 1.0;
-
-  const areaRatio = (targetW * targetH) / (origW * origH);
   const isCompressionDisabled = imageOptions.compress === false;
 
   let estimatedBytes: number;
@@ -723,63 +708,17 @@ const generateLocalBrowserPreview = (
     savedPercentage = activeFile.sizeBytes > 0
       ? Math.max(0, Math.round(((activeFile.sizeBytes - estimatedBytes) / activeFile.sizeBytes) * 100))
       : 0;
-  } else if (isCompressionDisabled) {
-    const isFormatOriginal = imageOptions.format === 'Original';
-    const hasPixelTransformations =
-      (imageOptions.rotation || 0) % 360 !== 0 ||
-      Boolean(imageOptions.flip_horizontal) ||
-      Boolean(imageOptions.flip_vertical) ||
-      activeColorFilter !== 'none' ||
-      !imageOptions.resize_mode.None;
-
-    const baseFormatFactor = isFormatOriginal
-      ? (hasPixelTransformations ? 0.78 : 1.0)
-      : imageOptions.format === 'Avif'
-      ? 0.42
-      : imageOptions.format === 'Webp'
-      ? 0.60
-      : imageOptions.format === 'Png'
-      ? 0.85
-      : 0.75;
-
-    const finalRatio = isFormatOriginal && !hasPixelTransformations
-      ? 1.0
-      : baseFormatFactor * filterFactor;
-
-    estimatedBytes = Math.max(
-      1,
-      Math.round(activeFile.sizeBytes * areaRatio * finalRatio)
-    );
-    savedPercentage =
-      activeFile.sizeBytes > 0 && activeFile.sizeBytes > estimatedBytes
-        ? Math.max(0, Math.round(((activeFile.sizeBytes - estimatedBytes) / activeFile.sizeBytes) * 100))
-        : 0;
   } else {
-    const qualityFactor = Math.max(0.1, imageOptions.quality / 100);
-    const formatCompressionFactor =
-      imageOptions.format === 'Avif'
-        ? 0.42
-        : imageOptions.format === 'Webp'
-        ? 0.55
-        : imageOptions.format === 'Png'
-        ? imageOptions.lossless
-          ? 0.80
-          : 0.90
-        : 0.70;
-
-    estimatedBytes = Math.max(
-      1,
-      Math.round(activeFile.sizeBytes * areaRatio * qualityFactor * formatCompressionFactor * filterFactor)
-    );
-    savedPercentage = Math.max(
-      0,
-      Math.round(((activeFile.sizeBytes - estimatedBytes) / activeFile.sizeBytes) * 100)
-    );
+    estimatedBytes = activeFile.sizeBytes;
+    savedPercentage = 0;
   }
   const isJpegWithAlpha = imageOptions.format === 'Jpeg' && activeFile.format === 'PNG';
 
   const isLogo = activeFile.name.toLowerCase().includes('logo');
   const bgFill = isJpegWithAlpha ? '#ffffff' : '#0f172a';
+
+  const activeColorFilter =
+    imageOptions.color_filter || (imageOptions.grayscale ? 'grayscale' : 'none');
 
   let filterStyle = '';
   if (activeColorFilter === 'grayscale') {
@@ -1947,10 +1886,10 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
             ? (activeFile.sizeBytes > 0 && activeFile.sizeBytes > targetBytes
                 ? Math.round(((activeFile.sizeBytes - targetBytes) / activeFile.sizeBytes) * 100)
                 : 0)
-            : (pdfOptions.profile === 'Compact' ? 65 : pdfOptions.profile === 'Balanced' ? 45 : 25);
+            : 0;
           const estimatedFinal = isTargetSize
             ? Math.min(activeFile.sizeBytes, targetBytes)
-            : Math.round(activeFile.sizeBytes * (1 - estimatedPercent / 100));
+            : activeFile.sizeBytes;
 
           if (reqId === previewRequestId) {
             const previewSvg = createPdfPlaceholderSvg(activeFile.name, 'Aperçu Page 1 (Simulé)');
@@ -2135,12 +2074,9 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       });
 
       if (!isTauriEnv()) {
-        let savedTotal = 0;
         for (let i = 0; i < files.length; i++) {
-          await new Promise((r) => setTimeout(r, 500));
+          await new Promise((r) => setTimeout(r, 200));
           const file = files[i];
-          const saved = Math.round(file.sizeBytes * 0.55);
-          savedTotal += saved;
           set({
             batchProgress: {
               current_index: i + 1,
@@ -2148,7 +2084,7 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
               current_file: file.name,
               success: true,
               error_message: null,
-              saved_bytes: savedTotal,
+              saved_bytes: 0,
             },
           });
         }
@@ -2158,13 +2094,13 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           success_count: files.length,
           failure_count: 0,
           total_original_bytes: files.reduce((acc, f) => acc + f.sizeBytes, 0),
-          total_final_bytes: files.reduce((acc, f) => acc + Math.round(f.sizeBytes * 0.45), 0),
-          total_saved_bytes: savedTotal,
+          total_final_bytes: files.reduce((acc, f) => acc + f.sizeBytes, 0),
+          total_saved_bytes: 0,
           cancelled: false,
           items: files.map((f) => ({
             file_name: f.name,
             original_size: f.sizeBytes,
-            final_size: Math.round(f.sizeBytes * 0.45),
+            final_size: f.sizeBytes,
             success: true,
             error: null,
             output_path: `./FileMint/${f.name}`,
@@ -2267,16 +2203,16 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       });
 
       if (!isTauriEnv()) {
-        await new Promise((r) => setTimeout(r, 800));
+        await new Promise((r) => setTimeout(r, 400));
         const totalOrig = pdfFiles.reduce((acc, f) => acc + f.sizeBytes, 0);
-        const finalSize = Math.round(totalOrig * 0.9);
+        const finalSize = totalOrig;
         const mockSummary: BatchSummary = {
           total_items: 1,
           success_count: 1,
           failure_count: 0,
           total_original_bytes: totalOrig,
           total_final_bytes: finalSize,
-          total_saved_bytes: totalOrig - finalSize,
+          total_saved_bytes: 0,
           cancelled: false,
           items: [
             {

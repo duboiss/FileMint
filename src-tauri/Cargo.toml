@@ -6,7 +6,7 @@ members = [
 
 [package]
 name = "filemint"
-version = "1.7.51"
+version = "1.7.52"
 description = "FileMint - Local file optimizer and converter"
 authors = ["FileMint Team"]
 license = "MIT"

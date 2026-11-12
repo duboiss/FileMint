@@ -614,41 +614,6 @@ fn extract_page_one_doc(mut doc: Document) -> Result<Document> {
     Ok(doc)
 }
 
-fn estimate_document_compression_size(
-    doc: &Document,
-    original_bytes: u64,
-    profile: &PdfCompressionProfile,
-) -> (u64, f32) {
-    let mut total_image_bytes = 0u64;
-    for obj in doc.objects.values() {
-        if let Ok(stream) = obj.as_stream() {
-            let is_image = stream
-                .dict
-                .get(b"Subtype")
-                .is_ok_and(|v| v.as_name().is_ok_and(|n| n == b"Image"));
-            if is_image {
-                total_image_bytes += stream.content.len() as u64;
-            }
-        }
-    }
-
-    let non_image_bytes = original_bytes.saturating_sub(total_image_bytes);
-    let image_ratio = match profile {
-        PdfCompressionProfile::Readable => 0.70,
-        PdfCompressionProfile::Balanced => 0.45,
-        PdfCompressionProfile::Compact => 0.30,
-    };
-
-    let est_image_bytes = ((total_image_bytes as f64) * image_ratio) as u64;
-    let est_bytes = (non_image_bytes + est_image_bytes).min(original_bytes);
-    let pct = if original_bytes > 0 && original_bytes > est_bytes {
-        (((original_bytes - est_bytes) as f64 / original_bytes as f64) * 100.0) as f32
-    } else {
-        0.0
-    };
-    (est_bytes, pct)
-}
-
 pub fn generate_pdf_preview(
     input_path: &Path,
     options: &PdfCompressionOptions,
@@ -663,12 +628,6 @@ pub fn generate_pdf_preview(
     if total_pages == 0 {
         return Err(anyhow!("Le document PDF ne contient aucune page valide."));
     }
-
-    let full_doc_probe = if total_pages > 0 && total_pages <= 5 {
-        Some(doc.clone())
-    } else {
-        None
-    };
 
     let (orig_page_bytes, _) = if total_pages == 1 {
         let raw = std::fs::read(input_path)?;
@@ -716,28 +675,68 @@ pub fn generate_pdf_preview(
             0.0
         };
         (est, pct)
-    } else if let Some(probe_doc) = full_doc_probe {
-        // Fast exact probe for multi-page documents with <= 5 pages
-        if let Ok((probe_bytes, _)) = compress_doc_internal(
-            probe_doc,
-            target_jpeg_quality,
-            target_max_dim,
-            options.recompress_images,
-            options.optimize_structure,
-            true,
-        ) {
-            let est = std::cmp::min(original_bytes, probe_bytes.len() as u64);
-            let pct = if original_bytes > 0 && original_bytes > est {
-                (((original_bytes - est) as f64 / original_bytes as f64) * 100.0) as f32
-            } else {
-                0.0
-            };
-            (est, pct)
-        } else {
-            estimate_document_compression_size(&doc, original_bytes, &options.profile)
-        }
     } else {
-        estimate_document_compression_size(&doc, original_bytes, &options.profile)
+        // Empirical probe: run compress_doc_internal directly on cloned doc in memory.
+        // For documents up to 25 pages, compressing the full document in memory gives
+        // a 100% single-byte exact match with actual compress_pdf execution.
+        // For documents with > 25 pages, we extract and compress a 3-page sample and
+        // measure the actual empirical compression ratio.
+        let probe_result = if total_pages <= 25 {
+            compress_doc_internal(
+                doc.clone(),
+                target_jpeg_quality,
+                target_max_dim,
+                options.recompress_images,
+                options.optimize_structure,
+                true,
+            )
+            .map(|(bytes, _)| {
+                let est = std::cmp::min(original_bytes, bytes.len() as u64);
+                let pct = if original_bytes > 0 && original_bytes > est {
+                    (((original_bytes - est) as f64 / original_bytes as f64) * 100.0) as f32
+                } else {
+                    0.0
+                };
+                (est, pct)
+            })
+        } else {
+            let mut sample_doc = doc.clone();
+            let pages_to_delete: Vec<u32> = (4..=total_pages).collect();
+            sample_doc.delete_pages(&pages_to_delete);
+            sample_doc.prune_objects();
+
+            let mut sample_orig_bytes = Vec::new();
+            let orig_sample_len = if sample_doc.save_to(&mut sample_orig_bytes).is_ok()
+                && !sample_orig_bytes.is_empty()
+            {
+                sample_orig_bytes.len() as u64
+            } else {
+                1
+            };
+
+            compress_doc_internal(
+                sample_doc,
+                target_jpeg_quality,
+                target_max_dim,
+                options.recompress_images,
+                options.optimize_structure,
+                true,
+            )
+            .map(|(sample_compressed, _)| {
+                let sample_ratio = (sample_compressed.len() as f64) / (orig_sample_len as f64);
+                let est = ((original_bytes as f64) * sample_ratio)
+                    .round()
+                    .min(original_bytes as f64) as u64;
+                let pct = if original_bytes > 0 && original_bytes > est {
+                    (((original_bytes - est) as f64 / original_bytes as f64) * 100.0) as f32
+                } else {
+                    0.0
+                };
+                (est, pct)
+            })
+        };
+
+        probe_result.unwrap_or((original_bytes, 0.0))
     };
 
     let compressed_page_pdf_base64 = if orig_page_bytes.len() <= 512 * 1024 {

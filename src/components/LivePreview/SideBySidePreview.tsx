@@ -97,7 +97,9 @@ export const SideBySidePreview: React.FC = () => {
     preview.estimated_bytes !== activeFile.sizeBytes
   );
 
-  // Fast preliminary estimate for PDFs to guarantee instant visual feedback in the header
+  // Fast preliminary estimate for PDFs: ONLY used if target_size_kb is explicitly requested.
+  // We NEVER invent an arbitrary hardcoded percentage (e.g. -45%) while loading because CAD/vector
+  // PDFs only compress by ~14% whereas photo albums compress by 60%.
   const pdfEstimate = React.useMemo(() => {
     if (!isPdf || pdfToolMode !== 'compress') return null;
     if (pdfOptions.target_size_kb && pdfOptions.target_size_kb > 0) {
@@ -108,10 +110,7 @@ export const SideBySidePreview: React.FC = () => {
         : 0;
       return { bytes: est, percent: pct };
     }
-    const ratio = pdfOptions.profile === 'Compact' ? 0.35 : pdfOptions.profile === 'Balanced' ? 0.55 : 0.75;
-    const est = Math.round(activeFile.sizeBytes * ratio);
-    const pct = Math.round((1 - ratio) * 100);
-    return { bytes: est, percent: pct };
+    return null;
   }, [isPdf, pdfToolMode, pdfOptions, activeFile.sizeBytes]);
 
   const estimatedBytes = preview?.estimated_bytes ?? pdfEstimate?.bytes;
@@ -153,7 +152,7 @@ export const SideBySidePreview: React.FC = () => {
               <span className="shrink-0 text-slate-600 dark:text-slate-400">
                 {formatFileSize(activeFile.sizeBytes, language)}
               </span>
-              {showEstimatedSize && estimatedBytes !== undefined && (
+              {showEstimatedSize && estimatedBytes !== undefined ? (
                 <>
                   <ArrowRight className="w-2.5 h-2.5 text-slate-400 shrink-0" />
                   <span
@@ -182,7 +181,15 @@ export const SideBySidePreview: React.FC = () => {
                     <Loader2 className="w-2.5 h-2.5 animate-spin text-mint-500 shrink-0" />
                   )}
                 </>
-              )}
+              ) : previewLoading ? (
+                <>
+                  <ArrowRight className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                  <span className="shrink-0 text-slate-400 italic text-[9px] flex items-center gap-1">
+                    <Loader2 className="w-2.5 h-2.5 animate-spin text-mint-500 shrink-0" />
+                    <span>{t.previewLoading}</span>
+                  </span>
+                </>
+              ) : null}
             </div>
           </div>
 

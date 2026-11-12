@@ -614,6 +614,41 @@ fn extract_page_one_doc(mut doc: Document) -> Result<Document> {
     Ok(doc)
 }
 
+fn estimate_document_compression_size(
+    doc: &Document,
+    original_bytes: u64,
+    profile: &PdfCompressionProfile,
+) -> (u64, f32) {
+    let mut total_image_bytes = 0u64;
+    for obj in doc.objects.values() {
+        if let Ok(stream) = obj.as_stream() {
+            let is_image = stream
+                .dict
+                .get(b"Subtype")
+                .is_ok_and(|v| v.as_name().is_ok_and(|n| n == b"Image"));
+            if is_image {
+                total_image_bytes += stream.content.len() as u64;
+            }
+        }
+    }
+
+    let non_image_bytes = original_bytes.saturating_sub(total_image_bytes);
+    let image_ratio = match profile {
+        PdfCompressionProfile::Readable => 0.70,
+        PdfCompressionProfile::Balanced => 0.45,
+        PdfCompressionProfile::Compact => 0.30,
+    };
+
+    let est_image_bytes = ((total_image_bytes as f64) * image_ratio) as u64;
+    let est_bytes = (non_image_bytes + est_image_bytes).min(original_bytes);
+    let pct = if original_bytes > 0 && original_bytes > est_bytes {
+        (((original_bytes - est_bytes) as f64 / original_bytes as f64) * 100.0) as f32
+    } else {
+        0.0
+    };
+    (est_bytes, pct)
+}
+
 pub fn generate_pdf_preview(
     input_path: &Path,
     options: &PdfCompressionOptions,
@@ -629,118 +664,85 @@ pub fn generate_pdf_preview(
         return Err(anyhow!("Le document PDF ne contient aucune page valide."));
     }
 
-    // Extract Page 1 for original rendering:
-    // If single page and file is large (> 3MB), generate a fast, high-quality Page 1 preview document
-    // rather than shipping 20+ MB of uncompressed base64 over IPC which exhausts WebView memory.
-    let (orig_page_bytes, doc_to_compress) = if total_pages == 1 {
-        let raw = std::fs::read(input_path)?;
-        if raw.len() > 3 * 1024 * 1024 {
-            let preview_doc = doc.clone();
-            let (light_bytes, _) = compress_doc_internal(preview_doc, 85, 1600, true, true, false)
-                .unwrap_or_else(|_| (raw.clone(), 0));
-            (light_bytes, doc)
-        } else {
-            (raw, doc)
-        }
+    let full_doc_probe = if total_pages > 0 && total_pages <= 5 {
+        Some(doc.clone())
     } else {
-        let mut orig_doc = extract_page_one_doc(doc)?;
+        None
+    };
+
+    let (orig_page_bytes, _) = if total_pages == 1 {
+        let raw = std::fs::read(input_path)?;
+        (raw, doc.clone())
+    } else {
+        let mut orig_doc = extract_page_one_doc(doc.clone())?;
         let mut bytes = Vec::new();
         orig_doc.save_to(&mut bytes)?;
-        let comp_doc = orig_doc.clone();
-        (bytes, comp_doc)
+        (bytes, orig_doc)
     };
 
-    let (target_jpeg_quality, target_max_dim, estimated_ratio) =
-        if let Some(target_kb) = options.target_size_kb {
-            let target_bytes = (target_kb as u64) * 1024;
-            let ratio = if original_bytes > 0 {
-                (target_bytes as f64) / (original_bytes as f64)
-            } else {
-                1.0
-            };
-            let (q, dim) = if ratio >= 0.8 {
-                (85u8, 2000u32)
-            } else if ratio >= 0.6 {
-                (70u8, 1500u32)
-            } else if ratio >= 0.45 {
-                (55u8, 1100u32)
-            } else if ratio >= 0.3 {
-                (40u8, 850u32)
-            } else {
-                (25u8, 650u32)
-            };
-            (q, dim, ratio.min(1.0))
-        } else {
-            match options.profile {
-                PdfCompressionProfile::Readable => (85u8, 2400u32, 0.75),
-                PdfCompressionProfile::Balanced => (70u8, 1600u32, 0.55),
-                PdfCompressionProfile::Compact => (50u8, 1000u32, 0.35),
-            }
-        };
-
-    let (compressed_page_bytes, image_count_optimized) = match compress_doc_internal(
-        doc_to_compress,
-        target_jpeg_quality,
-        target_max_dim,
-        options.recompress_images,
-        options.optimize_structure,
-        false,
-    ) {
-        Ok((bytes, count)) => (bytes, count),
-        Err(_) => (orig_page_bytes.clone(), 0),
-    };
-
-    let effective_ratio = if let Some(target_kb) = options.target_size_kb {
+    let (target_jpeg_quality, target_max_dim) = if let Some(target_kb) = options.target_size_kb {
         let target_bytes = (target_kb as u64) * 1024;
-        if original_bytes > 0 {
-            ((target_bytes as f64) / (original_bytes as f64)).min(1.0)
+        let ratio = if original_bytes > 0 {
+            (target_bytes as f64) / (original_bytes as f64)
         } else {
             1.0
-        }
-    } else if total_pages == 1 {
-        if !orig_page_bytes.is_empty() {
-            ((compressed_page_bytes.len() as f64) / (orig_page_bytes.len() as f64)).clamp(0.05, 1.0)
+        };
+        let (q, dim) = if ratio >= 0.8 {
+            (85u8, 2000u32)
+        } else if ratio >= 0.6 {
+            (70u8, 1500u32)
+        } else if ratio >= 0.45 {
+            (55u8, 1100u32)
+        } else if ratio >= 0.3 {
+            (40u8, 850u32)
         } else {
-            estimated_ratio
-        }
+            (25u8, 650u32)
+        };
+        (q, dim)
     } else {
-        // Multi-page document:
-        // If Page 1 had compressible images and reduced in size, use its measured ratio.
-        // Otherwise (cover/text page without images), use the profile expected ratio.
-        if image_count_optimized > 0
-            && !orig_page_bytes.is_empty()
-            && compressed_page_bytes.len() < orig_page_bytes.len()
-        {
-            ((compressed_page_bytes.len() as f64) / (orig_page_bytes.len() as f64)).clamp(0.05, 1.0)
+        match options.profile {
+            PdfCompressionProfile::Readable => (85u8, 2400u32),
+            PdfCompressionProfile::Balanced => (70u8, 1600u32),
+            PdfCompressionProfile::Compact => (50u8, 1000u32),
+        }
+    };
+
+    let (estimated_bytes, saved_percentage) = if let Some(target_kb) = options.target_size_kb {
+        let target_bytes = (target_kb as u64) * 1024;
+        let est = std::cmp::min(original_bytes, target_bytes);
+        let pct = if original_bytes > 0 && original_bytes > est {
+            (((original_bytes - est) as f64 / original_bytes as f64) * 100.0) as f32
         } else {
-            estimated_ratio
+            0.0
+        };
+        (est, pct)
+    } else if let Some(probe_doc) = full_doc_probe {
+        // Fast exact probe for multi-page documents with <= 5 pages
+        if let Ok((probe_bytes, _)) = compress_doc_internal(
+            probe_doc,
+            target_jpeg_quality,
+            target_max_dim,
+            options.recompress_images,
+            options.optimize_structure,
+            true,
+        ) {
+            let est = std::cmp::min(original_bytes, probe_bytes.len() as u64);
+            let pct = if original_bytes > 0 && original_bytes > est {
+                (((original_bytes - est) as f64 / original_bytes as f64) * 100.0) as f32
+            } else {
+                0.0
+            };
+            (est, pct)
+        } else {
+            estimate_document_compression_size(&doc, original_bytes, &options.profile)
         }
-    };
-
-    let estimated_bytes = if let Some(target_kb) = options.target_size_kb {
-        std::cmp::min(original_bytes, (target_kb as u64) * 1024)
     } else {
-        ((original_bytes as f64) * effective_ratio)
-            .round()
-            .min(original_bytes as f64) as u64
+        estimate_document_compression_size(&doc, original_bytes, &options.profile)
     };
 
-    let saved_percentage = if original_bytes > 0 && original_bytes > estimated_bytes {
-        let diff = (original_bytes - estimated_bytes) as f64;
-        ((diff / (original_bytes as f64)) * 100.0).max(0.0) as f32
-    } else {
-        0.0
-    };
-
-    let compressed_page_pdf_base64 = if image_count_optimized > 0
-        && !compressed_page_bytes.is_empty()
-        && compressed_page_bytes.len() < orig_page_bytes.len()
-    {
-        BASE64.encode(&compressed_page_bytes)
-    } else if orig_page_bytes.len() <= 512 * 1024 {
+    let compressed_page_pdf_base64 = if orig_page_bytes.len() <= 512 * 1024 {
         BASE64.encode(&orig_page_bytes)
     } else {
-        // Large page without compressible images: skip duplicate multi-megabyte IPC payload
         String::new()
     };
 
@@ -1776,6 +1778,8 @@ startxref
         let temp_out = std::env::temp_dir().join("plan1_out_balanced.pdf");
         let _c = TempFileCleaner(temp_out.clone());
         let res = compress_pdf(path, &temp_out, &opts).unwrap();
+        assert_eq!(prev.estimated_bytes, res.compressed_bytes);
+        assert_eq!(prev.saved_percentage, res.saved_percentage);
         assert!(res.compressed_bytes < res.original_bytes);
         assert!(res.image_count_optimized > 0);
     }

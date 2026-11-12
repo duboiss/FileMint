@@ -41,7 +41,7 @@ export function base64ToUint8Array(base64: string): Uint8Array {
  */
 export async function renderPdfPage1(
   pdfData: Uint8Array | ArrayBuffer,
-  maxDimension = 750
+  maxDimension = 650
 ): Promise<RenderedPdfPage> {
   return renderPdfPage(pdfData, 1, maxDimension);
 }
@@ -160,7 +160,7 @@ export async function getPdfPageCount(
 export async function renderPdfPage(
   pdfData: Uint8Array | ArrayBuffer,
   pageNum: number,
-  maxDimension = 750
+  maxDimension = 650
 ): Promise<RenderedPdfPage> {
   const loadingTask = pdfjsLib.getDocument({
     data: pdfData,

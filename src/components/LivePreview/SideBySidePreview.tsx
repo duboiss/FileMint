@@ -184,9 +184,11 @@ export const SideBySidePreview: React.FC = () => {
               ) : previewLoading ? (
                 <>
                   <ArrowRight className="w-2.5 h-2.5 text-slate-400 shrink-0" />
-                  <span className="shrink-0 text-slate-400 italic text-[9px] flex items-center gap-1">
+                  <span
+                    className="shrink-0 flex items-center cursor-help"
+                    title={t.previewLoading}
+                  >
                     <Loader2 className="w-2.5 h-2.5 animate-spin text-mint-500 shrink-0" />
-                    <span>{t.previewLoading}</span>
                   </span>
                 </>
               ) : null}

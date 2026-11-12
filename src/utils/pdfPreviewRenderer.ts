@@ -10,13 +10,26 @@ export interface RenderedPdfPage {
 }
 
 /**
- * Converts a base64 encoded string to Uint8Array.
+ * Converts a base64 encoded string to Uint8Array with fast loop unrolling.
  */
 export function base64ToUint8Array(base64: string): Uint8Array {
   const binaryString = window.atob(base64);
   const len = binaryString.length;
   const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
+  const step = 8;
+  const bound = len - (len % step);
+  let i = 0;
+  for (; i < bound; i += step) {
+    bytes[i] = binaryString.charCodeAt(i);
+    bytes[i + 1] = binaryString.charCodeAt(i + 1);
+    bytes[i + 2] = binaryString.charCodeAt(i + 2);
+    bytes[i + 3] = binaryString.charCodeAt(i + 3);
+    bytes[i + 4] = binaryString.charCodeAt(i + 4);
+    bytes[i + 5] = binaryString.charCodeAt(i + 5);
+    bytes[i + 6] = binaryString.charCodeAt(i + 6);
+    bytes[i + 7] = binaryString.charCodeAt(i + 7);
+  }
+  for (; i < len; i++) {
     bytes[i] = binaryString.charCodeAt(i);
   }
   return bytes;
@@ -55,39 +68,53 @@ export async function renderPdfPageFromDoc(
   maxDimension = 350
 ): Promise<RenderedPdfPage> {
   const targetPage = Math.max(1, Math.min(pageNum, pdfDoc.numPages));
-  const page = await pdfDoc.getPage(targetPage);
-
-  const defaultViewport = page.getViewport({ scale: 1.0 });
-  const longestEdge = Math.max(defaultViewport.width, defaultViewport.height);
-  const scale = longestEdge > maxDimension ? maxDimension / longestEdge : 1.0;
-  const viewport = page.getViewport({ scale: Math.max(0.2, scale) });
-
+  let page: pdfjsLib.PDFPageProxy | null = null;
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(viewport.width);
-  canvas.height = Math.round(viewport.height);
 
-  const context = canvas.getContext('2d', { alpha: false });
-  if (!context) {
-    throw new Error('Canvas 2D context not available');
+  try {
+    page = await pdfDoc.getPage(targetPage);
+
+    const defaultViewport = page.getViewport({ scale: 1.0 });
+    const longestEdge = Math.max(defaultViewport.width, defaultViewport.height);
+    const scale = longestEdge > maxDimension ? maxDimension / longestEdge : 1.0;
+    const viewport = page.getViewport({ scale: Math.max(0.2, scale) });
+
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+
+    const context = canvas.getContext('2d', { alpha: false });
+    if (!context) {
+      throw new Error('Canvas 2D context not available');
+    }
+
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    const renderContext = {
+      canvasContext: context,
+      viewport,
+      canvas,
+    };
+
+    await page.render(renderContext).promise;
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+    return {
+      dataUrl,
+      width: canvas.width,
+      height: canvas.height,
+    };
+  } finally {
+    if (page) {
+      try {
+        page.cleanup();
+      } catch {
+        // ignore
+      }
+    }
+    canvas.width = 0;
+    canvas.height = 0;
   }
-
-  context.fillStyle = '#ffffff';
-  context.fillRect(0, 0, canvas.width, canvas.height);
-
-  const renderContext = {
-    canvasContext: context,
-    viewport,
-    canvas,
-  };
-
-  await page.render(renderContext).promise;
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-
-  return {
-    dataUrl,
-    width: canvas.width,
-    height: canvas.height,
-  };
 }
 
 /**
@@ -100,12 +127,26 @@ export async function getPdfPageCount(
     data: pdfData,
     useSystemFonts: true,
   });
-  const pdfDoc = await loadingTask.promise;
-  return pdfDoc.numPages;
+  let pdfDoc: pdfjsLib.PDFDocumentProxy | null = null;
+  try {
+    pdfDoc = await loadingTask.promise;
+    return pdfDoc.numPages;
+  } finally {
+    if (pdfDoc) {
+      try {
+        await pdfDoc.cleanup();
+      } catch {
+        // ignore
+      }
+    }
+    await loadingTask.destroy().catch(() => {});
+  }
 }
 
 /**
  * Renders any specified 1-based page of a PDF onto an offscreen canvas and returns a data URL.
+ * Automatically cleans up the PDFDocumentProxy, loadingTask, and offscreen canvas after rendering
+ * to prevent Web Worker memory leaks and 4GB+ RAM spikes.
  */
 export async function renderPdfPage(
   pdfData: Uint8Array | ArrayBuffer,
@@ -117,43 +158,67 @@ export async function renderPdfPage(
     useSystemFonts: true,
   });
 
-  const pdfDoc = await loadingTask.promise;
-  const targetPage = Math.max(1, Math.min(pageNum, pdfDoc.numPages));
-  const page = await pdfDoc.getPage(targetPage);
-
-  const defaultViewport = page.getViewport({ scale: 1.0 });
-  const longestEdge = Math.max(defaultViewport.width, defaultViewport.height);
-  const scale = longestEdge > maxDimension ? maxDimension / longestEdge : 1.0;
-  const viewport = page.getViewport({ scale: Math.max(0.2, scale) });
-
+  let pdfDoc: pdfjsLib.PDFDocumentProxy | null = null;
+  let page: pdfjsLib.PDFPageProxy | null = null;
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(viewport.width);
-  canvas.height = Math.round(viewport.height);
 
-  const context = canvas.getContext('2d', { alpha: false });
-  if (!context) {
-    throw new Error('Canvas 2D context not available');
+  try {
+    pdfDoc = await loadingTask.promise;
+    const targetPage = Math.max(1, Math.min(pageNum, pdfDoc.numPages));
+    page = await pdfDoc.getPage(targetPage);
+
+    const defaultViewport = page.getViewport({ scale: 1.0 });
+    const longestEdge = Math.max(defaultViewport.width, defaultViewport.height);
+    const scale = longestEdge > maxDimension ? maxDimension / longestEdge : 1.0;
+    const viewport = page.getViewport({ scale: Math.max(0.2, scale) });
+
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+
+    const context = canvas.getContext('2d', { alpha: false });
+    if (!context) {
+      throw new Error('Canvas 2D context not available');
+    }
+
+    // White background for transparent PDF pages
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    const renderContext = {
+      canvasContext: context,
+      viewport,
+      canvas,
+    };
+
+    await page.render(renderContext).promise;
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+    return {
+      dataUrl,
+      width: canvas.width,
+      height: canvas.height,
+    };
+  } finally {
+    if (page) {
+      try {
+        page.cleanup();
+      } catch {
+        // ignore
+      }
+    }
+    canvas.width = 0;
+    canvas.height = 0;
+
+    if (pdfDoc) {
+      try {
+        await pdfDoc.cleanup();
+      } catch {
+        // ignore
+      }
+    }
+    await loadingTask.destroy().catch(() => {});
   }
-
-  // White background for transparent PDF pages
-  context.fillStyle = '#ffffff';
-  context.fillRect(0, 0, canvas.width, canvas.height);
-
-  const renderContext = {
-    canvasContext: context,
-    viewport,
-    canvas,
-  };
-
-  await page.render(renderContext).promise;
-
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-
-  return {
-    dataUrl,
-    width: canvas.width,
-    height: canvas.height,
-  };
 }
 
 /**

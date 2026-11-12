@@ -134,12 +134,20 @@ export const SideBySidePreview: React.FC = () => {
         {/* Left: Metadata comparison */}
         <div className="flex items-center gap-2 min-w-0">
           <div className="min-w-0 flex flex-col justify-center">
-            <span
-              className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[140px] sm:max-w-[200px] md:max-w-xs cursor-help text-xs leading-tight"
-              title={activeFile.path}
-            >
-              {activeFile.name}
-            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span
+                className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[130px] sm:max-w-[180px] md:max-w-[240px] cursor-help text-xs leading-tight"
+                title={activeFile.path}
+              >
+                {activeFile.name}
+              </span>
+              {isPdf && (
+                <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-mint-500/15 text-mint-600 dark:text-mint-400 font-semibold text-[9px] shrink-0 whitespace-nowrap">
+                  <span>📄</span>
+                  <span>{t.pdfPage1Preview}</span>
+                </span>
+              )}
+            </div>
 
             <div className="flex items-center gap-1.5 font-mono text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-none">
               <span className="shrink-0 text-slate-600 dark:text-slate-400">
@@ -179,19 +187,11 @@ export const SideBySidePreview: React.FC = () => {
           </div>
 
           {isPdf ? (
-            <>
-              <span
-                className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-mint-500/15 text-mint-600 dark:text-mint-400 font-semibold text-[10px] shrink-0"
-              >
-                <span>📄</span>
-                <span>{t.pdfPage1Preview}</span>
-              </span>
-              <span
-                className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[10px] shrink-0"
-              >
-                <span>{getPdfProfileLabel(pdfOptions.profile)}</span>
-              </span>
-            </>
+            <span
+              className="hidden xl:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[10px] shrink-0"
+            >
+              <span>{getPdfProfileLabel(pdfOptions.profile)}</span>
+            </span>
           ) : (
             <>
               {imageOptions.target_size_kb && imageOptions.compress !== false && (

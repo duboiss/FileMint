@@ -41,6 +41,7 @@ export const PdfPageGrid: React.FC = () => {
   // Load the PDF document proxy when active file changes
   useEffect(() => {
     let isCancelled = false;
+    let localDoc: pdfjsLib.PDFDocumentProxy | null = null;
 
     async function loadDocument() {
       if (!activeFile || activeFile.fileType !== 'pdf') return;
@@ -66,11 +67,14 @@ export const PdfPageGrid: React.FC = () => {
 
         if (isCancelled) return;
 
-        const doc = await loadPdfDocument(pdfBytes);
-        if (isCancelled) return;
+        localDoc = await loadPdfDocument(pdfBytes);
+        if (isCancelled) {
+          localDoc.loadingTask.destroy().catch(() => {});
+          return;
+        }
 
-        setPdfDoc(doc);
-        const total = doc.numPages;
+        setPdfDoc(localDoc);
+        const total = localDoc.numPages;
         setActivePdfTotalPages(total);
 
         // If no pages currently selected, default to select all
@@ -93,6 +97,10 @@ export const PdfPageGrid: React.FC = () => {
 
     return () => {
       isCancelled = true;
+      if (localDoc) {
+        localDoc.cleanup().catch(() => {});
+        localDoc.loadingTask.destroy().catch(() => {});
+      }
     };
   }, [activeFile?.path]);
 

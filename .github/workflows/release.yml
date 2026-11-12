@@ -85,14 +85,58 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Publish Draft Release
+      - name: Publish Draft Release with Commits Changelog
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Retrieve existing draft release notes
+          CURRENT_BODY=$(gh release view "${{ github.ref_name }}" --json body -q .body 2>/dev/null || echo "")
+
+          # Find previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 "${{ github.ref_name }}^" 2>/dev/null || true)
+
+          # Format list of included commits with markdown links
+          if [ -n "$PREV_TAG" ]; then
+            COMMIT_LIST=$(git log "${PREV_TAG}..${{ github.ref_name }}" --no-merges --pretty=format:"* [%s](https://github.com/${{ github.repository }}/commit/%H)")
+          else
+            COMMIT_LIST=$(git log "${{ github.ref_name }}" --no-merges --pretty=format:"* [%s](https://github.com/${{ github.repository }}/commit/%H)")
+          fi
+
+          NEW_BODY="$CURRENT_BODY"
+
+          # Ensure Full Changelog link is present
+          if [ -n "$PREV_TAG" ] && [[ "$NEW_BODY" != *"Full Changelog"* ]]; then
+            FULL_CHANGELOG_LINK="**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${{ github.ref_name }}"
+            if [ -n "$NEW_BODY" ]; then
+              NEW_BODY="${NEW_BODY}
+
+${FULL_CHANGELOG_LINK}"
+            else
+              NEW_BODY="${FULL_CHANGELOG_LINK}"
+            fi
+          fi
+
+          # Append Commits list after Full Changelog
+          if [ -n "$COMMIT_LIST" ] && [[ "$NEW_BODY" != *"### Commits"* ]]; then
+            if [ -n "$NEW_BODY" ]; then
+              NEW_BODY="${NEW_BODY}
+
+### Commits
+${COMMIT_LIST}"
+            else
+              NEW_BODY="### Commits
+${COMMIT_LIST}"
+            fi
+          fi
+
+          printf "%s\n" "$NEW_BODY" > release_notes.md
+
           for i in 1 2 3 4 5; do
-            echo "Attempt $i: publishing release ${{ github.ref_name }}..."
-            if gh release edit "${{ github.ref_name }}" --draft=false; then
+            echo "Attempt $i: publishing release ${{ github.ref_name }} with commits changelog..."
+            if gh release edit "${{ github.ref_name }}" --notes-file release_notes.md --draft=false; then
               echo "Release published successfully!"
               exit 0
             fi

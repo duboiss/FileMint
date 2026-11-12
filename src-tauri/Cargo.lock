@@ -1367,7 +1367,7 @@ dependencies = [
 
 [[package]]
 name = "filemint"
-version = "1.7.49"
+version = "1.7.50"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -1391,6 +1391,16 @@ dependencies = [
  "tauri-plugin-shell",
  "thiserror 2.0.21",
  "tokio",
+ "windows 0.58.0",
+ "windows-core 0.58.0",
+ "winreg 0.52.0",
+]
+
+[[package]]
+name = "filemint-shell-ext"
+version = "1.7.50"
+dependencies = [
+ "serde_json",
  "windows 0.58.0",
  "windows-core 0.58.0",
  "winreg 0.52.0",

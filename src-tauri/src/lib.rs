@@ -2,9 +2,6 @@ pub mod commands;
 pub mod engine;
 pub mod shell;
 
-#[cfg(windows)]
-pub use shell::explorer_command::windows::{DllCanUnloadNow, DllGetClassObject};
-
 use commands::AppState;
 use engine::batch_runner::BatchRunner;
 use std::sync::Mutex;

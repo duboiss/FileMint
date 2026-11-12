@@ -88,7 +88,7 @@ Visit [**GitHub Releases**](https://github.com/duboiss/FileMint/releases) to dow
 
 | Operating System | Available Formats |
 |---|---|
-| **Windows** (10 / 11) | NSIS Installer (`.exe`) & MSI Package (`.msi`) |
+| **Windows** (10 / 11) | NSIS Installer (`.exe`) |
 | **macOS** (Apple Silicon & Intel) | Disk Image (`.dmg`) |
 | **Linux** (Debian, Ubuntu, etc.) | `.deb` package & standalone `.AppImage` |
 

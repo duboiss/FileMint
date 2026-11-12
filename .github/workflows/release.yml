@@ -53,11 +53,17 @@ jobs:
         with:
           workspaces: src-tauri
 
+      - name: Disable Windows Defender real-time scanning
+        if: matrix.platform == 'Windows'
+        run: |
+          Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
+          Add-MpPreference -ExclusionPath $env:GITHUB_WORKSPACE, "$env:USERPROFILE\.cargo", "$env:USERPROFILE\.rustup" -ErrorAction SilentlyContinue
+
       - name: Build Windows COM Shell Extension DLL
         if: matrix.platform == 'Windows'
         run: |
-          cargo build --manifest-path src-tauri/Cargo.toml --release --lib
-          Copy-Item src-tauri/target/release/filemint_lib.dll src-tauri/sparse_package/filemint_lib.dll -Force
+          cargo build --manifest-path src-tauri/crates/filemint-shell-ext/Cargo.toml --release
+          Copy-Item src-tauri/target/release/filemint_shell_ext.dll src-tauri/sparse_package/filemint_lib.dll -Force
 
       - name: Build Tauri Application & Publish Release
         uses: tauri-apps/tauri-action@v1

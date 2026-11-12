@@ -88,7 +88,7 @@ Téléchargez la dernière version sur la page [**GitHub Releases**](https://git
 
 | Système d'exploitation | Formats disponibles |
 |---|---|
-| **Windows** (10 / 11) | Installateur NSIS (`.exe`) & Paquet MSI (`.msi`) |
+| **Windows** (10 / 11) | Installateur NSIS (`.exe`) |
 | **macOS** (Apple Silicon & Intel) | Image disque (`.dmg`) |
 | **Linux** (Debian, Ubuntu, etc.) | Paquet `.deb` & binaire autonome `.AppImage` |
 

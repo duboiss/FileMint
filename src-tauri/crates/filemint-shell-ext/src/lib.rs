@@ -1,8 +1,15 @@
+//! Windows 11 Explorer Command COM Shell Extension for FileMint.
+//!
+//! Provides the top-level modern context menu entry for Windows 11 File Explorer
+//! via `IExplorerCommand` and forwards target paths to FileMint.
+
 #[cfg(windows)]
-pub mod windows {
+mod shell_ext {
     #![allow(non_snake_case)]
 
     use std::ffi::c_void;
+    use std::fs::OpenOptions;
+    use std::io::Write;
     use std::path::PathBuf;
     use windows::Win32::Foundation::{
         BOOL, CLASS_E_CLASSNOTAVAILABLE, CLASS_E_NOAGGREGATION, E_NOTIMPL, E_POINTER, HMODULE,
@@ -115,7 +122,7 @@ pub mod windows {
             let paths = extract_paths_from_array(psi_item_array);
 
             // 1. Try sending to active instance via Named Pipe IPC
-            if crate::shell::ipc_pipe::windows::try_send_to_existing_instance(&paths) {
+            if try_send_to_existing_instance(&paths) {
                 return S_OK;
             }
 
@@ -176,7 +183,6 @@ pub mod windows {
         }
     }
 
-    /// Extracts file paths from an IShellItemArray
     unsafe fn extract_paths_from_array(psi_item_array: *mut c_void) -> Vec<String> {
         let mut paths = Vec::new();
         if psi_item_array.is_null() {
@@ -195,7 +201,7 @@ pub mod windows {
                                 }
                             }
                             windows::Win32::System::Com::CoTaskMemFree(Some(
-                                pwstr.as_ptr() as *const c_void
+                                pwstr.as_ptr() as *const c_void,
                             ));
                         }
                     }
@@ -205,9 +211,38 @@ pub mod windows {
         paths
     }
 
-    /// Resolves the filemint.exe executable path
+    fn get_pipe_name() -> String {
+        let user = std::env::var("USERNAME").unwrap_or_else(|_| "default".to_string());
+        let sanitized: String = user
+            .chars()
+            .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-')
+            .collect();
+        format!(r"\\.\pipe\filemint_single_instance_pipe_{}", sanitized)
+    }
+
+    fn try_send_to_existing_instance(files: &[String]) -> bool {
+        if files.is_empty() {
+            return false;
+        }
+
+        let payload = match serde_json::to_vec(files) {
+            Ok(p) => p,
+            Err(_) => return false,
+        };
+
+        let pipe_name = get_pipe_name();
+        if let Ok(mut pipe) = OpenOptions::new().write(true).open(&pipe_name) {
+            let len = (payload.len() as u32).to_le_bytes();
+            if pipe.write_all(&len).is_ok() && pipe.write_all(&payload).is_ok() {
+                let _ = pipe.flush();
+                return true;
+            }
+        }
+
+        false
+    }
+
     pub fn get_filemint_exe_path() -> Option<PathBuf> {
-        // 1. Resolve from current DLL module memory address
         unsafe {
             let mut hmodule = HMODULE::default();
             if GetModuleHandleExW(
@@ -232,7 +267,6 @@ pub mod windows {
             }
         }
 
-        // 2. Fallback: resolve from current_exe path
         if let Ok(current_exe) = std::env::current_exe() {
             if let Some(file_name) = current_exe.file_name() {
                 if file_name
@@ -251,20 +285,14 @@ pub mod windows {
             }
         }
 
-        // 3. Fallback: query Windows registry stored key
-        #[cfg(windows)]
+        let hkcu = winreg::RegKey::predef(winreg::enums::HKEY_CURRENT_USER);
+        if let Ok(key) =
+            hkcu.open_subkey(r"Software\Classes\SystemFileAssociations\image\shell\FileMint")
         {
-            use winreg::enums::HKEY_CURRENT_USER;
-            use winreg::RegKey;
-            let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-            if let Ok(key) =
-                hkcu.open_subkey(r"Software\Classes\SystemFileAssociations\image\shell\FileMint")
-            {
-                if let Ok(icon) = key.get_value::<String, _>("Icon") {
-                    let path = PathBuf::from(icon);
-                    if path.exists() {
-                        return Some(path);
-                    }
+            if let Ok(icon) = key.get_value::<String, _>("Icon") {
+                let path = PathBuf::from(icon);
+                if path.exists() {
+                    return Some(path);
                 }
             }
         }
@@ -282,11 +310,6 @@ pub mod windows {
         PWSTR(ptr)
     }
 
-    // Native COM exports required by dllhost / Explorer
-    /// Entry point for COM class factory instantiation.
-    ///
-    /// # Safety
-    /// Pointers `rclsid`, `riid`, and `ppv` must point to valid memory or be null.
     #[no_mangle]
     pub unsafe extern "system" fn DllGetClassObject(
         rclsid: *const GUID,
@@ -306,10 +329,6 @@ pub mod windows {
         }
     }
 
-    /// Checks whether the COM DLL can be unloaded.
-    ///
-    /// # Safety
-    /// This function performs a safe status check and is called by the COM runtime.
     #[no_mangle]
     pub unsafe extern "system" fn DllCanUnloadNow() -> HRESULT {
         S_FALSE

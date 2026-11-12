@@ -39,6 +39,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Disable Windows Defender real-time scanning
+        if: matrix.platform == 'Windows'
+        run: |
+          Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
+          Add-MpPreference -ExclusionPath $env:GITHUB_WORKSPACE, "$env:USERPROFILE\.cargo", "$env:USERPROFILE\.rustup" -ErrorAction SilentlyContinue
+
       - name: Install Linux system dependencies
         if: matrix.platform == 'Linux'
         run: |

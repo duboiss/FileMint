@@ -1515,7 +1515,7 @@ startxref
             "Thumb key should be removed from Page dictionary"
         );
         assert!(
-            reloaded.objects.get(&thumb_id).is_none(),
+            !reloaded.objects.contains_key(&thumb_id),
             "Thumb stream object should be pruned"
         );
     }

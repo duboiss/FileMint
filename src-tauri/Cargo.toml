@@ -1,6 +1,12 @@
+[workspace]
+members = [
+    ".",
+    "crates/filemint-shell-ext",
+]
+
 [package]
 name = "filemint"
-version = "1.7.49"
+version = "1.7.50"
 description = "FileMint - Local file optimizer and converter"
 authors = ["FileMint Team"]
 license = "MIT"
@@ -8,7 +14,7 @@ edition = "2021"
 
 [lib]
 name = "filemint_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2.0", features = [] }

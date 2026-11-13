@@ -165,6 +165,17 @@ export const getDefaultProfiles = (dict?: TranslationDictionary): CustomProfile[
   },
 ];
 
+export const getProfileDisplayName = (
+  profile: CustomProfile,
+  t: TranslationDictionary
+): string => {
+  if (profile.id === 'preset_none') return t.presetNone;
+  if (profile.id === 'preset_web' && (profile.name === 'Web' || !profile.name)) return t.presetWeb;
+  if (profile.id === 'preset_quality' && (profile.name === 'Quality' || profile.name === 'Qualité' || !profile.name)) return t.presetQuality;
+  if (profile.id === 'preset_light' && (profile.name === 'Light' || profile.name === 'Léger' || !profile.name)) return t.presetLight;
+  return profile.name;
+};
+
 export const hasActiveImageChanges = (
   options: ImageTransformOptions,
   fileOrFiles?: FileItem | FileItem[]
@@ -628,19 +639,29 @@ const loadCustomProfilesFromStorage = (dict?: TranslationDictionary): CustomProf
       const parsed = JSON.parse(raw);
       const validated = validateAndSanitizeProfiles(parsed);
       if (validated && validated.length > 0) {
-        // Ensure preset_none is available
-        const hasNone = validated.some((p: CustomProfile) => p.id === 'preset_none');
-        const noneProfile: CustomProfile = hasNone
-          ? validated.find((p: CustomProfile) => p.id === 'preset_none')!
-          : {
-              id: 'preset_none',
-              name: dict?.presetNone || 'Aucun',
-              options: getPresetOptions('none'),
-              createdAt: 0,
-            };
+        // Ensure preset_none is available and localized
+        const existingNone = validated.find((p: CustomProfile) => p.id === 'preset_none');
+        const noneProfile: CustomProfile = {
+          id: 'preset_none',
+          name: dict?.presetNone || 'Aucun',
+          options: existingNone ? existingNone.options : getPresetOptions('none'),
+          createdAt: existingNone ? existingNone.createdAt : 0,
+        };
         const nonNone = validated
           .filter((p: CustomProfile) => p.id !== 'preset_none')
-          .slice(0, MAX_CUSTOM_PROFILES);
+          .slice(0, MAX_CUSTOM_PROFILES)
+          .map((p: CustomProfile) => {
+            if (p.id === 'preset_web' && (p.name === 'Web' || !p.name)) {
+              return { ...p, name: dict?.presetWeb || 'Web' };
+            }
+            if (p.id === 'preset_quality' && (p.name === 'Quality' || p.name === 'Qualité' || !p.name)) {
+              return { ...p, name: dict?.presetQuality || 'Qualité' };
+            }
+            if (p.id === 'preset_light' && (p.name === 'Light' || p.name === 'Léger' || !p.name)) {
+              return { ...p, name: dict?.presetLight || 'Léger' };
+            }
+            return p;
+          });
         const merged = [noneProfile, ...nonNone];
         saveCustomProfilesToStorage(merged);
         return merged;
@@ -1391,7 +1412,16 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       if (typeof document !== 'undefined') {
         document.documentElement.lang = lang;
       }
-      set({ language: lang, t: translations[lang] });
+      const newT = translations[lang];
+      const updatedProfiles = get().customProfiles.map((p) => {
+        if (p.id === 'preset_none') return { ...p, name: newT.presetNone };
+        if (p.id === 'preset_web' && (p.name === 'Web' || !p.name)) return { ...p, name: newT.presetWeb };
+        if (p.id === 'preset_quality' && (p.name === 'Quality' || p.name === 'Qualité' || !p.name)) return { ...p, name: newT.presetQuality };
+        if (p.id === 'preset_light' && (p.name === 'Light' || p.name === 'Léger' || !p.name)) return { ...p, name: newT.presetLight };
+        return p;
+      });
+      saveCustomProfilesToStorage(updatedProfiles);
+      set({ language: lang, t: newT, customProfiles: updatedProfiles });
       persistConfigToDisk();
       // Only refresh classic context menu labels if classic mode is currently enabled
       if (get().contextMenuEnabled && get().contextMenuMode === 'classic' && isTauriEnv()) {
@@ -1804,11 +1834,12 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       const validated = validateAndSanitizeProfiles(profiles);
       if (!validated || validated.length === 0) return false;
 
-      const noneItem = validated.find((p) => p.id === 'preset_none') || {
+      const existingNone = validated.find((p) => p.id === 'preset_none');
+      const noneItem: CustomProfile = {
         id: 'preset_none',
         name: get().t.presetNone || 'Aucun',
-        options: getPresetOptions('none'),
-        createdAt: 0,
+        options: existingNone ? existingNone.options : getPresetOptions('none'),
+        createdAt: existingNone ? existingNone.createdAt : 0,
       };
       const nonNone = validated.filter((p) => p.id !== 'preset_none').slice(0, MAX_CUSTOM_PROFILES);
       const sanitized = [noneItem, ...nonNone];
@@ -2816,8 +2847,16 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
               currentProfiles.length <= 1 ||
               diskConfig.custom_profiles.length > currentProfiles.length
             ) {
-              updates.customProfiles = diskConfig.custom_profiles;
-              saveCustomProfilesToStorage(diskConfig.custom_profiles);
+              const currentT = get().t;
+              const localizedDiskProfiles = diskConfig.custom_profiles.map((p: CustomProfile) => {
+                if (p.id === 'preset_none') return { ...p, name: currentT.presetNone || 'Aucun' };
+                if (p.id === 'preset_web' && (p.name === 'Web' || !p.name)) return { ...p, name: currentT.presetWeb || 'Web' };
+                if (p.id === 'preset_quality' && (p.name === 'Quality' || p.name === 'Qualité' || !p.name)) return { ...p, name: currentT.presetQuality || 'Qualité' };
+                if (p.id === 'preset_light' && (p.name === 'Light' || p.name === 'Léger' || !p.name)) return { ...p, name: currentT.presetLight || 'Léger' };
+                return p;
+              });
+              updates.customProfiles = localizedDiskProfiles;
+              saveCustomProfilesToStorage(localizedDiskProfiles);
             }
           }
 

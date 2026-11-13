@@ -7,6 +7,7 @@ import {
   createProfilesExportJson,
   validateAndSanitizeProfiles,
   isTauriEnv,
+  getProfileDisplayName,
 } from '../store/useFileMintStore';
 import {
   X,
@@ -317,7 +318,7 @@ export const SettingsModal: React.FC = () => {
                         className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between text-xs"
                       >
                         <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
-                          {p.name}
+                          {getProfileDisplayName(p, t)}
                         </span>
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-mint-500/10 text-mint-600 dark:text-mint-400 font-semibold shrink-0">
                           {desc}
@@ -687,9 +688,9 @@ export const SettingsModal: React.FC = () => {
                                 ? 'border-mint-500 bg-mint-500/15 text-mint-600 dark:text-mint-400 font-bold shadow-xs'
                                 : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                             }`}
-                            title={p.name}
+                            title={getProfileDisplayName(p, t)}
                           >
-                            <span className="truncate block">{p.name}</span>
+                            <span className="truncate block">{getProfileDisplayName(p, t)}</span>
                           </button>
                         );
                       })}
@@ -1184,13 +1185,14 @@ export const SettingsModal: React.FC = () => {
                             >
                               <option value="">
                                 {t.watchFolderProfileDefault} (
-                                {customProfiles.find((p) => p.id === defaultImagePreset)?.name ||
-                                  'Web'}
+                                {customProfiles.find((p) => p.id === defaultImagePreset)
+                                  ? getProfileDisplayName(customProfiles.find((p) => p.id === defaultImagePreset)!, t)
+                                  : (customProfiles[0] ? getProfileDisplayName(customProfiles[0], t) : 'Web')}
                                 )
                               </option>
                               {customProfiles.map((p) => (
                                 <option key={p.id} value={p.id}>
-                                  {p.name}
+                                  {getProfileDisplayName(p, t)}
                                 </option>
                               ))}
                             </select>

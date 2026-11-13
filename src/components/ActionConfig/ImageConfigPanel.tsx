@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useFileMintStore, formatResizeSummary } from '../../store/useFileMintStore';
+import { useFileMintStore, formatResizeSummary, getProfileDisplayName } from '../../store/useFileMintStore';
 import { OutputFormat, ImageConfigTab, ColorFilter } from '../../types';
 import {
   Sliders,
@@ -542,7 +542,7 @@ export const ImageConfigPanel: React.FC = () => {
                       <>
                         <div className="flex items-center justify-between gap-2 min-h-[20px]">
                           <div className="font-semibold text-xs flex items-center gap-1.5 min-w-0">
-                            <span className="truncate">{profile.name}</span>
+                            <span className="truncate">{getProfileDisplayName(profile, t)}</span>
                             {isActive && (
                               <span className="w-1.5 h-1.5 rounded-full bg-mint-500 shrink-0" />
                             )}
@@ -570,7 +570,7 @@ export const ImageConfigPanel: React.FC = () => {
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setEditingProfileId(profile.id);
-                                    setEditingProfileName(profile.name);
+                                    setEditingProfileName(getProfileDisplayName(profile, t));
                                   }}
                                   className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                                   title={t.renameProfile}

@@ -674,12 +674,8 @@ mod tests {
     fn test_inject_exif_into_webp() {
         // Minimal valid WebP container: RIFF + 4 bytes size + WEBP + VP8  chunk
         let mut webp = vec![
-            b'R', b'I', b'F', b'F',
-            12, 0, 0, 0, // RIFF size = 12
-            b'W', b'E', b'B', b'P',
-            b'V', b'P', b'8', b' ',
-            4, 0, 0, 0,
-            0, 0, 0, 0,
+            b'R', b'I', b'F', b'F', 12, 0, 0, 0, // RIFF size = 12
+            b'W', b'E', b'B', b'P', b'V', b'P', b'8', b' ', 4, 0, 0, 0, 0, 0, 0, 0,
         ];
         let payload = b"Exif\0\0TIFFEXIFDATA";
         let res = inject_exif_into_webp(&mut webp, payload);
@@ -697,6 +693,9 @@ mod tests {
             webp[chunk_start + 7],
         ]) as usize;
         assert_eq!(chunk_len, b"TIFFEXIFDATA".len());
-        assert_eq!(&webp[chunk_start + 8..chunk_start + 8 + chunk_len], b"TIFFEXIFDATA");
+        assert_eq!(
+            &webp[chunk_start + 8..chunk_start + 8 + chunk_len],
+            b"TIFFEXIFDATA"
+        );
     }
 }

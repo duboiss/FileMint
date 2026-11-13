@@ -1489,12 +1489,20 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           hasExif: m.has_exif ?? false,
         }));
 
-        if (newFiles.length === 0) return;
+        if (newFiles.length === 0) {
+          if (paths.length > 0) {
+            get().showAppToast(get().t.unsupportedFilesAlert, undefined, 'info');
+          }
+          return;
+        }
 
         const currentFiles = get().files;
         const existingPaths = new Set(currentFiles.map((f) => f.path));
         const filteredNew = newFiles.filter((f) => !existingPaths.has(f.path));
-        if (filteredNew.length === 0) return;
+        if (filteredNew.length === 0) {
+          get().showAppToast(get().t.duplicateFilesAlert, undefined, 'info');
+          return;
+        }
 
         const isFirstUpload = currentFiles.length === 0;
         const defaultPresetId = get().defaultImagePreset;
@@ -1537,8 +1545,12 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
           await get().refreshPreview();
         }
       } catch (err) {
-        console.warn('Fallback aperçu Web suite à :', err);
-        get().addDemoFiles();
+        console.warn('Erreur addFiles :', err);
+        if (!isTauriEnv() && get().files.length === 0) {
+          get().addDemoFiles();
+        } else {
+          get().showAppToast(get().t.fileLoadError, String(err), 'error');
+        }
       }
     },
 
@@ -2049,14 +2061,27 @@ export const useFileMintStore = create<FileMintState>((set, get) => {
       const activeFile = files[activePreviewIndex];
       const pdfFiles = files.filter((f) => f.fileType === 'pdf');
 
-      if (pdfFiles.length >= 2 && pdfToolMode === 'merge') {
-        const ok = await get().executePdfMerge();
-        if (ok) return;
+      if (pdfToolMode === 'merge') {
+        if (pdfFiles.length >= 2) {
+          const ok = await get().executePdfMerge();
+          if (ok) return;
+        } else {
+          return;
+        }
       }
 
-      if (activeFile?.fileType === 'pdf' && pdfToolMode === 'split') {
-        const ok = await get().executePdfSplit();
-        if (ok) return;
+      if (pdfToolMode === 'split') {
+        const targetPdf = activeFile?.fileType === 'pdf' ? activeFile : pdfFiles[0];
+        if (targetPdf) {
+          const targetIndex = files.findIndex((f) => f.path === targetPdf.path);
+          if (targetIndex !== -1 && targetIndex !== activePreviewIndex) {
+            set({ activePreviewIndex: targetIndex });
+          }
+          const ok = await get().executePdfSplit();
+          if (ok) return;
+        } else {
+          return;
+        }
       }
 
       set({

@@ -271,13 +271,23 @@ pub fn launch_installer_detached(installer_path: &Path) -> Result<(), String> {
         use std::os::windows::process::CommandExt;
         const DETACHED_PROCESS: u32 = 0x00000008;
 
-        // /UPDATE: Performs in-place update without prompting to uninstall previous version
-        // /P: Passive mode (displays non-interactive progress bar, zero wizard prompts)
-        // /R: Restarts FileMint automatically once installation completes
-        std::process::Command::new(installer_path)
-            .args(["/UPDATE", "/P", "/R"])
-            .creation_flags(DETACHED_PROCESS)
-            .spawn()
+        let ext = installer_path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+
+        let mut cmd = std::process::Command::new(installer_path);
+        cmd.creation_flags(DETACHED_PROCESS);
+
+        if ext == "msi" {
+            cmd.args(["/passive", "/norestart"]);
+        } else {
+            // NSIS executable: /S runs silent install without wizard blocks
+            cmd.arg("/S");
+        }
+
+        cmd.spawn()
             .map_err(|e| format!("Impossible de lancer l'installeur : {}", e))?;
         Ok(())
     }

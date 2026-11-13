@@ -385,7 +385,9 @@ pub fn open_directory_in_explorer(path: &Path) -> Result<()> {
     {
         use std::process::Command;
         if path.is_file() {
-            Command::new("explorer").arg("/select,").arg(path).spawn()?;
+            Command::new("explorer")
+                .arg(format!("/select,{}", path.to_string_lossy()))
+                .spawn()?;
         } else {
             Command::new("explorer").arg(path).spawn()?;
         }

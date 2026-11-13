@@ -195,7 +195,17 @@ fn process_watched_file(path: &Path, rule: &WatchFolderRule) -> Result<(PathBuf,
     let dest_dir = if let Some(ref custom_dest) = rule.output_path {
         let trimmed = custom_dest.trim();
         if !trimmed.is_empty() {
-            validate_and_sanitize_destination_dir(trimmed)?
+            let custom_path = validate_and_sanitize_destination_dir(trimmed)?;
+            let watch_dir = PathBuf::from(&rule.watch_path);
+            let is_same_folder = custom_path == watch_dir
+                || (custom_path.exists()
+                    && watch_dir.exists()
+                    && custom_path.canonicalize().ok() == watch_dir.canonicalize().ok());
+            if is_same_folder {
+                watch_dir.join("FileMint_Optimized")
+            } else {
+                custom_path
+            }
         } else {
             PathBuf::from(&rule.watch_path).join("FileMint_Optimized")
         }

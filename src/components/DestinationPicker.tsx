@@ -178,10 +178,13 @@ export const DestinationPicker: React.FC = () => {
 
   const handleLaunch = () => {
     if (!canLaunch) return;
+    const pattern = destinationConfig.naming_pattern?.trim() || '';
+    const hasModifyingPattern = pattern !== '' && pattern !== '{nom}';
+    const isSameAsOriginalDir = destinationConfig.mode === 'SameAsOriginal';
     if (
-      destinationConfig.mode === 'SameAsOriginal' &&
-      !destinationConfig.custom_suffix &&
-      !destinationConfig.naming_pattern &&
+      isSameAsOriginalDir &&
+      !destinationConfig.custom_suffix?.trim() &&
+      !hasModifyingPattern &&
       !destinationConfig.overwrite_existing &&
       pdfToolMode === 'compress'
     ) {

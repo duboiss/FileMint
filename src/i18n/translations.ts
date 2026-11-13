@@ -440,6 +440,15 @@ export interface TranslationDictionary {
   liveOptimizedPreview: string;
   previewDimensions: string;
   pixelLimitHint: string;
+  unsupportedFilesAlert: string;
+  duplicateFilesAlert: string;
+  fileLoadError: string;
+  pdfSplitModeTitle: string;
+  pdfMergeOrderTitle: string;
+  watchFolderDefaultName: string;
+  watchFolderDisableTooltip: string;
+  watchFolderEnableTooltip: string;
+  watchFolderSameAsInputError: string;
 }
 
 export const translations: Record<Language, TranslationDictionary> = {
@@ -871,6 +880,15 @@ export const translations: Record<Language, TranslationDictionary> = {
     liveOptimizedPreview: 'Aperçu du résultat en direct',
     previewDimensions: 'Dimensions dans l\'aperçu',
     pixelLimitHint: '1 à 16 384 px',
+    unsupportedFilesAlert: 'Aucun fichier pris en charge détecté (formats supportés : JPG, PNG, WebP, AVIF, HEIC, GIF, BMP, TIFF et PDF).',
+    duplicateFilesAlert: 'Tous les fichiers sélectionnés sont déjà présents dans la file.',
+    fileLoadError: 'Impossible d\'accéder aux métadonnées des fichiers sélectionnés.',
+    pdfSplitModeTitle: 'Mode de découpage',
+    pdfMergeOrderTitle: 'ordre de fusion',
+    watchFolderDefaultName: 'Dossier',
+    watchFolderDisableTooltip: 'Désactiver ce dossier surveillé',
+    watchFolderEnableTooltip: 'Activer ce dossier surveillé',
+    watchFolderSameAsInputError: 'Le dossier de sortie ne peut pas être identique au dossier surveillé.',
   },
 
   en: {
@@ -1301,6 +1319,15 @@ export const translations: Record<Language, TranslationDictionary> = {
     liveOptimizedPreview: 'Live Optimized Preview',
     previewDimensions: 'Live preview dimensions',
     pixelLimitHint: '1 to 16,384 px',
+    unsupportedFilesAlert: 'No supported files detected (supported formats: JPG, PNG, WebP, AVIF, HEIC, GIF, BMP, TIFF and PDF).',
+    duplicateFilesAlert: 'All selected files are already in the queue.',
+    fileLoadError: 'Unable to access metadata for selected files.',
+    pdfSplitModeTitle: 'Split mode',
+    pdfMergeOrderTitle: 'merge order',
+    watchFolderDefaultName: 'Folder',
+    watchFolderDisableTooltip: 'Disable this watched folder',
+    watchFolderEnableTooltip: 'Enable this watched folder',
+    watchFolderSameAsInputError: 'The output folder cannot be identical to the watched folder.',
   },
 };
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useFileMintStore, formatFileSize } from '../store/useFileMintStore';
 import { open } from '@tauri-apps/plugin-dialog';
 import { FileUp, Image as ImageIcon, FileText, ShieldCheck, Zap, Sparkles } from 'lucide-react';
@@ -6,6 +6,7 @@ import { FileUp, Image as ImageIcon, FileText, ShieldCheck, Zap, Sparkles } from
 export const Dropzone: React.FC = () => {
   const { addFiles, t, lifetimeSavedBytes, lifetimeFilesCount, language } = useFileMintStore();
   const [isDragOver, setIsDragOver] = useState(false);
+  const dragCounterRef = useRef(0);
 
   const handlePickFiles = async (types?: 'images' | 'pdf') => {
     try {
@@ -52,13 +53,25 @@ export const Dropzone: React.FC = () => {
 
       {/* Main drop target */}
       <div
-        onDragOver={(e) => {
+        onDragEnter={(e) => {
           e.preventDefault();
+          dragCounterRef.current += 1;
           setIsDragOver(true);
         }}
-        onDragLeave={() => setIsDragOver(false)}
+        onDragOver={(e) => {
+          e.preventDefault();
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          dragCounterRef.current -= 1;
+          if (dragCounterRef.current <= 0) {
+            setIsDragOver(false);
+            dragCounterRef.current = 0;
+          }
+        }}
         onDrop={async (e) => {
           e.preventDefault();
+          dragCounterRef.current = 0;
           setIsDragOver(false);
           // Handled via native Tauri drag-drop window listeners in App.tsx
         }}

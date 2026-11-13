@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFileMintStore, formatFileSize, hasActiveImageChanges } from '../../store/useFileMintStore';
 import {
   Loader2,
@@ -33,6 +33,10 @@ export const SideBySidePreview: React.FC = () => {
   const [splitPos, setSplitPos] = useState<number>(50);
   const [isLargeModalOpen, setIsLargeModalOpen] = useState(false);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+
+  useEffect(() => {
+    setZoomLevel(1);
+  }, [activeFile?.path]);
 
   const updateSplitPosition = (clientX: number, target: HTMLElement) => {
     const rect = target.getBoundingClientRect();
@@ -336,7 +340,62 @@ export const SideBySidePreview: React.FC = () => {
         )}
 
         {preview?.data_url ? (
-          !hasChanges || viewMode === 'sideBySide' ? (
+          viewMode === 'sideBySide' && hasChanges ? (
+            /* True Side-by-side mode: Two cards */
+            <div
+              className="flex items-center justify-center gap-3 sm:gap-5 max-h-full max-w-full min-h-0 min-w-0 my-auto py-2"
+              style={{
+                transform: zoomLevel !== 1 ? `scale(${zoomLevel})` : undefined,
+                transformOrigin: 'center',
+                transition: 'transform 0.15s ease-out',
+              }}
+            >
+              {/* Initial Card */}
+              <div
+                onClick={() => setIsLargeModalOpen(true)}
+                className="group relative inline-block border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-2xl select-none cursor-zoom-in hover:border-mint-500/60 transition-all max-h-full max-w-[49%] touch-none bg-slate-950/20"
+                title={t.clickToEnlarge}
+              >
+                <div className="absolute top-3 left-3 z-20 px-2.5 py-1 rounded-full bg-slate-950/75 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none border border-white/10 shadow-lg flex items-center gap-1">
+                  <span>{t.initial}</span>
+                  {isPdf && <span className="text-slate-400 text-[9px]">({t.pdfPage1Preview})</span>}
+                </div>
+                <img
+                  src={preview.original_data_url || preview.data_url}
+                  alt={t.initial}
+                  draggable={false}
+                  className="max-h-full max-w-full w-auto h-auto object-contain block rounded-3xl pointer-events-none select-none"
+                  style={{
+                    maxHeight: 'min(560px, calc(100vh - 380px))',
+                    maxWidth: 'min(530px, calc(50vw - 250px))',
+                  }}
+                />
+              </div>
+
+              {/* Result Card */}
+              <div
+                onClick={() => setIsLargeModalOpen(true)}
+                className="group relative inline-block border border-mint-500/30 dark:border-mint-500/30 rounded-3xl overflow-hidden shadow-2xl select-none cursor-zoom-in hover:border-mint-500/80 transition-all max-h-full max-w-[49%] touch-none bg-slate-950/20"
+                title={t.clickToEnlarge}
+              >
+                <div className="absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-mint-500/90 text-slate-950 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm pointer-events-none select-none shadow-lg flex items-center gap-1">
+                  <span>{t.result}</span>
+                  {isPdf && <span className="text-slate-800 text-[9px]">({t.pdfPage1Preview})</span>}
+                </div>
+                <img
+                  src={preview.data_url}
+                  alt={t.result}
+                  draggable={false}
+                  className="max-h-full max-w-full w-auto h-auto object-contain block rounded-3xl pointer-events-none select-none"
+                  style={{
+                    maxHeight: 'min(560px, calc(100vh - 380px))',
+                    maxWidth: 'min(530px, calc(50vw - 250px))',
+                  }}
+                />
+              </div>
+            </div>
+          ) : !hasChanges ? (
+            /* Single Image centered (no changes to compare) */
             <div className="flex items-center justify-center max-h-full max-w-full min-h-0 min-w-0 my-auto py-2">
               <div
                 onClick={() => setIsLargeModalOpen(true)}

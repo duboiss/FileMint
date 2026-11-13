@@ -1,6 +1,6 @@
 [package]
 name = "filemint-shell-ext"
-version = "1.7.53"
+version = "1.7.54"
 edition = "2021"
 authors = ["FileMint Team"]
 license = "MIT"

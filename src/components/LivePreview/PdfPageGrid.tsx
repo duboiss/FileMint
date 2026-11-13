@@ -104,7 +104,7 @@ export const PdfPageGrid: React.FC = () => {
     };
   }, [activeFile?.path]);
 
-  // Render visible or requested pages progressively
+  // Render visible or requested pages progressively with batched state updates
   useEffect(() => {
     if (!pdfDoc) return;
     let isCancelled = false;
@@ -112,6 +112,8 @@ export const PdfPageGrid: React.FC = () => {
     async function renderAllThumbnails() {
       if (!pdfDoc) return;
       const total = pdfDoc.numPages;
+      let batch: Record<number, string> = {};
+      let lastFlush = Date.now();
 
       for (let p = 1; p <= total; p++) {
         if (isCancelled) break;
@@ -119,16 +121,33 @@ export const PdfPageGrid: React.FC = () => {
 
         try {
           renderedPagesRef.current.add(p);
-          const rendered = await renderPdfPageFromDoc(pdfDoc, p, 320);
+          const rendered = await renderPdfPageFromDoc(pdfDoc, p, 240);
           if (isCancelled) break;
 
-          setPageThumbnails((prev) => ({
-            ...prev,
-            [p]: rendered.dataUrl,
-          }));
+          batch[p] = rendered.dataUrl;
+
+          const now = Date.now();
+          if (Object.keys(batch).length >= 4 || now - lastFlush > 200 || p === total) {
+            const toFlush = { ...batch };
+            batch = {};
+            lastFlush = now;
+            setPageThumbnails((prev) => ({
+              ...prev,
+              ...toFlush,
+            }));
+            // Yield to keep UI buttery smooth
+            await new Promise((r) => setTimeout(r, 16));
+          }
         } catch (err) {
           console.warn(`Erreur de rendu de la page ${p}:`, err);
         }
+      }
+
+      if (Object.keys(batch).length > 0 && !isCancelled) {
+        setPageThumbnails((prev) => ({
+          ...prev,
+          ...batch,
+        }));
       }
     }
 

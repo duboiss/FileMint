@@ -495,8 +495,44 @@ pub fn apply_metadata_policy(
         "png" => {
             inject_exif_into_png(output_bytes, &final_exif)?;
         }
+        "webp" => {
+            inject_exif_into_webp(output_bytes, &final_exif)?;
+        }
         _ => {}
     }
+
+    Ok(())
+}
+
+/// Injects raw TIFF metadata as an EXIF chunk into WebP bytes.
+pub fn inject_exif_into_webp(webp_bytes: &mut Vec<u8>, exif_payload: &[u8]) -> Result<()> {
+    if webp_bytes.len() < 12 || &webp_bytes[0..4] != b"RIFF" || &webp_bytes[8..12] != b"WEBP" {
+        return Ok(());
+    }
+
+    let tiff_data = if exif_payload.starts_with(b"Exif\0\0") {
+        &exif_payload[6..]
+    } else {
+        exif_payload
+    };
+
+    if tiff_data.is_empty() {
+        return Ok(());
+    }
+
+    let chunk_len = tiff_data.len() as u32;
+    let mut chunk = Vec::with_capacity(8 + tiff_data.len() + 1);
+    chunk.extend_from_slice(b"EXIF");
+    chunk.extend_from_slice(&chunk_len.to_le_bytes());
+    chunk.extend_from_slice(tiff_data);
+    if !chunk_len.is_multiple_of(2) {
+        chunk.push(0); // 1-byte padding for odd chunk sizes in RIFF
+    }
+
+    webp_bytes.extend_from_slice(&chunk);
+
+    let new_riff_size = (webp_bytes.len() - 8) as u32;
+    webp_bytes[4..8].copy_from_slice(&new_riff_size.to_le_bytes());
 
     Ok(())
 }
@@ -632,5 +668,35 @@ mod tests {
         let len = ((jpeg[4] as usize) << 8) | (jpeg[5] as usize);
         assert_eq!(len, payload.len() + 2);
         assert_eq!(&jpeg[6..6 + payload.len()], payload);
+    }
+
+    #[test]
+    fn test_inject_exif_into_webp() {
+        // Minimal valid WebP container: RIFF + 4 bytes size + WEBP + VP8  chunk
+        let mut webp = vec![
+            b'R', b'I', b'F', b'F',
+            12, 0, 0, 0, // RIFF size = 12
+            b'W', b'E', b'B', b'P',
+            b'V', b'P', b'8', b' ',
+            4, 0, 0, 0,
+            0, 0, 0, 0,
+        ];
+        let payload = b"Exif\0\0TIFFEXIFDATA";
+        let res = inject_exif_into_webp(&mut webp, payload);
+        assert!(res.is_ok());
+
+        assert_eq!(&webp[0..4], b"RIFF");
+        assert_eq!(&webp[8..12], b"WEBP");
+        // Verify EXIF chunk was added at index 24 (after initial 24 bytes)
+        let chunk_start = 24;
+        assert_eq!(&webp[chunk_start..chunk_start + 4], b"EXIF");
+        let chunk_len = u32::from_le_bytes([
+            webp[chunk_start + 4],
+            webp[chunk_start + 5],
+            webp[chunk_start + 6],
+            webp[chunk_start + 7],
+        ]) as usize;
+        assert_eq!(chunk_len, b"TIFFEXIFDATA".len());
+        assert_eq!(&webp[chunk_start + 8..chunk_start + 8 + chunk_len], b"TIFFEXIFDATA");
     }
 }

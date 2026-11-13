@@ -101,6 +101,11 @@ export const LargePreviewModal: React.FC<LargePreviewModalProps> = ({
   const qualityRef = useRef(imageOptions.quality);
   qualityRef.current = imageOptions.quality;
 
+  useEffect(() => {
+    setZoomLevel(1);
+    setPanOffset({ x: 0, y: 0 });
+  }, [activeFile?.path]);
+
   // Loupe A/B 200% / 400%
   const [isLoupeActive, setIsLoupeActive] = useState<boolean>(false);
   const [loupeZoom, setLoupeZoom] = useState<2 | 4>(2);

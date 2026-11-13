@@ -116,8 +116,12 @@ export const SettingsModal: React.FC = () => {
           setErrorMessage(t.duplicateWatchFolderAlert);
           return;
         }
-        const folderName = selected.split(/[\\/]/).filter(Boolean).pop() || '';
         const currentRule = watchFolders.find((r) => r.id === ruleId);
+        if (currentRule?.output_path && currentRule.output_path.trim().toLowerCase() === selected.trim().toLowerCase()) {
+          setErrorMessage(t.watchFolderSameAsInputError);
+          return;
+        }
+        const folderName = selected.split(/[\\/]/).filter(Boolean).pop() || '';
         updateWatchFolder(ruleId, {
           watch_path: selected,
           enabled: true,
@@ -136,6 +140,11 @@ export const SettingsModal: React.FC = () => {
         multiple: false,
       });
       if (selected && typeof selected === 'string') {
+        const rule = watchFolders.find((r) => r.id === ruleId);
+        if (rule?.watch_path && rule.watch_path.trim().toLowerCase() === selected.trim().toLowerCase()) {
+          setErrorMessage(t.watchFolderSameAsInputError);
+          return;
+        }
         updateWatchFolder(ruleId, { output_path: selected });
       }
     } catch (err) {
@@ -1040,8 +1049,8 @@ export const SettingsModal: React.FC = () => {
                             }
                             placeholder={
                               rule.watch_path
-                                ? rule.watch_path.split(/[\\/]/).filter(Boolean).pop() || `Dossier ${index + 1}`
-                                : `Dossier ${index + 1}`
+                                ? rule.watch_path.split(/[\\/]/).filter(Boolean).pop() || `${t.watchFolderDefaultName} ${index + 1}`
+                                : `${t.watchFolderDefaultName} ${index + 1}`
                             }
                             className="bg-transparent font-semibold text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-b focus:border-mint-500 max-w-xs truncate"
                           />
@@ -1065,7 +1074,7 @@ export const SettingsModal: React.FC = () => {
                                 ? 'bg-mint-500'
                                 : 'bg-slate-300 dark:bg-slate-700'
                             }`}
-                            title={rule.enabled ? 'Désactiver ce dossier surveillé' : 'Activer ce dossier surveillé'}
+                            title={rule.enabled ? t.watchFolderDisableTooltip : t.watchFolderEnableTooltip}
                           >
                             <span
                               className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${

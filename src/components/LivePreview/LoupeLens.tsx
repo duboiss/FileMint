@@ -1,4 +1,5 @@
 import React from 'react';
+import { useFileMintStore } from '../../store/useFileMintStore';
 
 interface LoupeLensProps {
   clientX: number;
@@ -26,6 +27,7 @@ export const LoupeLens: React.FC<LoupeLensProps> = ({
   hasChanges,
   zoom,
 }) => {
+  const { t } = useFileMintStore();
   const LOUPE_SIZE = 220;
   const HALF_SIZE = LOUPE_SIZE / 2;
 
@@ -101,10 +103,10 @@ export const LoupeLens: React.FC<LoupeLensProps> = ({
 
             {/* Mini Labels on Lens */}
             <div className="absolute top-2.5 left-4 z-20 px-1.5 py-0.5 rounded-md bg-slate-950/80 border border-white/20 text-[9px] font-bold uppercase tracking-wider text-slate-200">
-              Avant
+              {t.initial}
             </div>
             <div className="absolute top-2.5 right-4 z-20 px-1.5 py-0.5 rounded-md bg-mint-500/90 text-slate-950 text-[9px] font-bold uppercase tracking-wider">
-              Après
+              {t.result}
             </div>
           </>
         ) : (

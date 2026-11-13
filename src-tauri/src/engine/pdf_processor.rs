@@ -463,8 +463,20 @@ pub fn compress_pdf(
     let (final_bytes, image_count_optimized) = if let Some(target_kb) = options.target_size_kb {
         let target_bytes = (target_kb as u64) * 1024;
 
-        // Fast-path: If the file is already within the target size, run a single structure optimization pass.
-        if original_bytes <= target_bytes {
+        let has_raster_images = options.recompress_images
+            && doc.objects.values().any(|obj| {
+                if let Object::Stream(stream) = obj {
+                    stream
+                        .dict
+                        .get(b"Subtype")
+                        .is_ok_and(|val| val.as_name().is_ok_and(|name| name == b"Image"))
+                } else {
+                    false
+                }
+            });
+
+        // Fast-path: If the file is already within the target size, or if it has no raster images, run a single structure optimization pass.
+        if original_bytes <= target_bytes || !has_raster_images {
             compress_doc_internal(doc, 85, 2400, false, options.optimize_structure, true)?
         } else {
             let tiers = [

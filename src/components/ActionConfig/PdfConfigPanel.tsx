@@ -388,7 +388,7 @@ export const PdfConfigPanel: React.FC = () => {
                 <span>Documents ({displayMergeFiles.length})</span>
               </span>
               <span className="text-[10px] font-normal text-slate-400 lowercase">
-                ordre de fusion
+                {t.pdfMergeOrderTitle}
               </span>
             </div>
 
@@ -497,7 +497,7 @@ export const PdfConfigPanel: React.FC = () => {
           {/* Action Choice: 1 single PDF vs burst into individual page files */}
           <div className="space-y-2.5">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
-              Mode de découpage
+              {t.pdfSplitModeTitle}
             </label>
 
             {/* Option 1: Single combined PDF */}
